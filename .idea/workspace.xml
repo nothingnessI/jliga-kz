@@ -1,34 +1,160 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="ALL" />
+  </component>
   <component name="ChangeListManager">
-    <list default="true" id="7e289f6c-8968-49f0-ac18-b3bedd7dea2b" name="Changes" comment="" />
+    <list default="true" id="7e289f6c-8968-49f0-ac18-b3bedd7dea2b" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/app/models/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/disqualification.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/document.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/enums.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/match.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/match_event.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/news.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/player.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/stadium.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/team.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/team_player.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/tournament.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/tournament_standing.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/models/tournament_team.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/PythonProject.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/PythonProject.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/alembic/env.py" beforeDir="false" afterPath="$PROJECT_DIR$/alembic/env.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="DBNavigator.Project.Workspace.Settings">
+    <assistant-settings>
+      <credential-settings>
+        <credentials />
+      </credential-settings>
+      <profile-settings>
+        <profiles />
+      </profile-settings>
+      <mcp-server-settings>
+        <workspace-integration value="false" />
+        <mcp-servers />
+        <mcp-tool-approvals />
+      </mcp-server-settings>
+    </assistant-settings>
+  </component>
+  <component name="DatabaseLocalColorSettings">
+    <colors>
+      <entry key="bd1c78c0-0624-432f-a29f-8681a568d0f8" value="" />
+    </colors>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 5,
-  "fromUser": false
-}]]></component>
+  <component name="NextEditCompletionFeaturesState">
+    <decayedCancelled>
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0000000000039788" />
+      <entry key="S10" value="1.0000034960212092" />
+      <entry key="S30" value="1.040881807086497" />
+      <entry key="S60" value="1.589576050021904" />
+      <entry key="M2" value="4.752556512987731" />
+      <entry key="M5" value="23.547633756808555" />
+      <entry key="M10" value="53.603048583582954" />
+      <entry key="M15" value="78.49454531597516" />
+      <entry key="M30" value="133.42149460150492" />
+      <entry key="H1" value="205.80655819058" />
+      <entry key="H2" value="319.4402332415166" />
+      <entry key="H4" value="466.23028651101635" />
+      <entry key="D1" value="719.7591959810399" />
+      <entry key="W1" value="784.4145490433613" />
+    </decayedCancelled>
+    <decayedSelected>
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="1.5949544211461433E-118" />
+      <entry key="S2" value="3.5644337355237235E-30" />
+      <entry key="S5" value="1.823365766372154E-12" />
+      <entry key="S10" value="1.6921508516879335E-6" />
+      <entry key="S30" value="0.01873727517432636" />
+      <entry key="S60" value="0.21415063432462714" />
+      <entry key="M2" value="0.8166824894327664" />
+      <entry key="M5" value="2.5561525510719303" />
+      <entry key="M10" value="6.4047278394556875" />
+      <entry key="M15" value="10.970482149469591" />
+      <entry key="M30" value="22.806322617032254" />
+      <entry key="H1" value="37.74549073703342" />
+      <entry key="H2" value="56.22150158326875" />
+      <entry key="H4" value="76.32507366885554" />
+      <entry key="D1" value="107.88361839654533" />
+      <entry key="W1" value="115.62230799846641" />
+    </decayedSelected>
+    <decayedShown>
+      <entry key="MS100" value="0.24827312385925898" />
+      <entry key="MS500" value="0.7568083964847896" />
+      <entry key="S2" value="0.9327096829714221" />
+      <entry key="S5" value="0.9725201181559752" />
+      <entry key="S10" value="0.9861690574803839" />
+      <entry key="S30" value="1.0532584683088824" />
+      <entry key="S60" value="1.7901630582525783" />
+      <entry key="M2" value="5.542948739553887" />
+      <entry key="M5" value="26.070205102101472" />
+      <entry key="M10" value="59.97011901017361" />
+      <entry key="M15" value="89.42443400724972" />
+      <entry key="M30" value="156.18695412620477" />
+      <entry key="H1" value="243.5172060191282" />
+      <entry key="H2" value="375.63389369454075" />
+      <entry key="H4" value="542.5352241508706" />
+      <entry key="D1" value="827.6377570751911" />
+      <entry key="W1" value="900.0360739537292" />
+    </decayedShown>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 5,
+  &quot;fromUser&quot;: false
+}</component>
   <component name="ProjectId" id="3KYAAe1fE5PKYI2xfC3Tb1tf9bZ" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "master",
-    "python.packages.toolwindow.project.migrated.to.right.top.v2": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.news.executor&quot;: &quot;Run&quot;,
+    &quot;Python.tournament.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/imran/PycharmProjects/jliga-kz&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.jshint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.jshint&quot;: &quot;&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;python.packages.toolwindow.project.migrated.to.right.top.v2&quot;: &quot;true&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -43,10 +169,19 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1791723986203</updated>
+      <workItem from="1791786910250" duration="1282000" />
+      <workItem from="1791793402787" duration="2018000" />
+      <workItem from="1791870920657" duration="5210000" />
+      <workItem from="1792133901473" duration="326000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/jliga_kz$news.coverage" NAME="news Coverage Results" MODIFIED="1791879114486" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/models" />
+    <SUITE FILE_PATH="coverage/jliga_kz$main.coverage" NAME="main Coverage Results" MODIFIED="1791889060386" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app" />
+    <SUITE FILE_PATH="coverage/jliga_kz$tournament.coverage" NAME="tournament Coverage Results" MODIFIED="1792134069520" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/models" />
   </component>
 </project>
