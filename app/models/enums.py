@@ -41,3 +41,10 @@ class MatchEventType(str, enum.Enum):
     RED_CARD = "red_card"
     SUBSTITUTION_IN = "substitution_in"
     SUBSTITUTION_OUT = "substitution_out"
+
+
+class UserRole(str, enum.Enum):
+    ADMIN = "admin"
+    EDITOR = "editor"
+    CAPTAIN = "captain"
+    USER = "user"

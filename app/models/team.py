@@ -35,3 +35,5 @@ class Team(TimestampMixin, Base):
     standings: Mapped[list["TournamentStanding"]] = relationship(
         back_populates="team", cascade="all, delete-orphan"
     )
+
+    users: Mapped[list["User"]] = relationship(back_populates="team")

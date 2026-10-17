@@ -10,6 +10,8 @@ from app.models.team_player import TeamPlayer
 from app.models.tournament import Tournament
 from app.models.tournament_standing import TournamentStanding
 from app.models.tournament_team import TournamentTeam
+from app.models.user import User
+
 
 __all__ = [
     "Disqualification",
@@ -24,4 +26,5 @@ __all__ = [
     "Tournament",
     "TournamentStanding",
     "TournamentTeam",
+    "User"
 ]

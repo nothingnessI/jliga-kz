@@ -58,4 +58,8 @@ class Tournament(Base, TimestampMixin):
         back_populates="tournament",
     )
 
+    disqualifications: Mapped[list["Disqualification"]] = relationship(
+        back_populates="tournament", cascade="all, delete-orphan"
+    )
+
     

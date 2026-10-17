@@ -1,8 +1,8 @@
-"""create all models
+"""initial
 
-Revision ID: 1d8090f6654f
-Revises: 5182c756ab5a
-Create Date: 2026-10-16 12:06:23.982707
+Revision ID: ff0eafbcc7c1
+Revises: 
+Create Date: 2026-10-17 17:32:13.895286
 
 """
 from typing import Sequence, Union
@@ -12,8 +12,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '1d8090f6654f'
-down_revision: Union[str, Sequence[str], None] = '5182c756ab5a'
+revision: str = 'ff0eafbcc7c1'
+down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -233,6 +233,22 @@ def upgrade() -> None:
     op.create_index(op.f('ix_tournament_teams_team_id'), 'tournament_teams', ['team_id'], unique=False)
     op.create_index(op.f('ix_tournament_teams_tournament_id'), 'tournament_teams', ['tournament_id'], unique=False)
     op.create_index(op.f('ix_tournament_teams_updated_at'), 'tournament_teams', ['updated_at'], unique=False)
+    op.create_table('users',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('email', sa.String(length=255), nullable=False),
+    sa.Column('hashed_password', sa.String(length=255), nullable=False),
+    sa.Column('full_name', sa.String(length=255), nullable=True),
+    sa.Column('role', sa.Enum('ADMIN', 'EDITOR', 'CAPTAIN', 'USER', name='user_role'), nullable=False),
+    sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('team_id', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.ForeignKeyConstraint(['team_id'], ['teams.id'], ondelete='SET NULL'),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index(op.f('ix_users_created_at'), 'users', ['created_at'], unique=False)
+    op.create_index(op.f('ix_users_email'), 'users', ['email'], unique=True)
+    op.create_index(op.f('ix_users_updated_at'), 'users', ['updated_at'], unique=False)
     op.create_table('match_events',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('match_id', sa.Integer(), nullable=False),
@@ -267,6 +283,10 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_match_events_event_type'), table_name='match_events')
     op.drop_index(op.f('ix_match_events_created_at'), table_name='match_events')
     op.drop_table('match_events')
+    op.drop_index(op.f('ix_users_updated_at'), table_name='users')
+    op.drop_index(op.f('ix_users_email'), table_name='users')
+    op.drop_index(op.f('ix_users_created_at'), table_name='users')
+    op.drop_table('users')
     op.drop_index(op.f('ix_tournament_teams_updated_at'), table_name='tournament_teams')
     op.drop_index(op.f('ix_tournament_teams_tournament_id'), table_name='tournament_teams')
     op.drop_index(op.f('ix_tournament_teams_team_id'), table_name='tournament_teams')

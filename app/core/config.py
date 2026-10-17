@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     DB_PORT: int
     DB_NAME: str
 
+
+    # Tokens
+
+    SECRET_KEY: str
+    ACCESS_TOKEN_EXPIRE_MINUTES: int
+
+
     @property
     def get_db_url(self):
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"

@@ -5,6 +5,8 @@ from contextlib import asynccontextmanager
 from db import engine, session_factory
 from core import settings, Base
 
+from app.api.v1.api import api_router
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -20,6 +22,9 @@ app = FastAPI(
     title=settings.APP_NAME,
     lifespan=lifespan
 )
+
+
+app.include_router(api_router)
 
 
 if __name__ == "__main__":
