@@ -116,3 +116,4 @@ __all__ = [
     # TournamentTeam
     "TournamentTeamBase", "TournamentTeamCreate", "TournamentTeamRead",
     "TournamentTeamReadWithTeam", "TournamentTeamUpdate",
+]

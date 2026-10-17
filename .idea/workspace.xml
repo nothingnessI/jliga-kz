@@ -5,20 +5,14 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7e289f6c-8968-49f0-ac18-b3bedd7dea2b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/app/schemas/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/base.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/disqualification.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/document.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/match.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/match_event.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/news.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/player.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/stadium.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/team.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/team_player.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/tournament.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/tournament_team.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/crud/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/crud/base.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/crud/match.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/crud/player.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/crud/team.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/crud/tournament.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/schemas/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/schemas/__init__.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -169,6 +163,7 @@
       <workItem from="1791793402787" duration="2018000" />
       <workItem from="1791870920657" duration="5210000" />
       <workItem from="1792133901473" duration="1367000" />
+      <workItem from="1792212426365" duration="867000" />
     </task>
     <servers />
   </component>
