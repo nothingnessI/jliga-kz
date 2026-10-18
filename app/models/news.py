@@ -16,7 +16,7 @@ class News(Base, TimestampMixin):
     slug: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
     content: Mapped[str] = mapped_column(Text, nullable=False, index=True)
     image_url: Mapped[str | None] = mapped_column(Text)
-    published_ate: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_published: Mapped[bool] = mapped_column(Boolean,default=False, index=True)
     tournament_id: Mapped[int | None] = mapped_column(
         ForeignKey("tournaments.id", ondelete="SET NULL"),

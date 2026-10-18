@@ -5,28 +5,48 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7e289f6c-8968-49f0-ac18-b3bedd7dea2b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/app/api/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/api/deps.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/api/v1/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/api/v1/api.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/api/v1/endpoints/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/api/v1/endpoints/auth.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/api/v1/endpoints/teams.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/core/security.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/crud/user.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/models/user.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/schemas/user.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/api/v1/endpoints/matches.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/api/v1/endpoints/stadiums.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/api/v1/endpoints/tournaments.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/api/v1/pages.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/services/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/services/match.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/services/standings.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/services/stats.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/JLigaOwners/ras.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/JLigaStadiums/akas_arena.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/JLigaStadiums/almaty_arena.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/JLigaStadiums/cska_stadium.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/JLigaStadiums/haileybury.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/JLigaStadiums/jas_qyran_stadium.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/Partners/almaty_football.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/Partners/jliga.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/Partners/kazakhstan_liga.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/Partners/kff.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/Partners/void.jpg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/main_logo.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/static/style.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/about.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/base.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/index.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/managment.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/match_detail.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/media.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/news.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/participants.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/partners.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/stadiums.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/tournament_detail.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/tournaments.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/alembic/versions/1d8090f6654f_create_all_models.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/alembic/versions/5182c756ab5a_set_metadata.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/core/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/core/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/db/session.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/session.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/deps.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/deps.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/v1/api.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/v1/api.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/v1/endpoints/auth.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/v1/endpoints/auth.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/crud/user.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/crud/user.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/enums.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/enums.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/team.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/team.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/tournament.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/tournament.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/news.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/news.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/stadium.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/stadium.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/schemas/user.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/schemas/user.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -57,6 +77,7 @@
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Python Script" />
+        <option value="HTML File" />
       </list>
     </option>
   </component>
@@ -65,61 +86,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.5127327851443146" />
-      <entry key="MS500" value="2.4684655215452915" />
-      <entry key="S2" value="4.198386545083773" />
-      <entry key="S5" value="10.48883026228287" />
-      <entry key="S10" value="18.032296432872034" />
-      <entry key="S30" value="29.21784538109351" />
-      <entry key="S60" value="35.80256698361554" />
-      <entry key="M2" value="44.198512821911" />
-      <entry key="M5" value="62.53917992152417" />
-      <entry key="M10" value="82.81122329972689" />
-      <entry key="M15" value="96.63814490842815" />
-      <entry key="M30" value="119.44381328395072" />
-      <entry key="H1" value="138.69525749080066" />
-      <entry key="H2" value="182.73548757542983" />
-      <entry key="H4" value="322.0589585524613" />
-      <entry key="D1" value="859.3888341215101" />
-      <entry key="W1" value="1065.7996143998578" />
+      <entry key="MS100" value="0.007985731102612428" />
+      <entry key="MS500" value="0.5691443062077729" />
+      <entry key="S2" value="2.3826549917830744" />
+      <entry key="S5" value="3.6100147325134637" />
+      <entry key="S10" value="4.224518152299717" />
+      <entry key="S30" value="4.771004207347043" />
+      <entry key="S60" value="5.306655013476235" />
+      <entry key="M2" value="6.268430862002066" />
+      <entry key="M5" value="7.554063884644893" />
+      <entry key="M10" value="8.19992437473371" />
+      <entry key="M15" value="8.454878441485695" />
+      <entry key="M30" value="9.56407965467651" />
+      <entry key="H1" value="20.434379808799374" />
+      <entry key="H2" value="69.0635704250257" />
+      <entry key="H4" value="205.3646911606811" />
+      <entry key="D1" value="957.6378360577909" />
+      <entry key="W1" value="1354.941786236699" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="3.2365945496077218E-49" />
-      <entry key="MS500" value="2.0045535367422364E-10" />
-      <entry key="S2" value="0.003762741773516205" />
-      <entry key="S5" value="0.10720172308806485" />
-      <entry key="S10" value="0.3274167422232183" />
-      <entry key="S30" value="0.6892503435512638" />
-      <entry key="S60" value="0.8358519248981913" />
-      <entry key="M2" value="1.0215520922746544" />
-      <entry key="M5" value="1.8090824293890821" />
-      <entry key="M10" value="3.217273045546829" />
-      <entry key="M15" value="4.355092885707489" />
-      <entry key="M30" value="6.348865449990457" />
-      <entry key="H1" value="8.103397642299552" />
-      <entry key="H2" value="13.089594192924611" />
-      <entry key="H4" value="30.419058189906185" />
-      <entry key="D1" value="97.52388470132314" />
-      <entry key="W1" value="123.04444000554292" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.000000000037275" />
+      <entry key="S10" value="1.0000061053270068" />
+      <entry key="S30" value="1.0182769185612837" />
+      <entry key="S60" value="1.1351921542149677" />
+      <entry key="M2" value="1.3676848572010651" />
+      <entry key="M5" value="1.6701782722580352" />
+      <entry key="M10" value="1.8189613175843051" />
+      <entry key="M15" value="1.882827440217027" />
+      <entry key="M30" value="2.2736019315502882" />
+      <entry key="H1" value="4.986648011964308" />
+      <entry key="H2" value="13.91524166338749" />
+      <entry key="H4" value="34.233991111656195" />
+      <entry key="D1" value="132.95075728456294" />
+      <entry key="W1" value="183.38964362796386" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.2609045498421927" />
-      <entry key="MS500" value="2.393506807146196" />
-      <entry key="S2" value="4.177377013038887" />
-      <entry key="S5" value="10.556959772085294" />
-      <entry key="S10" value="18.30859885727451" />
-      <entry key="S30" value="29.87084749209898" />
-      <entry key="S60" value="36.61281932587032" />
-      <entry key="M2" value="45.20041064820437" />
-      <entry key="M5" value="64.33178901345376" />
-      <entry key="M10" value="86.01318884114856" />
-      <entry key="M15" value="100.97914431583557" />
-      <entry key="M30" value="125.78214228831456" />
-      <entry key="H1" value="146.7918179227998" />
-      <entry key="H2" value="195.81925082912073" />
-      <entry key="H4" value="352.47051344713003" />
-      <entry key="D1" value="956.9082813175877" />
-      <entry key="W1" value="1188.8432417847994" />
+      <entry key="MS100" value="0.0120120967101578" />
+      <entry key="MS500" value="0.8708223856634674" />
+      <entry key="S2" value="3.0807761684563184" />
+      <entry key="S5" value="4.463447015597604" />
+      <entry key="S10" value="5.145085483361052" />
+      <entry key="S30" value="5.760079451045511" />
+      <entry key="S60" value="6.4230491928350215" />
+      <entry key="M2" value="7.622402776474589" />
+      <entry key="M5" value="9.216425304590754" />
+      <entry key="M10" value="10.014392512394968" />
+      <entry key="M15" value="10.334553004154902" />
+      <entry key="M30" value="11.835821031933197" />
+      <entry key="H1" value="25.419153484737695" />
+      <entry key="H2" value="82.97594135137189" />
+      <entry key="H4" value="239.59411404870048" />
+      <entry key="D1" value="1090.5840683057622" />
+      <entry key="W1" value="1538.3304734569801" />
     </decayedShown>
   </component>
   <component name="ProjectColorInfo">{
@@ -134,31 +155,40 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.news.executor&quot;: &quot;Run&quot;,
-    &quot;Python.tournament.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/imran/PycharmProjects/jliga-kz&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.jshint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.jshint&quot;: &quot;&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;python.packages.toolwindow.project.migrated.to.right.top.v2&quot;: &quot;true&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultHtmlFileTemplate": "HTML File",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python.main.executor": "Run",
+    "Python.news.executor": "Run",
+    "Python.pages.executor": "Run",
+    "Python.tournament.executor": "Run",
+    "Python.tournaments.executor": "Run",
+    "Python.update_stadium.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "master",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "C:/Users/imran/PycharmProjects/jliga-kz/app/static",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.jshint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.jshint": "",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "python.packages.toolwindow.project.migrated.to.right.top.v2": "true",
+    "to.speed.mode.migration.done": "true"
   }
-}</component>
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\imran\PycharmProjects\jliga-kz\app\static" />
+    </key>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
@@ -177,7 +207,9 @@
       <workItem from="1791793402787" duration="2018000" />
       <workItem from="1791870920657" duration="5210000" />
       <workItem from="1792133901473" duration="1367000" />
-      <workItem from="1792212426365" duration="5462000" />
+      <workItem from="1792212426365" duration="7335000" />
+      <workItem from="1792297437039" duration="6029000" />
+      <workItem from="1792323550295" duration="6593000" />
     </task>
     <servers />
   </component>
@@ -185,8 +217,11 @@
     <option name="version" value="3" />
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/jliga_kz$tournaments.coverage" NAME="tournaments Coverage Results" MODIFIED="1792242300277" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/api/v1/endpoints" />
+    <SUITE FILE_PATH="coverage/jliga_kz$pages.coverage" NAME="pages Coverage Results" MODIFIED="1792299063100" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/api/v1" />
+    <SUITE FILE_PATH="coverage/jliga_kz$update_stadium.coverage" NAME="update_stadium Coverage Results" MODIFIED="1792326343165" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/jliga_kz$news.coverage" NAME="news Coverage Results" MODIFIED="1791879114486" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/models" />
-    <SUITE FILE_PATH="coverage/jliga_kz$main.coverage" NAME="main Coverage Results" MODIFIED="1792240492248" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app" />
+    <SUITE FILE_PATH="coverage/jliga_kz$main.coverage" NAME="main Coverage Results" MODIFIED="1792336580979" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app" />
     <SUITE FILE_PATH="coverage/jliga_kz$tournament.coverage" NAME="tournament Coverage Results" MODIFIED="1792239693571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/models" />
   </component>
 </project>

@@ -5,6 +5,8 @@ from app.crud.base import CRUDBase
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
 from app.core.security import get_password_hash
+from app.models.enums import UserRole
+
 
 class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
     async def get_by_email(self, db: AsyncSession, *, email: str) -> User | None:
@@ -12,18 +14,21 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         result = await db.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def create(self, db: AsyncSession, *, obj_in: UserCreate) -> User:
-        # Переопределяем метод create, чтобы хешировать пароль
+    async def create(
+        self, db: AsyncSession, *, obj_in: UserCreate, role: UserRole = UserRole.USER
+    ) -> User:
+        # Переопределяем метод create, чтобы хешировать пароль и ставить роль
         db_obj = User(
             email=obj_in.email,
             hashed_password=get_password_hash(obj_in.password),
             full_name=obj_in.full_name,
-            role=obj_in.role,
+            role=role,  # <-- Берем роль из аргумента
             is_active=True,
         )
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)
         return db_obj
+
 
 user = CRUDUser(User)

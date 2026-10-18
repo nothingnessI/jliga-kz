@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
+    <div>
+        <h3 class="text-uppercase fw-bold m-0">{{ tournament.name }}</h3>
+        <span class="text-muted">{{ tournament.season }} • {{ tournament.division }}</span>
+    </div>
+    <a href="/tournaments" class="btn btn-outline-dark">← Назад</a>
+</div>
+
+<div class="row">
+    <!-- Таблица (широкая) -->
+    <div class="col-xl-8 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-dark text-white fw-bold py-3">Турнирная таблица</div>
+            <div class="card-body p-0">
+                <table class="table table-hover table-custom mb-0 text-center">
+                    <thead>
+                        <tr>
+                            <th class="py-3">#</th><th class="text-start py-3">Команда</th>
+                            <th>И</th><th>В</th><th>Н</th><th>П</th><th>МЗ</th><th>МП</th><th>О</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for standing in standings %}
+                        <tr>
+                            <td class="fw-bold text-muted">{{ loop.index }}</td>
+                            <td class="text-start fw-bold">{{ standing.team.name }}</td>
+                            <td>{{ standing.games_played }}</td>
+                            <td>{{ standing.wins }}</td>
+                            <td>{{ standing.draws }}</td>
+                            <td>{{ standing.losses }}</td>
+                            <td>{{ standing.goals_for }}</td>
+                            <td>{{ standing.goals_against }}</td>
+                            <td><span class="badge bg-dark fs-6">{{ standing.points }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="9" class="text-muted py-4">Нет данных</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Матчи -->
+    <div class="col-xl-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-dark text-white fw-bold py-3">Матчи</div>
+            <div class="card-body p-0" style="max-height: 700px; overflow-y: auto;">
+                <ul class="list-group list-group-flush">
+                    {% for match in matches %}
+                    <li class="list-group-item p-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <small class="text-muted">{{ match.match_date.strftime('%d.%m.%Y %H:%M') if match.match_date else 'Дата TBA' }}</small>
+                            <span class="badge bg-{{ 'success' if match.status.value == 'FINISHED' else 'secondary' }}">{{ match.status.value }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-truncate" style="max-width: 40%;">{{ match.home_team.name }}</span>
+                            <span class="badge bg-light text-dark fs-6 border">{{ match.home_score or 0 }} : {{ match.away_score or 0 }}</span>
+                            <span class="fw-bold text-end text-truncate" style="max-width: 40%;">{{ match.away_team.name }}</span>
+                        </div>
+                        <a href="/matches/{{ match.id }}" class="btn btn-sm btn-outline-dark w-100 mt-2">Протокол</a>
+                    </li>
+                    {% else %}
+                    <li class="list-group-item p-4 text-center text-muted">Матчи не назначены.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="text-uppercase fw-bold mb-4 border-bottom pb-2">Турниры</h3>
+<div class="row">
+    {% for tournament in tournaments %}
+    <!-- По 3 турнира в ряд -->
+    <div class="col-md-6 col-xl-4 mb-4">
+        <div class="card border-0 shadow-sm h-100 hover-lift">
+            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+                <span class="fw-bold text-truncate">{{ tournament.name }}</span>
+                <span class="badge bg-danger ms-2">{{ tournament.status.value }}</span>
+            </div>
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between mb-4">
+                    <div><small class="text-muted d-block">Дивизион</small><strong>{{ tournament.division }}</strong></div>
+                    <div><small class="text-muted d-block">Сезон</small><strong>{{ tournament.season }}</strong></div>
+                    <div><small class="text-muted d-block">Возраст</small><strong>{{ tournament.age_category }}</strong></div>
+                </div>
+                <a href="/tournaments/{{ tournament.id }}" class="btn btn-dark w-100">Перейти к турниру</a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12"><div class="alert alert-secondary">Турниров пока нет.</div></div>
+    {% endfor %}
+</div>
+{% endblock %}

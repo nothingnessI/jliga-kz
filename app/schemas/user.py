@@ -7,7 +7,7 @@ from app.schemas.base import ORMModel
 class UserBase(BaseModel):
     email: EmailStr
     full_name: str | None = Field(None, max_length=255)
-    role: UserRole = UserRole.USER
+    # role: UserRole = UserRole.USER
 
 
 class UserCreate(UserBase):

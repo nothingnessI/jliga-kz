@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+    <h3 class="text-uppercase fw-bold m-0">Стадионы</h3>
+</div>
+
+<div class="row">
+    {% for stadium in stadiums %}
+    <div class="col-12 mb-5">
+        <div class="card border-0 shadow-sm overflow-hidden">
+            <div class="row g-0">
+                <!-- Левая часть: Карта -->
+                <div class="col-md-6" style="min-height: 300px;">
+                    {% if stadium.latitude and stadium.longitude %}
+                    <!-- Используем iframe Яндекс.Карт с меткой -->
+                    <iframe
+                        src="https://yandex.ru/map-widget/v1/?ll={{ stadium.longitude }},{{ stadium.latitude }}&z=15&pt={{ stadium.longitude }},{{ stadium.latitude }},pm2rdm"
+                        width="100%"
+                        height="100%"
+                        frameborder="0"
+                        allowfullscreen="true"
+                        style="min-height: 300px; display: block;">
+                    </iframe>
+                    {% else %}
+                    <div class="bg-light d-flex align-items-center justify-content-center h-100">
+                        <span class="text-muted">Координаты не указаны</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Правая часть: Фото и информация -->
+                <div class="col-md-6 d-flex flex-column">
+                    <!-- Фото стадиона -->
+                    {% if stadium.image_url %}
+                    <img src="{{ stadium.image_url }}" alt="{{ stadium.name }}" class="img-fluid w-100" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <span class="text-white fw-bold fs-3">ФОТО СТАДИОНА</span>
+                    </div>
+                    {% endif %}
+
+                    <!-- Информация -->
+                    <div class="card-body p-4 d-flex flex-column">
+                        <h4 class="card-title fw-bold text-uppercase mb-3">{{ stadium.name }}</h4>
+                        <p class="card-text text-muted mb-2">
+                            📍 {{ stadium.address or 'Адрес не указан' }}{% if stadium.city %}, {{ stadium.city }}{% endif %}
+                        </p>
+                        {% if stadium.capacity %}
+                        <p class="card-text text-muted mb-0">
+                            👥 Вместимость: {{ stadium.capacity }} мест
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-secondary text-center py-5">
+            Стадионы пока не добавлены.
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

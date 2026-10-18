@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="mb-4 border-bottom pb-3">
+    <a href="/tournaments/{{ match.tournament_id }}" class="text-decoration-none text-muted small">← К турниру</a>
+    <h4 class="fw-bold mt-1">{{ match.tournament.name }}</h4>
+    <p class="text-muted small">{{ match.match_date.strftime('%d %B %Y, %H:%M') if match.match_date else 'Дата не указана' }} | {{ match.stadium or 'Стадион не указан' }}</p>
+</div>
+
+<div class="row justify-content-center mb-5">
+    <div class="col-xl-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-5 text-center">
+                <div class="row align-items-center">
+                    <div class="col-4 text-end"><h3 class="fw-bold">{{ match.home_team.name }}</h3></div>
+                    <div class="col-4">
+                        <h1 class="display-3 fw-bold">{{ match.home_score or 0 }} : {{ match.away_score or 0 }}</h1>
+                        <span class="badge bg-{{ 'success' if match.status.value == 'FINISHED' else 'secondary' }} fs-6">{{ match.status.value }}</span>
+                    </div>
+                    <div class="col-4 text-start"><h3 class="fw-bold">{{ match.away_team.name }}</h3></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-xl-8 mx-auto">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-dark text-white fw-bold py-3">События матча</div>
+            <ul class="list-group list-group-flush">
+                {% for event in match.events %}
+                <li class="list-group-item p-3 d-flex justify-content-between align-items-center">
+                    <div>
+                        <span class="badge bg-secondary me-3 fs-6">{{ event.minute }}'</span>
+                        {% if event.event_type.value == 'GOAL' %} ⚽ <strong>Гол!</strong>
+                        {% elif event.event_type.value == 'YELLOW_CARD' %} 🟨 Жёлтая карточка
+                        {% elif event.event_type.value == 'RED_CARD' %} 🟥 Красная карточка
+                        {% else %} {{ event.event_type.value }} {% endif %}
+                        
+                        {% if event.player %} — {{ event.player.first_name }} {{ event.player.last_name }}{% endif %}
+                    </div>
+                    <span class="text-muted fw-bold">{{ event.team.name }}</span>
+                </li>
+                {% else %}
+                <li class="list-group-item p-4 text-center text-muted">Событий в этом матче пока нет.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

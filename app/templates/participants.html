@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="text-uppercase fw-bold m-0">Участники</h3>
+    <span class="badge bg-dark fs-6">Всего: {{ teams|length }}</span>
+</div>
+
+<div class="row">
+    {% for team in teams %}
+    <!-- По 6 команд в ряд на больших экранах -->
+    <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+        <div class="card border-0 shadow-sm h-100 text-center py-4 hover-lift">
+            <div class="mx-auto bg-light rounded-circle d-flex align-items-center justify-content-center mb-3 shadow-sm" style="width: 80px; height: 80px;">
+                <span class="fs-3 fw-bold text-secondary">{{ team.name[3:5] if team.name|length > 5 else team.name[0] }}</span>
+            </div>
+            <div class="card-body p-2">
+                <h6 class="fw-bold mb-1 text-truncate" title="{{ team.name }}">{{ team.name }}</h6>
+                <p class="text-muted small mb-0">{{ team.city or 'Не указан' }}</p>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12"><div class="alert alert-secondary">Команды пока не добавлены.</div></div>
+    {% endfor %}
+</div>
+{% endblock %}

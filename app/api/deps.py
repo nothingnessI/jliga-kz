@@ -6,18 +6,18 @@ from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.db.session import session_factory
+from app.db.session import get_db
 from app.core.security import ALGORITHM
 from app.crud.user import user as crud_user
 from app.models.user import User
 from app.models.enums import UserRole
 from app.schemas.user import TokenData
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 async def get_current_user(
-        db: AsyncSession = Depends(session_factory),
+        db: AsyncSession = Depends(get_db),
         token: str = Depends(oauth2_scheme),
 ) -> User:
     credentials_exception = HTTPException(

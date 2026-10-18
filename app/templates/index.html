@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- Левая часть: Матчи и Новости -->
+    <div class="col-xl-9 col-lg-8">
+        <h5 class="mb-3 text-uppercase fw-bold border-bottom pb-2">Матчи</h5>
+        <div class="row">
+            {% for match in upcoming_matches %}
+            <div class="col-md-6 col-xl-4">
+                <div class="match-card">
+                    <div class="match-date">{{ match.match_date.strftime('%d %B / %H:%M') if match.match_date else 'Дата не указана' }}</div>
+                    <div class="match-team">
+                        <span class="text-truncate" style="max-width: 40%;">{{ match.home_team.name }}</span>
+                        <span class="match-score">{{ match.home_score or 0 }} - {{ match.away_score or 0 }}</span>
+                        <span class="text-truncate text-end" style="max-width: 40%;">{{ match.away_team.name }}</span>
+                    </div>
+                    <div class="text-center mt-2">
+                        <a href="/matches/{{ match.id }}" class="btn btn-sm btn-outline-dark w-100">Протокол</a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12"><div class="alert alert-secondary">Нет ближайших матчей.</div></div>
+            {% endfor %}
+        </div>
+
+        <h5 class="mb-3 mt-5 text-uppercase fw-bold border-bottom pb-2">Результаты</h5>
+        <div class="row">
+            {% for match in last_matches %}
+            <div class="col-md-6 col-xl-4">
+                <div class="match-card">
+                    <div class="match-date">{{ match.match_date.strftime('%d %B / %H:%M') if match.match_date else 'Дата не указана' }}</div>
+                    <div class="match-team">
+                        <span class="text-truncate" style="max-width: 40%;">{{ match.home_team.name }}</span>
+                        <span class="match-score bg-dark text-white">{{ match.home_score }} : {{ match.away_score }}</span>
+                        <span class="text-truncate text-end" style="max-width: 40%;">{{ match.away_team.name }}</span>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12"><div class="alert alert-secondary">Нет завершенных матчей.</div></div>
+            {% endfor %}
+        </div>
+
+        <h5 class="mb-3 mt-5 text-uppercase fw-bold border-bottom pb-2">Новости лиги</h5>
+        <div class="row">
+            {% for news in latest_news %}
+            <div class="col-md-6 col-xl-4 mb-3">
+                <div class="card border-0 shadow-sm h-100 hover-lift">
+                    <div class="card-body">
+                        <small class="text-muted">{{ news.published_at.strftime('%d.%m.%Y') if news.published_at else '' }}</small>
+                        <h6 class="fw-bold mt-2 text-truncate">{{ news.title }}</h6>
+                        <p class="small text-muted mb-0">{{ news.content[:80] }}...</p>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="col-12"><div class="alert alert-secondary">Новостей пока нет.</div></div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Правая часть: Таблица -->
+    <div class="col-xl-3 col-lg-4">
+        {% if active_tournament %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="sidebar-title">{{ active_tournament.name }}</div>
+            <div class="card-body p-0">
+                <table class="table table-custom mb-0 text-center">
+                    <thead><tr><th>#</th><th class="text-start">Команда</th><th>И</th><th>О</th></tr></thead>
+                    <tbody>
+                        {% for standing in standings %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td class="text-start fw-bold text-truncate" style="max-width: 120px;">{{ standing.team.name }}</td>
+                            <td>{{ standing.games_played }}</td>
+                            <td><strong>{{ standing.points }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card border-0 shadow-sm">
+            <div class="sidebar-title bg-success">Бомбардиры</div>
+            <div class="card-body p-0">
+                <table class="table table-custom mb-0 text-center">
+                    <tbody>
+                        {% for scorer in top_scorers %}
+                        <tr><td class="text-start">{{ loop.index }}. {{ scorer.name }}</td><td class="fw-bold">{{ scorer.goals }}</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
