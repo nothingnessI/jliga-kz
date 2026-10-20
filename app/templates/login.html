@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center my-5">
+    <div class="col-md-5 col-lg-4">
+        <div class="card border-0 shadow-lg">
+            <div class="card-header bg-dark text-white text-center py-3">
+                <h4 class="m-0 fw-bold text-uppercase">Вход для администратора</h4>
+            </div>
+            <div class="card-body p-4">
+
+                {% if request.query_params.get('error') %}
+                <div class="alert alert-danger p-2 text-center small">Неверный email или пароль</div>
+                {% endif %}
+
+                <form action="/web-login" method="post">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Email</label>
+                        <input type="email" name="username" class="form-control" placeholder="admin@example.com" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Пароль</label>
+                        <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100 fw-bold py-2 text-uppercase">Войти</button>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

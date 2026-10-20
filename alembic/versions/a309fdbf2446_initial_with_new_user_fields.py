@@ -1,8 +1,8 @@
-"""initial
+"""initial with new user fields
 
-Revision ID: ff0eafbcc7c1
+Revision ID: a309fdbf2446
 Revises: 
-Create Date: 2026-10-17 17:32:13.895286
+Create Date: 2026-10-19 16:31:24.981411
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'ff0eafbcc7c1'
+revision: str = 'a309fdbf2446'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -40,6 +40,10 @@ def upgrade() -> None:
     sa.Column('name', sa.String(length=200), nullable=False),
     sa.Column('address', sa.String(length=300), nullable=True),
     sa.Column('city', sa.String(length=100), nullable=True),
+    sa.Column('capacity', sa.Integer(), nullable=True),
+    sa.Column('image_url', sa.String(length=500), nullable=True),
+    sa.Column('latitude', sa.Float(), nullable=True),
+    sa.Column('longitude', sa.Float(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id')
@@ -156,7 +160,7 @@ def upgrade() -> None:
     sa.Column('slug', sa.String(length=255), nullable=False),
     sa.Column('content', sa.Text(), nullable=False),
     sa.Column('image_url', sa.Text(), nullable=True),
-    sa.Column('published_ate', sa.DateTime(timezone=True), nullable=False),
+    sa.Column('published_at', sa.DateTime(timezone=True), nullable=False),
     sa.Column('is_published', sa.Boolean(), nullable=False),
     sa.Column('tournament_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
@@ -237,9 +241,14 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('email', sa.String(length=255), nullable=False),
     sa.Column('hashed_password', sa.String(length=255), nullable=False),
-    sa.Column('full_name', sa.String(length=255), nullable=True),
+    sa.Column('first_name', sa.String(length=100), nullable=False),
+    sa.Column('last_name', sa.String(length=100), nullable=False),
+    sa.Column('phone', sa.String(length=20), nullable=True),
     sa.Column('role', sa.Enum('ADMIN', 'EDITOR', 'CAPTAIN', 'USER', name='user_role'), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
+    sa.Column('is_verified', sa.Boolean(), nullable=False),
+    sa.Column('verification_token', sa.String(length=255), nullable=True),
+    sa.Column('reset_token', sa.String(length=255), nullable=True),
     sa.Column('team_id', sa.Integer(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),

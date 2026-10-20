@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center my-5">
+    <div class="col-md-6 col-lg-5">
+        <div class="card border-0 shadow-lg">
+            <div class="card-header bg-dark text-white text-center py-3">
+                <h4 class="m-0 fw-bold text-uppercase">Регистрация</h4>
+            </div>
+            <div class="card-body p-4">
+
+                {% if request.query_params.get('error') %}
+                <div class="alert alert-danger p-2 text-center small">Ошибка! Возможно, этот email уже занят или пароли не совпадают.</div>
+                {% endif %}
+
+                <form action="/register" method="post">
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Фамилия</label>
+                            <input type="text" name="last_name" class="form-control" placeholder="Алиев" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Имя</label>
+                            <input type="text" name="first_name" class="form-control" placeholder="Рашид" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Email</label>
+                        <input type="email" name="email" class="form-control" placeholder="example@mail.ru" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold text-uppercase">Телефон</label>
+                        <input type="text" name="phone" class="form-control" placeholder="+7 (777) 123-45-67">
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Пароль</label>
+                            <input type="password" name="password" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Повтор пароля</label>
+                            <input type="password" name="confirm_password" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-danger w-100 fw-bold py-2 text-uppercase">Зарегистрироваться</button>
+                </form>
+
+                <div class="text-center mt-4">
+                    <span class="text-muted small">Уже есть аккаунт? </span>
+                    <a href="/login" class="text-decoration-none small fw-bold text-dark">Войти</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

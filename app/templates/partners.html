@@ -34,7 +34,6 @@
     <div class="col-6 col-md-4 col-lg-3 mb-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="d-flex align-items-center justify-content-center p-4" style="height: 180px;">
-                <!-- Обрати внимание на .png в названии файла -->
                 <img src="/static/Partners/jliga.png" class="img-fluid" alt="J-LIGA" style="max-height: 100%; object-fit: contain;">
             </div>
             <div class="card-body pt-0">
@@ -55,16 +54,19 @@
         </div>
     </div>
 
-    <!-- 5. Место для рекламы -->
+    <!-- 5. Место для рекламы (КЛИКАБЕЛЬНО) -->
     <div class="col-6 col-md-4 col-lg-3 mb-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="d-flex align-items-center justify-content-center p-4" style="height: 180px;">
-                <img src="/static/Partners/void.jpg" class="img-fluid" alt="Место для вашей рекламы" style="max-height: 100%; object-fit: contain;">
+        <!-- Обернули карточку в ссылку на WhatsApp -->
+        <a href="https://wa.clck.bar/77087232313" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-dark d-block h-100">
+            <div class="card border-0 shadow-sm h-100 hover-lift">
+                <div class="d-flex align-items-center justify-content-center p-4" style="height: 180px;">
+                    <img src="/static/Partners/void.jpg" class="img-fluid" alt="Место для вашей рекламы" style="max-height: 100%; object-fit: contain;">
+                </div>
+                <div class="card-body pt-0">
+                    <p class="card-text fw-bold text-uppercase mb-0" style="font-size: 14px;">Место для вашей рекламы</p>
+                </div>
             </div>
-            <div class="card-body pt-0">
-                <p class="card-text fw-bold text-uppercase mb-0" style="font-size: 14px;">Место для вашей рекламы</p>
-            </div>
-        </div>
+        </a>
     </div>
 </div>
 {% endblock %}

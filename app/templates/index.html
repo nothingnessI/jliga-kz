@@ -1,6 +1,13 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% if request.query_params.get('login_error') %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <strong>Ошибка!</strong> Неверный email или пароль.
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
 <div class="row">
     <!-- Левая часть: Матчи и Новости -->
     <div class="col-xl-9 col-lg-8">

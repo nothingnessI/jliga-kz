@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-
+import uuid
 from app.crud.base import CRUDBase
 from app.models.user import User
 from app.schemas.user import UserCreate, UserUpdate
@@ -30,5 +30,25 @@ class CRUDUser(CRUDBase[User, UserCreate, UserUpdate]):
         await db.refresh(db_obj)
         return db_obj
 
+
+    async def create(self, db: AsyncSession, *, obj_in: UserCreate, role: UserRole = UserRole.USER) -> User:
+        # Генерируем токен для подтверждения почты
+        verify_token = str(uuid.uuid4())
+
+        db_obj = User(
+            email=obj_in.email,
+            hashed_password=get_password_hash(obj_in.password),
+            first_name=obj_in.first_name,
+            last_name=obj_in.last_name,
+            phone=obj_in.phone,
+            role=role,
+            is_active=True,
+            is_verified=False,  # Изначально почта не подтверждена
+            verification_token=verify_token
+        )
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
 
 user = CRUDUser(User)
