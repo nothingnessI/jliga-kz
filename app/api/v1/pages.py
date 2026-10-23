@@ -45,6 +45,8 @@ from app.schemas.team_player import TeamPlayerCreate
 from app.models.enums import MatchEventType
 from app.crud.match_event import match_event as crud_match_event
 from app.schemas.match_event import MatchEventCreate
+from app.crud.news import news as crud_news
+from app.schemas.news import NewsCreate, NewsUpdate
 
 router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -1093,8 +1095,137 @@ async def admin_generate_calendar(
             home_team_id=home_id,
             away_team_id=away_id,
             status=MatchStatus.SCHEDULED,
-            round=1 # Пока ставим всем первый тур (можно улучшить в будущем)
+            round=1
         )
         await crud_match.create(db, obj_in=match_in)
 
     return RedirectResponse(url="/admin/tournaments", status_code=303)
+
+
+# --- НОВОСТИ ---
+
+@router.get("/admin/news")
+async def admin_news_list(request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    news_list = (await db.execute(select(News).order_by(News.created_at.desc()))).scalars().all()
+    return await render_page(request, db, "admin_news.html", context={"user": user, "news_list": news_list})
+
+
+@router.get("/admin/news/create")
+async def admin_news_create_form(request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    return await render_page(request, db, "admin_news_form.html", context={"user": user, "news": None})
+
+
+@router.post("/admin/news/create")
+async def admin_news_create(
+        request: Request,
+        title: str = Form(...),
+        slug: str = Form(...),
+        content: str = Form(...),
+        published_at: str = Form(None),
+        is_published: bool = Form(False),
+        image: UploadFile = File(None),
+        db: AsyncSession = Depends(get_db)
+):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    image_url = await save_upload_file(image, "news")
+    parsed_date = datetime.fromisoformat(published_at) if published_at else datetime.now()
+
+    news_in = NewsCreate(
+        title=title, slug=slug, content=content,
+        image_url=image_url, is_published=is_published, published_at=parsed_date
+    )
+    await crud_news.create(db, obj_in=news_in)
+    return RedirectResponse(url="/admin/news", status_code=303)
+
+
+@router.get("/admin/news/{news_id}/edit")
+async def admin_news_edit_form(news_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    news_item = await crud_news.get(db, news_id)
+    if not news_item: return RedirectResponse(url="/admin/news", status_code=303)
+
+    return await render_page(request, db, "admin_news_form.html", context={"user": user, "news": news_item})
+
+
+@router.post("/admin/news/{news_id}/edit")
+async def admin_news_edit(
+        news_id: int,
+        request: Request,
+        title: str = Form(...),
+        slug: str = Form(...),
+        content: str = Form(...),
+        published_at: str = Form(None),
+        is_published: bool = Form(False),
+        image: UploadFile = File(None),
+        db: AsyncSession = Depends(get_db)
+):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    news_item = await crud_news.get(db, news_id)
+    if not news_item: return RedirectResponse(url="/admin/news", status_code=303)
+
+    new_image_url = await save_upload_file(image, "news")
+    final_image_url = new_image_url if new_image_url else news_item.image_url
+    parsed_date = datetime.fromisoformat(published_at) if published_at else news_item.published_at
+
+    news_in = NewsUpdate(
+        title=title, slug=slug, content=content,
+        image_url=final_image_url, is_published=is_published, published_at=parsed_date
+    )
+    await crud_news.update(db, db_obj=news_item, obj_in=news_in)
+    return RedirectResponse(url="/admin/news", status_code=303)
+
+
+@router.post("/admin/news/{news_id}/delete")
+async def admin_news_delete(news_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    news_item = await crud_news.get(db, news_id)
+    if news_item: await crud_news.delete(db, db_obj=news_item)
+
+    return RedirectResponse(url="/admin/news", status_code=303)
+
+
+@router.get("/matches/{match_id}/print")
+async def match_protocol_print(match_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    """Страница для печати официального протокола матча."""
+    stmt = select(Match).where(Match.id == match_id).options(
+        selectinload(Match.home_team),
+        selectinload(Match.away_team),
+        selectinload(Match.tournament),
+        selectinload(Match.events).selectinload(MatchEvent.player),
+        selectinload(Match.events).selectinload(MatchEvent.team)
+    )
+    match = (await db.execute(stmt)).scalar_one_or_none()
+
+    if not match:
+        raise HTTPException(status_code=404, detail="Матч не найден")
+
+    if match.events:
+        match.events.sort(key=lambda e: e.minute)
+
+    # Разделяем события на голы хозяев и гостей (для красивого вывода)
+    home_events = [e for e in match.events if e.team_id == match.home_team_id]
+    away_events = [e for e in match.events if e.team_id == match.away_team_id]
+
+    return templates.TemplateResponse(
+        request=request,
+        name="protocol_print.html",
+        context={
+            "match": match,
+            "home_events": home_events,
+            "away_events": away_events
+        }
+    )

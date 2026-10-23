@@ -1,0 +1,56 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold m-0">{{ 'Редактировать новость' if news else 'Новая новость' }}</h4>
+    <a href="/admin/news" class="btn btn-outline-secondary">← Назад</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <form action="/admin/news/{% if news %}{{ news.id }}/edit{% else %}create{% endif %}" method="post" enctype="multipart/form-data">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Заголовок *</label>
+                    <input type="text" name="title" class="form-control" value="{{ news.title if news else '' }}" required>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Slug (URL) *</label>
+                    <input type="text" name="slug" class="form-control" value="{{ news.slug if news else '' }}" placeholder="match-tour-1" required>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Текст новости *</label>
+                    <textarea name="content" class="form-control" rows="10" required>{{ news.content if news else '' }}</textarea>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Обложка новости</label>
+                    <input type="file" name="image" class="form-control" accept="image/*">
+                    {% if news and news.image_url %}
+                        <small class="text-success d-block mt-1">Текущая обложка: <a href="{{ news.image_url }}" target="_blank">Посмотреть</a></small>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Дата публикации</label>
+                    <input type="datetime-local" name="published_at" class="form-control" value="{{ news.published_at.strftime('%Y-%m-%dT%H:%M') if news and news.published_at else '' }}">
+                </div>
+
+                <div class="col-12 mt-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_published" id="is_published" value="true" {% if news and news.is_published %}checked{% endif %}>
+                        <label class="form-check-label fw-bold text-muted" for="is_published">Опубликовать на сайте</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top">
+                <button type="submit" class="btn btn-success fw-bold px-4">Сохранить новость</button>
+                <a href="/admin/news" class="btn btn-light ms-2">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

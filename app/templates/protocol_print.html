@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Протокол матча - {{ match.home_team.name }} vs {{ match.away_team.name }}</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', Times, serif; /* Официальный шрифт */
+            background-color: #f0f0f0; /* Серый фон для экрана */
+            margin: 0;
+            padding: 20px;
+        }
+
+        /* Контейнер листа А4 */
+        .a4-page {
+            background-color: white;
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 20mm;
+            box-sizing: border-box;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+        }
+
+        /* Шапка протокола */
+        .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+        .header h1 { margin: 0 0 10px 0; font-size: 24px; text-transform: uppercase; }
+        .header p { margin: 5px 0; font-size: 16px; }
+
+        /* Табло */
+        .scoreboard { display: flex; justify-content: space-between; align-items: center; margin: 40px 0; }
+        .team { font-size: 22px; font-weight: bold; width: 40%; }
+        .team.home { text-align: right; }
+        .team.away { text-align: left; }
+        .score { font-size: 48px; font-weight: bold; border: 2px solid #000; padding: 10px 30px; }
+
+        /* Таблица событий */
+        .events-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .events-table th, .events-table td { border: 1px solid #000; padding: 8px; text-align: left; font-size: 14px; }
+        .events-table th { background-color: #eee; text-align: center; }
+
+        /* Кнопка печати */
+        .print-btn {
+            display: block; width: 200px; margin: 20px auto; padding: 10px;
+            background-color: #0d6efd; color: white; text-align: center;
+            text-decoration: none; font-family: Arial, sans-serif; font-weight: bold;
+            border-radius: 5px; cursor: pointer; border: none;
+        }
+
+        /* МАГИЯ ПЕЧАТИ: скрываем всё лишнее */
+        @media print {
+            body { background-color: white; padding: 0; }
+            .a4-page { box-shadow: none; width: 100%; padding: 0; }
+            .print-btn { display: none; } /* Скрываем кнопку при печати */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Кнопка для вызова окна печати -->
+    <button class="print-btn" onclick="window.print()">🖨️ Распечатать</button>
+
+    <!-- Лист А4 -->
+    <div class="a4-page">
+        <!-- Шапка -->
+        <div class="header">
+            <h1>Официальный протокол матча</h1>
+            <p><strong>Турнир:</strong> {{ match.tournament.name }} ({{ match.tournament.season }})</p>
+            <p><strong>Дата и время:</strong> {{ match.match_date.strftime('%d.%m.%Y %H:%M') if match.match_date else 'Не указана' }}</p>
+            <p><strong>Стадион:</strong> {{ match.stadium or 'Не указан' }}</p>
+        </div>
+
+        <!-- Счет -->
+        <div class="scoreboard">
+            <div class="team home">{{ match.home_team.name }}</div>
+            <div class="score">{{ match.home_score or 0 }} : {{ match.away_score or 0 }}</div>
+            <div class="team away">{{ match.away_team.name }}</div>
+        </div>
+
+        <!-- Таблица событий -->
+        <table class="events-table">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">Минута</th>
+                    <th style="width: 35%;">{{ match.home_team.name }}</th>
+                    <th style="width: 35%;">{{ match.away_team.name }}</th>
+                    <th style="width: 15%;">Событие</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for event in match.events %}
+                <tr>
+                    <td style="text-align: center; font-weight: bold;">{{ event.minute }}'</td>
+
+                    <!-- Событие хозяев -->
+                    <td>
+                        {% if event.team_id == match.home_team_id %}
+                            {% if event.event_type.value == 'GOAL' %}⚽
+                            {% elif event.event_type.value == 'YELLOW_CARD' %}🟨
+                            {% elif event.event_type.value == 'RED_CARD' %}🟥
+                            {% endif %}
+                            {{ event.player.last_name if event.player else 'Неизвестный' }}
+                        {% endif %}
+                    </td>
+
+                    <!-- Событие гостей -->
+                    <td>
+                        {% if event.team_id == match.away_team_id %}
+                            {% if event.event_type.value == 'GOAL' %}⚽
+                            {% elif event.event_type.value == 'YELLOW_CARD' %}🟨
+                            {% elif event.event_type.value == 'RED_CARD' %}🟥
+                            {% endif %}
+                            {{ event.player.last_name if event.player else 'Неизвестный' }}
+                        {% endif %}
+                    </td>
+
+                    <!-- Тип события текстом -->
+                    <td style="text-align: center;">
+                        {% if event.event_type.value == 'GOAL' %}Гол
+                        {% elif event.event_type.value == 'PENALTY_GOAL' %}Пенальти
+                        {% elif event.event_type.value == 'OWN_GOAL' %}Автогол
+                        {% elif event.event_type.value == 'YELLOW_CARD' %}Желтая карточка
+                        {% elif event.event_type.value == 'RED_CARD' %}Красная карточка
+                        {% else %}{{ event.event_type.value }}{% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align: center; padding: 20px;">В этом матче не было зафиксировано событий</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Подписи -->
+        <div style="margin-top: 80px; display: flex; justify-content: space-between;">
+            <div style="width: 40%; border-bottom: 1px solid #000; text-align: center; padding-bottom: 5px;">Главный судья</div>
+            <div style="width: 40%; border-bottom: 1px solid #000; text-align: center; padding-bottom: 5px;">Инспектор матча</div>
+        </div>
+    </div>
+
+</body>
+</html>
