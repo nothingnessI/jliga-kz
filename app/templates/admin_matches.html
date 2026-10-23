@@ -1,0 +1,102 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold m-0">Матчи</h4>
+    <a href="/admin/matches/create" class="btn btn-primary fw-bold">
+        <i class="bi bi-plus-lg"></i> Добавить матч
+    </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 text-center">
+                <thead class="table-light">
+                    <tr>
+                        <th class="py-3 px-4 text-start" style="width: 120px;">Дата</th>
+                        <th class="text-start">Турнир</th>
+                        <th class="text-end" style="width: 25%;">Хозяева</th>
+                        <th style="width: 100px;">Счет</th>
+                        <th class="text-start" style="width: 25%;">Гости</th>
+                        <th style="width: 120px;">Статус</th>
+                        <th class="text-end px-4" style="width: 200px;">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for match in matches %}
+                    <tr>
+                        <!-- Дата и время -->
+                        <td class="px-4 text-start">
+                            <small class="fw-bold">{{ match.match_date.strftime('%d.%m.%Y') if match.match_date else 'TBA' }}</small><br>
+                            <small class="text-muted">{{ match.match_date.strftime('%H:%M') if match.match_date else '' }}</small>
+                        </td>
+
+                        <!-- Турнир -->
+                        <td class="text-start">
+                            <small class="text-muted">{{ match.tournament.name }}</small>
+                        </td>
+
+                        <!-- Хозяева -->
+                        <td class="text-end fw-bold text-dark">
+                            {{ match.home_team.name }}
+                        </td>
+
+                        <!-- Счет -->
+                        <td>
+                            {% if match.status.value == 'FINISHED' or match.status.value == 'LIVE' %}
+                                <span class="badge bg-dark fs-6 px-3 py-2">{{ match.home_score or 0 }} : {{ match.away_score or 0 }}</span>
+                            {% else %}
+                                <span class="text-muted fw-bold">- : -</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Гости -->
+                        <td class="text-start fw-bold text-dark">
+                            {{ match.away_team.name }}
+                        </td>
+
+                        <!-- Статус -->
+                        <td>
+                            <span class="badge bg-{{ 'success' if match.status.value == 'FINISHED' else 'danger' if match.status.value == 'LIVE' else 'secondary' }}">
+                                {{ match.status.value }}
+                            </span>
+                        </td>
+
+                        <!-- Действия -->
+                        <td class="text-end px-4">
+                            <div class="d-flex justify-content-end gap-2">
+                                <!-- Кнопка Протокол -->
+                                <a href="/admin/matches/{{ match.id }}/events" class="btn btn-sm btn-outline-success" title="Протокол матча">
+                                    <i class="bi bi-activity me-1"></i> Протокол
+                                </a>
+
+                                <!-- Кнопка Редактировать -->
+                                <a href="/admin/matches/{{ match.id }}/edit" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+
+                                <!-- Кнопка Удалить -->
+                                <form action="/admin/matches/{{ match.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Вы уверены, что хотите удалить этот матч?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-calendar-x fs-1 d-block mb-3 text-secondary"></i>
+                            Матчи пока не назначены. <br>
+                            Нажмите «Добавить матч», чтобы создать расписание.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

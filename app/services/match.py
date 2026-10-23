@@ -50,7 +50,6 @@ class MatchService:
         from app.services.standings import StandingsService
         await StandingsService.recalculate_standings(db, match.tournament_id)
 
-
     @staticmethod
     def generate_round_robin(team_ids: list[int]) -> list[tuple[int, int]]:
         """Генерирует пары команд для кругового турнира (каждый с каждым)."""
@@ -66,10 +65,12 @@ class MatchService:
                 home = teams[j]
                 away = teams[n - 1 - j]
                 if home is not None and away is not None:
+                    # Чередуем домашние и гостевые матчи
                     if i % 2 == 0:
                         pairs.append((home, away))
                     else:
                         pairs.append((away, home))
+            # Ротация команд (кроме первой)
             teams = [teams[0]] + [teams[-1]] + teams[1:-1]
 
         return pairs

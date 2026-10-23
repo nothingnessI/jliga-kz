@@ -1,0 +1,61 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold m-0">{{ 'Редактировать стадион' if stadium else 'Новый стадион' }}</h4>
+    <a href="/admin/stadiums" class="btn btn-outline-secondary">← Назад</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <!-- Обязательно добавлен enctype -->
+        <form action="/admin/stadiums/{% if stadium %}{{ stadium.id }}/edit{% else %}create{% endif %}" method="post" enctype="multipart/form-data">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Название *</label>
+                    <input type="text" name="name" class="form-control" value="{{ stadium.name if stadium else '' }}" required>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Город</label>
+                    <input type="text" name="city" class="form-control" value="{{ stadium.city if stadium and stadium.city else '' }}">
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Адрес</label>
+                    <input type="text" name="address" class="form-control" value="{{ stadium.address if stadium and stadium.address else '' }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Вместимость</label>
+                    <input type="number" name="capacity" class="form-control" value="{{ stadium.capacity if stadium and stadium.capacity else '' }}">
+                </div>
+
+                <!-- ПОЛЕ ЗАГРУЗКИ ФОТО -->
+                <div class="col-md-8">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Фотография стадиона</label>
+                    <input type="file" name="image" class="form-control" accept="image/*">
+                    {% if stadium and stadium.image_url %}
+                        <small class="text-success d-block mt-1">Текущее фото: <a href="{{ stadium.image_url }}" target="_blank">Посмотреть</a></small>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Широта (Latitude)</label>
+                    <input type="number" step="any" name="latitude" class="form-control" value="{{ stadium.latitude if stadium and stadium.latitude else '' }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Долгота (Longitude)</label>
+                    <input type="number" step="any" name="longitude" class="form-control" value="{{ stadium.longitude if stadium and stadium.longitude else '' }}">
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top">
+                <button type="submit" class="btn btn-success fw-bold px-4">Сохранить</button>
+                <a href="/admin/stadiums" class="btn btn-light ms-2">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

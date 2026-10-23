@@ -1,60 +1,40 @@
-import uvicorn
-from fastapi import FastAPI
 from pathlib import Path
-
-from  fastapi.templating import Jinja2Templates
+from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-
 from fastapi.middleware.cors import CORSMiddleware
 
-from contextlib import asynccontextmanager
-from db import engine
-from core import settings, Base
-
+# Импортируем наши роутеры
 from app.api.v1.api import api_router
-
 from app.api.v1 import pages
 
-
-STATIC_DIR = Path(__file__).resolve().parent / "static"
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-    yield
-
-    await engine.dispose()
-
+# Определяем базовую директорию (папка app)
+BASE_DIR = Path(__file__).resolve().parent
 
 app = FastAPI(
-    title=settings.APP_NAME,
-    lifespan=lifespan
+    title="J-Liga",
+    description="Официальный сайт футбольной лиги",
+    version="1.0.0",
 )
 
-
-app.include_router(api_router)
-app.include_router(pages.router)
-
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-
-
-templates = Jinja2Templates(directory="app/templates")
-
+# Настройка CORS (чтобы фронтенд мог делать запросы)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # В продакшене заменить на ["https://jliga.kz"]
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Подключаем папку со статикой (картинки, css, js)
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
+# 1. Подключаем API (эндпоинты для Swagger / JSON)
+app.include_router(api_router, prefix="/api/v1")
+
+# 2. Подключаем HTML-страницы (Jinja2)
+app.include_router(pages.router)
+
+# Запуск сервера (для запуска через python app/main.py)
 if __name__ == "__main__":
-    uvicorn.run(
-        app,
-        host=settings.APP_HOST,
-        port=settings.APP_PORT,
-    )
+    import uvicorn
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)

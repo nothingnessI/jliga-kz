@@ -1,0 +1,54 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold m-0">{{ 'Редактировать игрока' if player else 'Новый игрок' }}</h4>
+    <a href="/admin/players" class="btn btn-outline-secondary">← Назад</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <form action="/admin/players/{% if player %}{{ player.id }}/edit{% else %}create{% endif %}" method="post" enctype="multipart/form-data">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Фамилия *</label>
+                    <input type="text" name="last_name" class="form-control" value="{{ player.last_name if player else '' }}" required>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Имя *</label>
+                    <input type="text" name="first_name" class="form-control" value="{{ player.first_name if player else '' }}" required>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Дата рождения</label>
+                    <input type="date" name="date_of_birth" class="form-control" value="{{ player.date_of_birth.strftime('%Y-%m-%d') if player and player.date_of_birth else '' }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Амплуа</label>
+                    <select name="position" class="form-select">
+                        <option value="">Не указано</option>
+                        {% for pos in positions %}
+                            <option value="{{ pos.value }}" {% if player and player.position == pos %}selected{% endif %}>{{ pos.value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Фотография игрока</label>
+                    <input type="file" name="photo" class="form-control" accept="image/*">
+                    {% if player and player.photo_url %}
+                        <small class="text-success d-block mt-1">Текущее фото: <a href="{{ player.photo_url }}" target="_blank">Посмотреть</a></small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top">
+                <button type="submit" class="btn btn-success fw-bold px-4">Сохранить</button>
+                <a href="/admin/players" class="btn btn-light ms-2">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

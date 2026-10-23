@@ -8,38 +8,45 @@
 
 <!-- Верхний ряд карточек -->
 <div class="row g-4 mb-4">
+    <!-- 1. Дни рождения -->
     <div class="col-md-3">
         <div class="stat-card" style="background-color: #8bc34a;">
             <i class="bi bi-gift icon"></i>
             <div>
-                <div class="number">24</div>
+                <div class="number">{{ birthdays_count|default(0) }}</div>
                 <div class="label">Дни рождения сегодня</div>
             </div>
         </div>
     </div>
+
+    <!-- 2. Заявки на управление -->
     <div class="col-md-3">
         <div class="stat-card" style="background-color: #2196f3;">
             <i class="bi bi-person-plus icon"></i>
             <div>
-                <div class="number">0</div>
+                <div class="number">{{ manage_requests|default(0) }}</div>
                 <div class="label">Заявки на управление</div>
             </div>
         </div>
     </div>
+
+    <!-- 3. Заявки на участие -->
     <div class="col-md-3">
         <div class="stat-card" style="background-color: #03a9f4;">
             <i class="bi bi-crosshair icon"></i>
             <div>
-                <div class="number">0</div>
+                <div class="number">{{ participation_requests|default(0) }}</div>
                 <div class="label">Заявки на участие</div>
             </div>
         </div>
     </div>
+
+    <!-- 4. Черновики дисквалификаций -->
     <div class="col-md-3">
         <div class="stat-card" style="background-color: #f44336;">
             <i class="bi bi-slash-circle icon"></i>
             <div>
-                <div class="number">0</div>
+                <div class="number">{{ disc_drafts|default(0) }}</div>
                 <div class="label">Черновики дисквалификаций</div>
             </div>
         </div>
@@ -48,6 +55,7 @@
 
 <!-- Второй ряд карточек -->
 <div class="row g-4 mb-4">
+    <!-- 1. Пользователи -->
     <div class="col-md-3">
         <div class="stat-card" style="background-color: #8bc34a;">
             <i class="bi bi-person icon"></i>
@@ -57,6 +65,8 @@
             </div>
         </div>
     </div>
+
+    <!-- 2. Новости на рассмотрении -->
     <div class="col-md-3">
         <div class="stat-card" style="background-color: #009688;">
             <i class="bi bi-newspaper icon"></i>
@@ -66,27 +76,31 @@
             </div>
         </div>
     </div>
+
+    <!-- 3. Фото на рассмотрении -->
     <div class="col-md-3">
         <div class="stat-card" style="background-color: #26a69a;">
             <i class="bi bi-image icon"></i>
             <div>
-                <div class="number">0</div>
+                <div class="number">{{ photos_count|default(0) }}</div>
                 <div class="label">Фото на рассмотрении</div>
             </div>
         </div>
     </div>
+
+    <!-- 4. Видео на рассмотрении -->
     <div class="col-md-3">
         <div class="stat-card" style="background-color: #26a69a;">
             <i class="bi bi-camera-video icon"></i>
             <div>
-                <div class="number">0</div>
+                <div class="number">{{ videos_count|default(0) }}</div>
                 <div class="label">Видео на рассмотрении</div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Синяя плашка -->
+<!-- Синяя плашка с инструкциями -->
 <div class="alert alert-info mb-4" role="alert">
     Инструкции, подсказки и ответы на часто задаваемые вопросы смотрите <a href="#" class="alert-link">здесь</a>
 </div>
@@ -97,10 +111,22 @@
     <div class="card-body p-4" style="background-color: #2b3035; color: white; border-radius: 8px;">
         <h5 class="fw-bold mb-4">Для администраторов системы</h5>
         <ul class="list-unstyled mb-0" style="line-height: 2.2;">
-            <li><i class="bi bi-record-circle me-2"></i> Ознакомьтесь с видео-инструкцией <a href="#" class="text-info text-decoration-none">здесь</a></li>
-            <li><i class="bi bi-record-circle me-2"></i> Создайте турнир <a href="/admin/tournaments" class="text-info text-decoration-none">здесь</a></li>
-            <li><i class="bi bi-record-circle me-2"></i> Создайте команды <a href="/admin/teams" class="text-info text-decoration-none">здесь</a></li>
-            <li><i class="bi bi-record-circle me-2"></i> Заявите команды на турнир <a href="#" class="text-info text-decoration-none">здесь</a></li>
+            <li>
+                <i class="bi bi-record-circle me-2"></i>
+                Ознакомьтесь с видео-инструкцией <a href="#" class="text-info text-decoration-none">здесь</a>
+            </li>
+            <li>
+                <i class="bi bi-record-circle me-2"></i>
+                Создайте турнир <a href="/admin/tournaments" class="text-info text-decoration-none">здесь</a>
+            </li>
+            <li>
+                <i class="bi bi-record-circle me-2"></i>
+                Создайте команды <a href="/admin/teams" class="text-info text-decoration-none">здесь</a>
+            </li>
+            <li>
+                <i class="bi bi-record-circle me-2"></i>
+                Заявите команды на турнир <a href="#" class="text-info text-decoration-none">здесь</a>
+            </li>
         </ul>
     </div>
 </div>

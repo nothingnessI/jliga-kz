@@ -1,0 +1,108 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold m-0">Заявка команды: {{ team.name }}</h4>
+        <span class="text-muted">Управление составом на турнир</span>
+    </div>
+    <a href="/admin/teams" class="btn btn-outline-secondary">← Назад к командам</a>
+</div>
+
+<!-- Выбор турнира -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form action="/admin/teams/{{ team.id }}/roster" method="get" class="d-flex align-items-center gap-3">
+            <label class="fw-bold text-muted text-uppercase small m-0">Выберите турнир:</label>
+            <select name="tournament_id" class="form-select w-auto" onchange="this.form.submit()">
+                <option value="">-- Выберите --</option>
+                {% for t in tournaments %}
+                    <option value="{{ t.id }}" {% if selected_tournament_id == t.id %}selected{% endif %}>{{ t.name }} ({{ t.season }})</option>
+                {% endfor %}
+            </select>
+            <noscript><button type="submit" class="btn btn-primary">Показать</button></noscript>
+        </form>
+    </div>
+</div>
+
+{% if selected_tournament_id %}
+<div class="row">
+    <!-- Текущий состав -->
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-dark text-white fw-bold">Заявленные игроки ({{ roster|length }})</div>
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="px-4">№</th>
+                            <th>Игрок</th>
+                            <th>Амплуа</th>
+                            <th class="text-end px-4">Удалить</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in roster %}
+                        <tr>
+                            <td class="px-4 fw-bold fs-5">{{ item.jersey_number or '-' }}</td>
+                            <td>
+                                {{ item.player.last_name }} {{ item.player.first_name }}
+                                {% if item.is_captain %}<span class="badge bg-warning text-dark ms-1">К</span>{% endif %}
+                            </td>
+                            <td><small class="text-muted">{{ item.player.position.value if item.player.position else '—' }}</small></td>
+                            <td class="text-end px-4">
+                                <form action="/admin/roster/{{ item.id }}/delete" method="post" onsubmit="return confirm('Убрать из заявки?');">
+                                    <input type="hidden" name="team_id" value="{{ team.id }}">
+                                    <input type="hidden" name="tournament_id" value="{{ selected_tournament_id }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-x-lg"></i></button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-center py-4 text-muted">Состав пока пуст.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Форма добавления -->
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm bg-light">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Добавить игрока в заявку</h6>
+                <form action="/admin/teams/{{ team.id }}/roster/add" method="post">
+                    <input type="hidden" name="tournament_id" value="{{ selected_tournament_id }}">
+                    
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">ИГРОК</label>
+                        <select name="player_id" class="form-select" required>
+                            <option value="">Выберите...</option>
+                            {% for p in all_players %}
+                                <option value="{{ p.id }}">{{ p.last_name }} {{ p.first_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">ИГРОВОЙ НОМЕР</label>
+                            <input type="number" name="jersey_number" class="form-control" min="1" max="99">
+                        </div>
+                        <div class="col-6 d-flex align-items-end">
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" name="is_captain" id="is_captain" value="true">
+                                <label class="form-check-label small fw-bold text-muted" for="is_captain">Капитан</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success w-100 fw-bold"><i class="bi bi-plus-lg"></i> Добавить в заявку</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

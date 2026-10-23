@@ -1,0 +1,101 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold m-0">{{ 'Редактировать турнир' if tournament else 'Новый турнир' }}</h4>
+    <a href="/admin/tournaments" class="btn btn-outline-secondary">← Назад</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <form action="/admin/tournaments/{% if tournament %}{{ tournament.id }}/edit{% else %}create{% endif %}" method="post" enctype="multipart/form-data">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Название турнира *</label>
+                    <input type="text" name="name" class="form-control" value="{{ tournament.name if tournament else '' }}" placeholder="J-LIGA PRIMERA 2026" required>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Сезон *</label>
+                    <input type="text" name="season" class="form-control" value="{{ tournament.season if tournament else '2026' }}" required>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Описание</label>
+                    <textarea name="description" class="form-control" rows="2">{{ tournament.description if tournament and tournament.description else '' }}</textarea>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Дата начала</label>
+                    <!-- Формат datetime-local требует значение в формате YYYY-MM-DDTHH:MM -->
+                    <input type="datetime-local" name="start_at" class="form-control" value="{{ tournament.start_at.strftime('%Y-%m-%dT%H:%M') if tournament and tournament.start_at else '' }}">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Дата окончания</label>
+                    <input type="datetime-local" name="end_at" class="form-control" value="{{ tournament.end_at.strftime('%Y-%m-%dT%H:%M') if tournament and tournament.end_at else '' }}">
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Дивизион *</label>
+                    <select name="division" class="form-select" required>
+                        <option value="PRIMERA" {% if tournament and tournament.division == 'PRIMERA' %}selected{% endif %}>PRIMERA</option>
+                        <option value="SEGUNDA" {% if tournament and tournament.division == 'SEGUNDA' %}selected{% endif %}>SEGUNDA</option>
+                        <option value="TERSERA" {% if tournament and tournament.division == 'TERSERA' %}selected{% endif %}>TERSERA</option>
+                        <option value="REGIONAL" {% if tournament and tournament.division == 'REGIONAL' %}selected{% endif %}>REGIONAL</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Возрастная категория *</label>
+                    <select name="age_category" class="form-select" required>
+                        <option value="ADULTS" {% if tournament and tournament.age_category == 'ADULTS' %}selected{% endif %}>ADULTS</option>
+                        <option value="UNDER-21" {% if tournament and tournament.age_category == 'UNDER-21' %}selected{% endif %}>UNDER-21</option>
+                        <option value="2014" {% if tournament and tournament.age_category == '2014' %}selected{% endif %}>2014</option>
+                        <option value="2013" {% if tournament and tournament.age_category == '2013' %}selected{% endif %}>2013</option>
+                        <option value="2012" {% if tournament and tournament.age_category == '2012' %}selected{% endif %}>2012</option>
+                        <option value="2011" {% if tournament and tournament.age_category == '2011' %}selected{% endif %}>2011</option>
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Макс. команд *</label>
+                    <input type="number" name="max_teams" class="form-control" value="{{ tournament.max_teams if tournament else 16 }}" required>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Статус *</label>
+                    <select name="status" class="form-select" required>
+                        {% for s in statuses %}
+                        <option value="{{ s.value }}" {% if tournament and tournament.status == s %}selected{% endif %}>{{ s.value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Формат</label>
+                    <select name="tournament_format" class="form-select">
+                        <option value="">Не указан</option>
+                        {% for f in formats %}
+                        <option value="{{ f.value }}" {% if tournament and tournament.tournament_format == f %}selected{% endif %}>{{ f.value }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Логотип турнира</label>
+                    <input type="file" name="logo" class="form-control" accept="image/*">
+                    {% if tournament and tournament.logo_url %}
+                        <small class="text-success d-block mt-1">Текущий: <a href="{{ tournament.logo_url }}" target="_blank">Посмотреть</a></small>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top">
+                <button type="submit" class="btn btn-success fw-bold px-4">Сохранить турнир</button>
+                <a href="/admin/tournaments" class="btn btn-light ms-2">Отмена</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
