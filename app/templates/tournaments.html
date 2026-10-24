@@ -1,27 +1,76 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h3 class="text-uppercase fw-bold mb-4 border-bottom pb-2">Турниры</h3>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="text-uppercase fw-bold m-0">Турниры</h3>
+
+    <!-- Выбор сезона -->
+    <form method="get" action="/tournaments" class="d-flex align-items-center">
+        <select name="season" class="form-select bg-info text-white fw-bold border-0 shadow-sm" onchange="this.form.submit()" style="min-width: 150px; cursor: pointer;">
+            {% for s in available_seasons %}
+                <option value="{{ s }}" {% if s == current_season %}selected{% endif %}>Сезон {{ s }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+
 <div class="row">
     {% for tournament in tournaments %}
-    <!-- По 3 турнира в ряд -->
-    <div class="col-md-6 col-xl-4 mb-4">
-        <div class="card border-0 shadow-sm h-100 hover-lift">
-            <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
-                <span class="fw-bold text-truncate">{{ tournament.name }}</span>
-                <span class="badge bg-danger ms-2">{{ tournament.status.value }}</span>
+    <!-- Карточка турнира (по 3 в ряд на больших экранах) -->
+    <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card border-0 shadow-sm h-100 hover-lift overflow-hidden">
+
+            <!-- Обложка турнира -->
+            <div style="height: 200px; background-color: #1a3c56; position: relative; display: flex; align-items: center; justify-content: center;">
+                {% if tournament.logo_url %}
+                    <!-- Если картинка битая, onerror скроет её и покажет кубок -->
+                    <img src="{{ tournament.logo_url }}"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+                         style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0;"
+                         alt="{{ tournament.name }}">
+                    <i class="bi bi-trophy text-white" style="font-size: 4rem; opacity: 0.3; display: none;"></i>
+                {% else %}
+                    <!-- Если картинки нет изначально -->
+                    <i class="bi bi-trophy text-white" style="font-size: 4rem; opacity: 0.3;"></i>
+                {% endif %}
+
+                <!-- Бейдж статуса -->
+                <span class="position-absolute top-0 end-0 m-3 badge bg-{{ 'success' if tournament.status.value == 'ACTIVE' else 'danger' }}">
+                    {{ tournament.status.value }}
+                </span>
             </div>
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between mb-4">
-                    <div><small class="text-muted d-block">Дивизион</small><strong>{{ tournament.division }}</strong></div>
-                    <div><small class="text-muted d-block">Сезон</small><strong>{{ tournament.season }}</strong></div>
-                    <div><small class="text-muted d-block">Возраст</small><strong>{{ tournament.age_category }}</strong></div>
+
+            <!-- Информация -->
+            <div class="card-body p-4 d-flex flex-column">
+                <h5 class="fw-bold text-dark mb-2 text-truncate" title="{{ tournament.name }}">{{ tournament.name }}</h5>
+
+                <div class="d-flex justify-content-between text-muted small mb-4 mt-auto">
+                    <div>
+                        <span class="d-block text-uppercase" style="font-size: 11px;">Дивизион</span>
+                        <strong class="text-dark">{{ tournament.division }}</strong>
+                    </div>
+                    <div>
+                        <span class="d-block text-uppercase" style="font-size: 11px;">Возраст</span>
+                        <strong class="text-dark">{{ tournament.age_category }}</strong>
+                    </div>
+                    <div>
+                        <span class="d-block text-uppercase" style="font-size: 11px;">Сезон</span>
+                        <strong class="text-dark">{{ tournament.season }}</strong>
+                    </div>
                 </div>
-                <a href="/tournaments/{{ tournament.id }}" class="btn btn-dark w-100">Перейти к турниру</a>
+
+                <a href="/tournaments/{{ tournament.id }}" class="btn btn-dark w-100 fw-bold">
+                    Перейти к турниру
+                </a>
             </div>
         </div>
     </div>
     {% else %}
-    <div class="col-12"><div class="alert alert-secondary">Турниров пока нет.</div></div>
+    <div class="col-12">
+        <div class="alert alert-secondary text-center py-5">
+            За {{ current_season }} год турниров не найдено.
+        </div>
+    </div>
     {% endfor %}
 </div>
 {% endblock %}

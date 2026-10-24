@@ -1,0 +1,58 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold m-0">{{ album.title }}</h4>
+        <span class="text-muted">Загружено фото: {{ album.items|length }}</span>
+    </div>
+    <a href="/admin/media" class="btn btn-outline-secondary">← Назад к альбомам</a>
+</div>
+
+<div class="row">
+    <!-- Левая часть: Загрузка -->
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm bg-light">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3">Загрузить фотографии</h6>
+                <form action="/admin/media/{{ album.id }}/upload" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <!-- Атрибут multiple позволяет выбрать несколько файлов -->
+                        <input type="file" name="photos" class="form-control" accept="image/*" multiple required>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 fw-bold">
+                        <i class="bi bi-cloud-arrow-up me-1"></i> Загрузить
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая часть: Галерея -->
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for item in album.items %}
+                    <div class="col-4 col-md-3 position-relative">
+                        <div class="border rounded overflow-hidden" style="height: 120px;">
+                            <img src="{{ item.file_url }}" alt="photo" style="width: 100%; height: 100%; object-fit: cover;">
+                        </div>
+                        <!-- Кнопка удаления конкретного фото -->
+                        <form action="/admin/media/item/{{ item.id }}/delete" method="post" class="position-absolute" style="top: 5px; right: 15px;">
+                            <button type="submit" class="btn btn-sm btn-danger p-1" style="--bs-btn-padding-y: .1rem; --bs-btn-padding-x: .3rem;" title="Удалить фото">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-center py-5 text-muted">
+                        В этом альбоме пока нет фотографий.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -12,6 +12,7 @@ class Team(TimestampMixin, Base):
     slug: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
     city: Mapped[str | None] = mapped_column(String(100))
     logo_url: Mapped[str | None] = mapped_column(String(500))
+    cover_url: Mapped[str | None] = mapped_column(String(500))
     coach_name: Mapped[str | None] = mapped_column(String(200))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 

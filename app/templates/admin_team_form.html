@@ -2,58 +2,65 @@
 
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold m-0">{{ 'Редактировать стадион' if stadium else 'Новый стадион' }}</h4>
-    <a href="/admin/stadiums" class="btn btn-outline-secondary">← Назад</a>
+    <h4 class="fw-bold m-0">{{ 'Редактировать команду' if team else 'Новая команда' }}</h4>
+    <a href="/admin/teams" class="btn btn-outline-secondary">← Назад</a>
 </div>
 
 <div class="card border-0 shadow-sm">
     <div class="card-body p-4">
         <!-- Обязательно добавлен enctype -->
-        <form action="/admin/stadiums/{% if stadium %}{{ stadium.id }}/edit{% else %}create{% endif %}" method="post" enctype="multipart/form-data">
+        <form action="/admin/teams/{% if team %}{{ team.id }}/edit{% else %}create{% endif %}" method="post" enctype="multipart/form-data">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label text-muted small fw-bold text-uppercase">Название *</label>
-                    <input type="text" name="name" class="form-control" value="{{ stadium.name if stadium else '' }}" required>
+                    <label class="form-label text-muted small fw-bold text-uppercase">Название команды *</label>
+                    <input type="text" name="name" class="form-control" value="{{ team.name if team else '' }}" placeholder="Например: FC ABAI" required>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Slug (URL) *</label>
+                    <input type="text" name="slug" class="form-control" value="{{ team.slug if team else '' }}" placeholder="team-137605" required>
+                    <small class="text-muted">Уникальный идентификатор для ссылок</small>
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label text-muted small fw-bold text-uppercase">Город</label>
-                    <input type="text" name="city" class="form-control" value="{{ stadium.city if stadium and stadium.city else '' }}">
+                    <input type="text" name="city" class="form-control" value="{{ team.city if team and team.city else '' }}" placeholder="Алматы">
                 </div>
 
-                <div class="col-12">
-                    <label class="form-label text-muted small fw-bold text-uppercase">Адрес</label>
-                    <input type="text" name="address" class="form-control" value="{{ stadium.address if stadium and stadium.address else '' }}">
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Главный тренер</label>
+                    <input type="text" name="coach_name" class="form-control" value="{{ team.coach_name if team and team.coach_name else '' }}" placeholder="Иванов Иван">
                 </div>
 
-                <div class="col-md-4">
-                    <label class="form-label text-muted small fw-bold text-uppercase">Вместимость</label>
-                    <input type="number" name="capacity" class="form-control" value="{{ stadium.capacity if stadium and stadium.capacity else '' }}">
-                </div>
-
-                <!-- ПОЛЕ ЗАГРУЗКИ ФОТО -->
-                <div class="col-md-8">
-                    <label class="form-label text-muted small fw-bold text-uppercase">Фотография стадиона</label>
-                    <input type="file" name="image" class="form-control" accept="image/*">
-                    {% if stadium and stadium.image_url %}
-                        <small class="text-success d-block mt-1">Текущее фото: <a href="{{ stadium.image_url }}" target="_blank">Посмотреть</a></small>
+                <!-- ЗАГРУЗКА ОБЛОЖКИ -->
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Обложка команды (Cover)</label>
+                    <input type="file" name="cover" class="form-control" accept="image/*">
+                    {% if team and team.cover_url %}
+                        <small class="text-success d-block mt-1">Текущая: <a href="{{ team.cover_url }}" target="_blank">Посмотреть</a></small>
                     {% endif %}
                 </div>
 
+                <!-- ЗАГРУЗКА ЛОГОТИПА -->
                 <div class="col-md-6">
-                    <label class="form-label text-muted small fw-bold text-uppercase">Широта (Latitude)</label>
-                    <input type="number" step="any" name="latitude" class="form-control" value="{{ stadium.latitude if stadium and stadium.latitude else '' }}">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Логотип команды</label>
+                    <input type="file" name="logo" class="form-control" accept="image/*">
+                    {% if team and team.logo_url %}
+                        <small class="text-success d-block mt-1">Текущий: <a href="{{ team.logo_url }}" target="_blank">Посмотреть</a></small>
+                    {% endif %}
                 </div>
 
-                <div class="col-md-6">
-                    <label class="form-label text-muted small fw-bold text-uppercase">Долгота (Longitude)</label>
-                    <input type="number" step="any" name="longitude" class="form-control" value="{{ stadium.longitude if stadium and stadium.longitude else '' }}">
+                <div class="col-12 mt-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="true" {% if not team or team.is_active %}checked{% endif %}>
+                        <label class="form-check-label fw-bold text-muted" for="is_active">Команда активна</label>
+                    </div>
                 </div>
             </div>
 
             <div class="mt-4 pt-3 border-top">
-                <button type="submit" class="btn btn-success fw-bold px-4">Сохранить</button>
-                <a href="/admin/stadiums" class="btn btn-light ms-2">Отмена</a>
+                <button type="submit" class="btn btn-success fw-bold px-4">Сохранить команду</button>
+                <a href="/admin/teams" class="btn btn-light ms-2">Отмена</a>
             </div>
         </form>
     </div>

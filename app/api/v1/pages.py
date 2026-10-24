@@ -47,6 +47,7 @@ from app.crud.match_event import match_event as crud_match_event
 from app.schemas.match_event import MatchEventCreate
 from app.crud.news import news as crud_news
 from app.schemas.news import NewsCreate, NewsUpdate
+from app.models.media import MediaAlbum, MediaItem
 
 router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -196,9 +197,27 @@ async def about_page(request: Request, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/tournaments")
-async def tournaments_list_page(request: Request, db: AsyncSession = Depends(get_db)):
-    tournaments = (await db.execute(select(Tournament).order_by(Tournament.start_at.desc()))).scalars().all()
-    return await render_page(request, db, "tournaments.html", context={"tournaments": tournaments})
+async def tournaments_list_page(request: Request, season: str = None, db: AsyncSession = Depends(get_db)):
+    # 1. Получаем список всех уникальных сезонов из базы
+    result = await db.execute(select(Tournament.season).distinct().order_by(Tournament.season.desc()))
+    available_seasons = result.scalars().all()
+
+    # 2. Если сезон не выбран, берем самый новый (например, 2026)
+    if not season and available_seasons:
+        season = available_seasons[0]
+
+    # 3. Получаем турниры только за выбранный сезон
+    stmt = select(Tournament)
+    if season:
+        stmt = stmt.where(Tournament.season == season)
+
+    tournaments = (await db.execute(stmt.order_by(Tournament.division, Tournament.name))).scalars().all()
+
+    return await render_page(request, db, "tournaments.html", context={
+        "tournaments": tournaments,
+        "available_seasons": available_seasons,
+        "current_season": season
+    })
 
 
 @router.get("/tournaments/{tournament_id}")
@@ -224,15 +243,50 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
 
 
 @router.get("/participants/teams")
-async def participants_teams_page(request: Request, db: AsyncSession = Depends(get_db)):
-    teams = (await db.execute(select(Team).order_by(Team.name))).scalars().all()
-    return await render_page(request, db, "participants.html", context={"teams": teams})
+async def participants_teams_page(request: Request, page: int = 1, db: AsyncSession = Depends(get_db)):
+    limit = 24  # Количество команд на одной странице
+    skip = (page - 1) * limit
+
+    # 1. Считаем общее количество команд для пагинации
+    total_teams = await db.scalar(select(func.count()).select_from(Team))
+
+    # 2. Получаем только нужную порцию команд
+    stmt = select(Team).order_by(Team.name).offset(skip).limit(limit)
+    teams = (await db.execute(stmt)).scalars().all()
+
+    # 3. Высчитываем общее количество страниц
+    total_pages = (total_teams + limit - 1) // limit if total_teams > 0 else 1
+
+    return await render_page(request, db, "participants.html", context={
+        "teams": teams,
+        "page": page,
+        "total_pages": total_pages,
+        "total_teams": total_teams
+    })
 
 
 @router.get("/participants/players")
-async def participants_players_page(request: Request, db: AsyncSession = Depends(get_db)):
-    players = (await db.execute(select(Player).order_by(Player.last_name))).scalars().all()
-    return await render_page(request, db, "players_list.html", context={"players": players})
+async def participants_players_page(request: Request, page: int = 1, db: AsyncSession = Depends(get_db)):
+    limit = 30
+    skip = (page - 1) * limit
+
+    total_players = await db.scalar(select(func.count()).select_from(Player))
+    stmt = select(Player).order_by(Player.last_name).offset(skip).limit(limit)
+    players = (await db.execute(stmt)).scalars().all()
+
+    total_pages = (total_players + limit - 1) // limit if total_players > 0 else 1
+
+    start_page = max(1, page - 2)
+    end_page = min(total_pages, page + 2)
+
+    return await render_page(request, db, "players_list.html", context={
+        "players": players,
+        "page": page,
+        "total_pages": total_pages,
+        "total_players": total_players,
+        "start_page": start_page,
+        "end_page": end_page
+    })
 
 
 @router.get("/participants/coaches")
@@ -254,7 +308,10 @@ async def news_page(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/media")
 async def media_page(request: Request, db: AsyncSession = Depends(get_db)):
-    return await render_page(request, db, "media.html")
+    stmt = select(MediaAlbum).options(selectinload(MediaAlbum.items)).order_by(MediaAlbum.created_at.desc())
+    albums = (await db.execute(stmt)).scalars().all()
+
+    return await render_page(request, db, "media.html", context={"albums": albums})
 
 
 @router.get("/matches/{match_id}")
@@ -446,14 +503,20 @@ async def admin_team_create_form(request: Request, db: AsyncSession = Depends(ge
 @router.post("/admin/teams/create")
 async def admin_team_create(
         request: Request, name: str = Form(...), slug: str = Form(...), city: str = Form(None),
-        coach_name: str = Form(None), logo: UploadFile = File(None), is_active: bool = Form(False),
+        coach_name: str = Form(None), logo: UploadFile = File(None), cover: UploadFile = File(None),
+        is_active: bool = Form(False),
         db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
     logo_url = await save_upload_file(logo, "teams")
-    team_in = TeamCreate(name=name, slug=slug, city=city, coach_name=coach_name, logo_url=logo_url, is_active=is_active)
+    cover_url = await save_upload_file(cover, "teams")
+
+    team_in = TeamCreate(
+        name=name, slug=slug, city=city, coach_name=coach_name,
+        logo_url=logo_url, cover_url=cover_url, is_active=is_active
+    )
     await crud_team.create(db, obj_in=team_in)
     return RedirectResponse(url="/admin/teams", status_code=303)
 
@@ -470,7 +533,8 @@ async def admin_team_edit_form(team_id: int, request: Request, db: AsyncSession 
 @router.post("/admin/teams/{team_id}/edit")
 async def admin_team_edit(
         team_id: int, request: Request, name: str = Form(...), slug: str = Form(...), city: str = Form(None),
-        coach_name: str = Form(None), logo: UploadFile = File(None), is_active: bool = Form(False),
+        coach_name: str = Form(None), logo: UploadFile = File(None), cover: UploadFile = File(None),
+        is_active: bool = Form(False),
         db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
@@ -482,11 +546,15 @@ async def admin_team_edit(
     new_logo_url = await save_upload_file(logo, "teams")
     final_logo_url = new_logo_url if new_logo_url else team.logo_url
 
-    team_in = TeamUpdate(name=name, slug=slug, city=city, coach_name=coach_name, logo_url=final_logo_url,
-                         is_active=is_active)
+    new_cover_url = await save_upload_file(cover, "teams")
+    final_cover_url = new_cover_url if new_cover_url else team.cover_url
+
+    team_in = TeamUpdate(
+        name=name, slug=slug, city=city, coach_name=coach_name,
+        logo_url=final_logo_url, cover_url=final_cover_url, is_active=is_active
+    )
     await crud_team.update(db, db_obj=team, obj_in=team_in)
     return RedirectResponse(url="/admin/teams", status_code=303)
-
 
 @router.post("/admin/teams/{team_id}/delete")
 async def admin_team_delete(team_id: int, request: Request, db: AsyncSession = Depends(get_db)):
@@ -1229,3 +1297,108 @@ async def match_protocol_print(match_id: int, request: Request, db: AsyncSession
             "away_events": away_events
         }
     )
+
+
+# --- МЕДИА (АЛЬБОМЫ И ФОТО) ---
+
+@router.get("/admin/media")
+async def admin_media_list(request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    # Получаем альбомы вместе с их элементами (фото)
+    stmt = select(MediaAlbum).options(selectinload(MediaAlbum.items)).order_by(MediaAlbum.created_at.desc())
+    albums = (await db.execute(stmt)).scalars().all()
+
+    return await render_page(request, db, "admin_media.html", context={"user": user, "albums": albums})
+
+
+@router.get("/admin/media/create")
+async def admin_media_create_form(request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    tournaments = (await db.execute(select(Tournament).order_by(Tournament.name))).scalars().all()
+    return await render_page(request, db, "admin_media_form.html",
+                             context={"user": user, "album": None, "tournaments": tournaments})
+
+
+@router.post("/admin/media/create")
+async def admin_media_create(
+        request: Request,
+        title: str = Form(...),
+        tournament_id: int = Form(None),
+        db: AsyncSession = Depends(get_db)
+):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    album = MediaAlbum(title=title, tournament_id=tournament_id)
+    db.add(album)
+    await db.commit()
+    await db.refresh(album)
+
+    return RedirectResponse(url=f"/admin/media/{album.id}", status_code=303)
+
+
+@router.post("/admin/media/{album_id}/delete")
+async def admin_media_delete(album_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    album = await db.get(MediaAlbum, album_id)
+    if album:
+        await db.delete(album)
+        await db.commit()
+
+    return RedirectResponse(url="/admin/media", status_code=303)
+
+
+# Управление фото внутри альбома
+@router.get("/admin/media/{album_id}")
+async def admin_media_album_detail(album_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    stmt = select(MediaAlbum).where(MediaAlbum.id == album_id).options(selectinload(MediaAlbum.items))
+    album = (await db.execute(stmt)).scalar_one_or_none()
+    if not album: return RedirectResponse(url="/admin/media", status_code=303)
+
+    return await render_page(request, db, "admin_media_detail.html", context={"user": user, "album": album})
+
+
+@router.post("/admin/media/{album_id}/upload")
+async def admin_media_upload(
+        album_id: int,
+        request: Request,
+        photos: list[UploadFile] = File(...),  # Поддерживаем загрузку сразу нескольких файлов
+        db: AsyncSession = Depends(get_db)
+):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    album = await db.get(MediaAlbum, album_id)
+    if not album: return RedirectResponse(url="/admin/media", status_code=303)
+
+    for photo in photos:
+        photo_url = await save_upload_file(photo, "media")
+        if photo_url:
+            item = MediaItem(album_id=album_id, media_type="photo", file_url=photo_url)
+            db.add(item)
+
+    await db.commit()
+    return RedirectResponse(url=f"/admin/media/{album_id}", status_code=303)
+
+
+@router.post("/admin/media/item/{item_id}/delete")
+async def admin_media_item_delete(item_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    item = await db.get(MediaItem, item_id)
+    album_id = item.album_id if item else None
+    if item:
+        await db.delete(item)
+        await db.commit()
+
+    return RedirectResponse(url=f"/admin/media/{album_id}", status_code=303)

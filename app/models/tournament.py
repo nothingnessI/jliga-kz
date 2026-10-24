@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Integer, String, DateTime, Enum
+from sqlalchemy import Integer, String, DateTime, Enum, UniqueConstraint
 
 from app.core import Base, TimestampMixin
 
@@ -13,6 +13,10 @@ from app.models.match import Match
 
 class Tournament(Base, TimestampMixin):
     __tablename__ = "tournaments"
+
+    __table_args__ = (
+        UniqueConstraint("name", "season", name="uq_tournament_name_season"),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
@@ -28,7 +32,7 @@ class Tournament(Base, TimestampMixin):
         nullable=False,
     )
     max_teams: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    logo_url: Mapped[str] = mapped_column(String(500), nullable=False, index=True)
+    logo_url: Mapped[str | None] = mapped_column(String(500), nullable=False, index=True)
     tournament_format: Mapped[TournamentFormat | None] = mapped_column(
         Enum(TournamentFormat)
     )

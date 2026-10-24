@@ -1,0 +1,35 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold m-0">Новый фотоальбом</h4>
+    <a href="/admin/media" class="btn btn-outline-secondary">← Назад</a>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+        <form action="/admin/media/create" method="post">
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Название альбома *</label>
+                    <input type="text" name="title" class="form-control" placeholder="Например: Матчи 1-го тура" required>
+                </div>
+                
+                <div class="col-md-4">
+                    <label class="form-label text-muted small fw-bold text-uppercase">Привязать к турниру</label>
+                    <select name="tournament_id" class="form-select">
+                        <option value="">Без привязки</option>
+                        {% for t in tournaments %}
+                            <option value="{{ t.id }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top">
+                <button type="submit" class="btn btn-success fw-bold px-4">Создать и перейти к загрузке</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

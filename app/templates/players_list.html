@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="text-uppercase fw-bold m-0">Игроки</h3>
+    <span class="badge bg-dark fs-6">Всего: {{ total_players }}</span>
+</div>
+
+<!-- Сетка с карточками игроков -->
+<div class="row">
+    {% for player in players %}
+    <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
+        <div class="card border-0 shadow-sm h-100 text-center hover-lift pt-3">
+
+            <!-- Фото игрока -->
+            <div class="mx-auto rounded-circle overflow-hidden shadow-sm" style="width: 100px; height: 100px; background-color: #f8f9fa;">
+                {% if player.photo_url %}
+                    <img src="{{ player.photo_url }}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;" alt="{{ player.last_name }}">
+                {% else %}
+                    <div class="d-flex align-items-center justify-content-center h-100">
+                        <i class="bi bi-person text-secondary" style="font-size: 3rem;"></i>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Информация -->
+            <div class="card-body pt-2">
+                <h6 class="fw-bold mb-1 text-truncate" title="{{ player.last_name }} {{ player.first_name }}">
+                    {{ player.last_name }}<br>{{ player.first_name }}
+                </h6>
+                <small class="text-muted text-uppercase" style="font-size: 11px;">
+                    {{ player.position.value if player.position else 'Амплуа не указано' }}
+                </small>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <div class="alert alert-secondary text-center py-5">Игроки пока не добавлены.</div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- УМНАЯ ПАГИНАЦИЯ -->
+{% if total_pages > 1 %}
+<nav aria-label="Page navigation" class="mt-5 mb-4">
+    <!-- flex-wrap нужен, чтобы кнопки переносились на новую строку на телефонах -->
+    <ul class="pagination justify-content-center flex-wrap gap-1">
+
+        <!-- Кнопка Назад -->
+        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+            <a class="page-link text-dark shadow-sm" href="/participants/players?page={{ page - 1 }}">Назад</a>
+        </li>
+
+        <!-- Первая страница и многоточие (если мы далеко) -->
+        {% if page > 3 %}
+            <li class="page-item">
+                <a class="page-link text-dark shadow-sm" href="/participants/players?page=1">1</a>
+            </li>
+            {% if page > 4 %}
+                <li class="page-item disabled"><span class="page-link text-dark shadow-sm">...</span></li>
+            {% endif %}
+        {% endif %}
+
+        <!-- Страницы вокруг текущей (по 2 влево и вправо) -->
+        {% for p in range(start_page, end_page + 1) %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link shadow-sm {% if p == page %}bg-dark border-dark text-white{% else %}text-dark{% endif %}" href="/participants/players?page={{ p }}">
+                    {{ p }}
+                </a>
+            </li>
+        {% endfor %}
+
+        <!-- Последняя страница и многоточие (если мы далеко) -->
+        {% if page < total_pages - 2 %}
+            {% if page < total_pages - 3 %}
+                <li class="page-item disabled"><span class="page-link text-dark shadow-sm">...</span></li>
+            {% endif %}
+            <li class="page-item">
+                <a class="page-link text-dark shadow-sm" href="/participants/players?page={{ total_pages }}">{{ total_pages }}</a>
+            </li>
+        {% endif %}
+
+        <!-- Кнопка Вперед -->
+        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+            <a class="page-link text-dark shadow-sm" href="/participants/players?page={{ page + 1 }}">Вперед</a>
+        </li>
+
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
