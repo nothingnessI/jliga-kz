@@ -13,7 +13,6 @@ from app.db.session import get_db
 from app.core.security import create_access_token, verify_password, ALGORITHM
 from app.core.config import settings
 
-# Модели
 from app.models.tournament import Tournament
 from app.models.tournament_standing import TournamentStanding
 from app.models.match import Match
@@ -22,45 +21,48 @@ from app.models.news import News
 from app.models.team import Team
 from app.models.player import Player
 from app.models.user import User
-from app.models.enums import MatchStatus, TournamentStatus, UserRole, TournamentFormat, PlayerPosition
+from app.models.enums import MatchStatus, TournamentStatus, UserRole, TournamentFormat, PlayerPosition, MatchEventType
+from app.models.media import MediaAlbum, MediaItem
 
-# Сервисы
 from app.services.standings import StandingsService
 from app.services.stats import StatsService
+from app.services.match import MatchService
 
-# CRUD и Схемы
 from app.crud.user import user as crud_user
 from app.crud.stadium import stadium as crud_stadium
 from app.crud.team import team as crud_team
+from app.crud.tournament import tournament as crud_tournament
+from app.crud.match import match as crud_match
+from app.crud.player import player as crud_player
+from app.crud.team_player import team_player as crud_team_player
+from app.crud.match_event import match_event as crud_match_event
+from app.crud.news import news as crud_news
+
 from app.schemas.stadium import StadiumCreate, StadiumUpdate
 from app.schemas.team import TeamCreate, TeamUpdate
-from app.crud.tournament import tournament as crud_tournament
 from app.schemas.tournament import TournamentCreate, TournamentUpdate
-from app.crud.match import match as crud_match
 from app.schemas.match import MatchCreate, MatchUpdate
-from app.crud.player import player as crud_player
 from app.schemas.player import PlayerCreate, PlayerUpdate
-from app.crud.team_player import team_player as crud_team_player
 from app.schemas.team_player import TeamPlayerCreate
-from app.models.enums import MatchEventType
-from app.crud.match_event import match_event as crud_match_event
 from app.schemas.match_event import MatchEventCreate
-from app.crud.news import news as crud_news
 from app.schemas.news import NewsCreate, NewsUpdate
-from app.models.media import MediaAlbum, MediaItem
 
 router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
-# ==========================================
-# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-# ==========================================
+def fix_logo_url(url: str | None) -> str | None:
+    if url and url.startswith("/"):
+        return f"https://jliga.ru{url}"
+    return url
+
 
 async def get_mega_menu_context(db: AsyncSession):
-    """Собирает данные для мега-меню (строго текущий год)."""
-    current_year = str(datetime.now().year)
+    latest_season_stmt = select(Tournament.season).order_by(Tournament.season.desc()).limit(1)
+    latest_season_result = await db.execute(latest_season_stmt)
+    current_year = latest_season_result.scalar() or str(datetime.now().year)
+
     stmt = select(Tournament).where(Tournament.season == current_year)
     tournaments = (await db.execute(stmt)).scalars().all()
 
@@ -89,7 +91,6 @@ async def get_mega_menu_context(db: AsyncSession):
 
 
 async def render_page(request: Request, db: AsyncSession, name: str, context: dict = None):
-    """Обертка для рендера: подкидывает данные меню и проверяет куки."""
     if context is None:
         context = {}
 
@@ -114,7 +115,6 @@ async def render_page(request: Request, db: AsyncSession, name: str, context: di
 
 
 async def get_admin_from_cookie(request: Request, db: AsyncSession):
-    """Проверяет куки и возвращает админа или RedirectResponse."""
     token = request.cookies.get("access_token")
     if not token:
         return RedirectResponse(url="/login", status_code=303)
@@ -129,7 +129,6 @@ async def get_admin_from_cookie(request: Request, db: AsyncSession):
 
 
 async def save_upload_file(upload_file: UploadFile, folder: str) -> str | None:
-    """Сохраняет загруженный файл и возвращает путь к нему."""
     if not upload_file or not upload_file.filename:
         return None
 
@@ -146,16 +145,15 @@ async def save_upload_file(upload_file: UploadFile, folder: str) -> str | None:
     return f"/static/uploads/{folder}/{filename}"
 
 
-# ==========================================
-# ПУБЛИЧНЫЕ СТРАНИЦЫ
-# ==========================================
-
 @router.get("/")
 async def home_page(request: Request, db: AsyncSession = Depends(get_db)):
     stmt_tournaments = select(Tournament).where(
         Tournament.status.in_([TournamentStatus.ACTIVE, TournamentStatus.ACCEPTING_APPLICATIONS])
     ).order_by(Tournament.start_at.desc())
     tournaments = (await db.execute(stmt_tournaments)).scalars().all()
+
+    for t in tournaments:
+        t.logo_url = fix_logo_url(t.logo_url)
 
     stmt_last_matches = select(Match).where(
         Match.status == MatchStatus.FINISHED
@@ -198,20 +196,20 @@ async def about_page(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/tournaments")
 async def tournaments_list_page(request: Request, season: str = None, db: AsyncSession = Depends(get_db)):
-    # 1. Получаем список всех уникальных сезонов из базы
     result = await db.execute(select(Tournament.season).distinct().order_by(Tournament.season.desc()))
     available_seasons = result.scalars().all()
 
-    # 2. Если сезон не выбран, берем самый новый (например, 2026)
     if not season and available_seasons:
         season = available_seasons[0]
 
-    # 3. Получаем турниры только за выбранный сезон
     stmt = select(Tournament)
     if season:
         stmt = stmt.where(Tournament.season == season)
 
     tournaments = (await db.execute(stmt.order_by(Tournament.division, Tournament.name))).scalars().all()
+
+    for t in tournaments:
+        t.logo_url = fix_logo_url(t.logo_url)
 
     return await render_page(request, db, "tournaments.html", context={
         "tournaments": tournaments,
@@ -223,7 +221,10 @@ async def tournaments_list_page(request: Request, season: str = None, db: AsyncS
 @router.get("/tournaments/{tournament_id}")
 async def tournament_page(tournament_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     tournament = await db.get(Tournament, tournament_id)
-    if not tournament: raise HTTPException(status_code=404, detail="Турнир не найден")
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Турнир не найден")
+
+    tournament.logo_url = fix_logo_url(tournament.logo_url)
 
     await StandingsService.recalculate_standings(db, tournament_id)
 
@@ -244,24 +245,17 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
 
 @router.get("/participants/teams")
 async def participants_teams_page(request: Request, page: int = 1, db: AsyncSession = Depends(get_db)):
-    limit = 24  # Количество команд на одной странице
+    limit = 24
     skip = (page - 1) * limit
 
-    # 1. Считаем общее количество команд для пагинации
     total_teams = await db.scalar(select(func.count()).select_from(Team))
-
-    # 2. Получаем только нужную порцию команд
     stmt = select(Team).order_by(Team.name).offset(skip).limit(limit)
     teams = (await db.execute(stmt)).scalars().all()
 
-    # 3. Высчитываем общее количество страниц
     total_pages = (total_teams + limit - 1) // limit if total_teams > 0 else 1
 
     return await render_page(request, db, "participants.html", context={
-        "teams": teams,
-        "page": page,
-        "total_pages": total_pages,
-        "total_teams": total_teams
+        "teams": teams, "page": page, "total_pages": total_pages, "total_teams": total_teams
     })
 
 
@@ -280,12 +274,8 @@ async def participants_players_page(request: Request, page: int = 1, db: AsyncSe
     end_page = min(total_pages, page + 2)
 
     return await render_page(request, db, "players_list.html", context={
-        "players": players,
-        "page": page,
-        "total_pages": total_pages,
-        "total_players": total_players,
-        "start_page": start_page,
-        "end_page": end_page
+        "players": players, "page": page, "total_pages": total_pages,
+        "total_players": total_players, "start_page": start_page, "end_page": end_page
     })
 
 
@@ -310,7 +300,6 @@ async def news_page(request: Request, db: AsyncSession = Depends(get_db)):
 async def media_page(request: Request, db: AsyncSession = Depends(get_db)):
     stmt = select(MediaAlbum).options(selectinload(MediaAlbum.items)).order_by(MediaAlbum.created_at.desc())
     albums = (await db.execute(stmt)).scalars().all()
-
     return await render_page(request, db, "media.html", context={"albums": albums})
 
 
@@ -322,8 +311,12 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
         selectinload(Match.events).selectinload(MatchEvent.team)
     )
     match = (await db.execute(stmt)).scalar_one_or_none()
-    if not match: raise HTTPException(status_code=404, detail="Матч не найден")
-    if match.events: match.events.sort(key=lambda e: e.minute)
+    if not match:
+        raise HTTPException(status_code=404, detail="Матч не найден")
+
+    if match.events:
+        match.events.sort(key=lambda e: e.minute)
+
     return await render_page(request, db, "match_detail.html", context={"match": match})
 
 
@@ -358,10 +351,6 @@ async def disciplinary_page(request: Request, db: AsyncSession = Depends(get_db)
     return await render_page(request, db, "disciplinary.html")
 
 
-# ==========================================
-# АВТОРИЗАЦИЯ
-# ==========================================
-
 @router.get("/login")
 async def login_page(request: Request, db: AsyncSession = Depends(get_db)):
     return await render_page(request, db, "login.html")
@@ -392,10 +381,6 @@ async def logout():
     return response
 
 
-# ==========================================
-# АДМИН-ПАНЕЛЬ
-# ==========================================
-
 @router.get("/admin")
 async def admin_panel(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -408,8 +393,6 @@ async def admin_panel(request: Request, db: AsyncSession = Depends(get_db)):
         "user": user, "users_count": users_count, "news_count": news_count
     })
 
-
-# --- СТАДИОНЫ ---
 
 @router.get("/admin/stadiums")
 async def admin_stadiums_list(request: Request, db: AsyncSession = Depends(get_db)):
@@ -430,8 +413,7 @@ async def admin_stadium_create_form(request: Request, db: AsyncSession = Depends
 async def admin_stadium_create(
         request: Request, name: str = Form(...), city: str = Form(None), address: str = Form(None),
         capacity: int = Form(None), image: UploadFile = File(None), latitude: float = Form(None),
-        longitude: float = Form(None),
-        db: AsyncSession = Depends(get_db)
+        longitude: float = Form(None), db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
@@ -456,8 +438,7 @@ async def admin_stadium_edit_form(stadium_id: int, request: Request, db: AsyncSe
 async def admin_stadium_edit(
         stadium_id: int, request: Request, name: str = Form(...), city: str = Form(None), address: str = Form(None),
         capacity: int = Form(None), image: UploadFile = File(None), latitude: float = Form(None),
-        longitude: float = Form(None),
-        db: AsyncSession = Depends(get_db)
+        longitude: float = Form(None), db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
@@ -483,8 +464,6 @@ async def admin_stadium_delete(stadium_id: int, request: Request, db: AsyncSessi
     return RedirectResponse(url="/admin/stadiums", status_code=303)
 
 
-# --- КОМАНДЫ ---
-
 @router.get("/admin/teams")
 async def admin_teams_list(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -504,8 +483,7 @@ async def admin_team_create_form(request: Request, db: AsyncSession = Depends(ge
 async def admin_team_create(
         request: Request, name: str = Form(...), slug: str = Form(...), city: str = Form(None),
         coach_name: str = Form(None), logo: UploadFile = File(None), cover: UploadFile = File(None),
-        is_active: bool = Form(False),
-        db: AsyncSession = Depends(get_db)
+        is_active: bool = Form(False), db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
@@ -534,8 +512,7 @@ async def admin_team_edit_form(team_id: int, request: Request, db: AsyncSession 
 async def admin_team_edit(
         team_id: int, request: Request, name: str = Form(...), slug: str = Form(...), city: str = Form(None),
         coach_name: str = Form(None), logo: UploadFile = File(None), cover: UploadFile = File(None),
-        is_active: bool = Form(False),
-        db: AsyncSession = Depends(get_db)
+        is_active: bool = Form(False), db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
@@ -556,6 +533,7 @@ async def admin_team_edit(
     await crud_team.update(db, db_obj=team, obj_in=team_in)
     return RedirectResponse(url="/admin/teams", status_code=303)
 
+
 @router.post("/admin/teams/{team_id}/delete")
 async def admin_team_delete(team_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -565,30 +543,10 @@ async def admin_team_delete(team_id: int, request: Request, db: AsyncSession = D
     return RedirectResponse(url="/admin/teams", status_code=303)
 
 
-# --- ТУРНИРЫ И МАТЧИ (ЗАГЛУШКИ ДЛЯ БУДУЩЕГО CRUD) ---
-
-@router.get("/admin/tournaments")
-async def admin_tournaments(request: Request, db: AsyncSession = Depends(get_db)):
-    user = await get_admin_from_cookie(request, db)
-    if isinstance(user, RedirectResponse): return user
-    tournaments = (await db.execute(select(Tournament).order_by(Tournament.created_at.desc()))).scalars().all()
-    return await render_page(request, db, "admin_tournaments.html", context={"user": user, "tournaments": tournaments})
-
-
-@router.get("/admin/matches")
-async def admin_matches(request: Request, db: AsyncSession = Depends(get_db)):
-    user = await get_admin_from_cookie(request, db)
-    if isinstance(user, RedirectResponse): return user
-    return await render_page(request, db, "admin_matches.html", context={"user": user})
-
-
-# --- ТУРНИРЫ ---
-
 @router.get("/admin/tournaments")
 async def admin_tournaments_list(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
-
     tournaments = (await db.execute(select(Tournament).order_by(Tournament.created_at.desc()))).scalars().all()
     return await render_page(request, db, "admin_tournaments.html", context={"user": user, "tournaments": tournaments})
 
@@ -597,38 +555,23 @@ async def admin_tournaments_list(request: Request, db: AsyncSession = Depends(ge
 async def admin_tournament_create_form(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
-
-    # Передаем перечисления (enums) для выпадающих списков
     return await render_page(request, db, "admin_tournament_form.html", context={
-        "user": user,
-        "tournament": None,
-        "statuses": TournamentStatus,
-        "formats": TournamentFormat
+        "user": user, "tournament": None, "statuses": TournamentStatus, "formats": TournamentFormat
     })
 
 
 @router.post("/admin/tournaments/create")
 async def admin_tournament_create(
-        request: Request,
-        name: str = Form(...),
-        description: str = Form(None),
-        start_at: str = Form(None),
-        end_at: str = Form(None),
-        division: str = Form(...),
-        season: str = Form(...),
-        age_category: str = Form(...),
-        status: TournamentStatus = Form(...),
-        max_teams: int = Form(...),
+        request: Request, name: str = Form(...), description: str = Form(None), start_at: str = Form(None),
+        end_at: str = Form(None), division: str = Form(...), season: str = Form(...), age_category: str = Form(...),
+        status: TournamentStatus = Form(...), max_teams: int = Form(...),
         tournament_format: TournamentFormat = Form(None),
-        logo: UploadFile = File(None),
-        db: AsyncSession = Depends(get_db)
+        logo: UploadFile = File(None), db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
     logo_url = await save_upload_file(logo, "tournaments")
-
-    # Парсим даты из строки в datetime (если они есть)
     start_date = datetime.fromisoformat(start_at) if start_at else None
     end_date = datetime.fromisoformat(end_at) if end_at else None
 
@@ -650,28 +593,16 @@ async def admin_tournament_edit_form(tournament_id: int, request: Request, db: A
     if not tournament: return RedirectResponse(url="/admin/tournaments", status_code=303)
 
     return await render_page(request, db, "admin_tournament_form.html", context={
-        "user": user,
-        "tournament": tournament,
-        "statuses": TournamentStatus,
-        "formats": TournamentFormat
+        "user": user, "tournament": tournament, "statuses": TournamentStatus, "formats": TournamentFormat
     })
 
 
 @router.post("/admin/tournaments/{tournament_id}/edit")
 async def admin_tournament_edit(
-        tournament_id: int,
-        request: Request,
-        name: str = Form(...),
-        description: str = Form(None),
-        start_at: str = Form(None),
-        end_at: str = Form(None),
-        division: str = Form(...),
-        season: str = Form(...),
-        age_category: str = Form(...),
-        status: TournamentStatus = Form(...),
-        max_teams: int = Form(...),
-        tournament_format: TournamentFormat = Form(None),
-        logo: UploadFile = File(None),
+        tournament_id: int, request: Request, name: str = Form(...), description: str = Form(None),
+        start_at: str = Form(None), end_at: str = Form(None), division: str = Form(...), season: str = Form(...),
+        age_category: str = Form(...), status: TournamentStatus = Form(...), max_teams: int = Form(...),
+        tournament_format: TournamentFormat = Form(None), logo: UploadFile = File(None),
         db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
@@ -702,22 +633,42 @@ async def admin_tournament_delete(tournament_id: int, request: Request, db: Asyn
 
     tournament = await crud_tournament.get(db, tournament_id)
     if tournament: await crud_tournament.delete(db, db_obj=tournament)
-
     return RedirectResponse(url="/admin/tournaments", status_code=303)
 
 
-# --- МАТЧИ ---
+@router.post("/admin/tournaments/{tournament_id}/generate-calendar")
+async def admin_generate_calendar(tournament_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    tournament = await crud_tournament.get(db, tournament_id)
+    if not tournament:
+        return RedirectResponse(url="/admin/tournaments", status_code=303)
+
+    teams = (await db.execute(select(Team).where(Team.is_active == True))).scalars().all()
+    if len(teams) < 2:
+        return RedirectResponse(url="/admin/tournaments", status_code=303)
+
+    team_ids = [t.id for t in teams]
+    pairs = MatchService.generate_round_robin(team_ids)
+
+    for home_id, away_id in pairs:
+        match_in = MatchCreate(
+            tournament_id=tournament_id, home_team_id=home_id, away_team_id=away_id,
+            status=MatchStatus.SCHEDULED, round=1
+        )
+        await crud_match.create(db, obj_in=match_in)
+
+    return RedirectResponse(url="/admin/tournaments", status_code=303)
+
 
 @router.get("/admin/matches")
 async def admin_matches_list(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Подгружаем матчи вместе с командами и турнирами
     stmt = select(Match).options(
-        selectinload(Match.home_team),
-        selectinload(Match.away_team),
-        selectinload(Match.tournament)
+        selectinload(Match.home_team), selectinload(Match.away_team), selectinload(Match.tournament)
     ).order_by(Match.match_date.desc())
     matches = (await db.execute(stmt)).scalars().all()
 
@@ -729,7 +680,6 @@ async def admin_match_create_form(request: Request, db: AsyncSession = Depends(g
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Получаем списки для выпадающих меню
     tournaments = (await db.execute(select(Tournament).order_by(Tournament.name))).scalars().all()
     teams = (await db.execute(select(Team).order_by(Team.name))).scalars().all()
     stadiums = await crud_stadium.get_multi(db, limit=100)
@@ -742,15 +692,9 @@ async def admin_match_create_form(request: Request, db: AsyncSession = Depends(g
 
 @router.post("/admin/matches/create")
 async def admin_match_create(
-        request: Request,
-        tournament_id: int = Form(...),
-        home_team_id: int = Form(...),
-        away_team_id: int = Form(...),
-        match_date: str = Form(None),
-        stadium: str = Form(None),
-        status: MatchStatus = Form(...),
-        round: int = Form(None),
-        group_name: str = Form(None),
+        request: Request, tournament_id: int = Form(...), home_team_id: int = Form(...),
+        away_team_id: int = Form(...), match_date: str = Form(None), stadium: str = Form(None),
+        status: MatchStatus = Form(...), round: int = Form(None), group_name: str = Form(None),
         db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
@@ -789,50 +733,30 @@ async def admin_match_edit_form(match_id: int, request: Request, db: AsyncSessio
 
 @router.post("/admin/matches/{match_id}/edit")
 async def admin_match_edit(
-    match_id: int,
-    request: Request,
-    tournament_id: int = Form(...),
-    home_team_id: int = Form(...),
-    away_team_id: int = Form(...),
-    match_date: str = Form(None),
-    stadium: str = Form(None),
-    home_score: int = Form(None),
-    away_score: int = Form(None),
-    status: MatchStatus = Form(...),
-    round: int = Form(None),
-    group_name: str = Form(None),
-    db: AsyncSession = Depends(get_db)
+        match_id: int, request: Request, tournament_id: int = Form(...), home_team_id: int = Form(...),
+        away_team_id: int = Form(...), match_date: str = Form(None), stadium: str = Form(None),
+        home_score: int = Form(None), away_score: int = Form(None), status: MatchStatus = Form(...),
+        round: int = Form(None), group_name: str = Form(None), db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
-    if isinstance(user, RedirectResponse):
-        return user
+    if isinstance(user, RedirectResponse): return user
 
     match = await crud_match.get(db, match_id)
-    if not match:
-        return RedirectResponse(url="/admin/matches", status_code=303)
+    if not match: return RedirectResponse(url="/admin/matches", status_code=303)
 
-    # 3. Проверка, что команда не играет сама с собой
     if home_team_id == away_team_id:
         raise HTTPException(status_code=400, detail="Команда не может играть сама с собой")
 
     parsed_date = datetime.fromisoformat(match_date) if match_date else None
 
     match_in = MatchUpdate(
-        tournament_id=tournament_id,
-        home_team_id=home_team_id,
-        away_team_id=away_team_id,
-        match_date=parsed_date,
-        stadium=stadium,
-        home_score=home_score,
-        away_score=away_score,
-        status=status,
-        round=round,
-        group_name=group_name
+        tournament_id=tournament_id, home_team_id=home_team_id, away_team_id=away_team_id,
+        match_date=parsed_date, stadium=stadium, home_score=home_score, away_score=away_score,
+        status=status, round=round, group_name=group_name
     )
     await crud_match.update(db, db_obj=match, obj_in=match_in)
 
     if status == MatchStatus.FINISHED:
-        from app.services.standings import StandingsService
         await StandingsService.recalculate_standings(db, tournament_id)
 
     return RedirectResponse(url="/admin/matches", status_code=303)
@@ -849,8 +773,6 @@ async def admin_match_delete(match_id: int, request: Request, db: AsyncSession =
     return RedirectResponse(url="/admin/matches", status_code=303)
 
 
-# --- ИГРОКИ ---
-
 @router.get("/admin/players")
 async def admin_players_list(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -864,7 +786,6 @@ async def admin_players_list(request: Request, db: AsyncSession = Depends(get_db
 async def admin_player_create_form(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
-
     return await render_page(request, db, "admin_player_form.html", context={
         "user": user, "player": None, "positions": PlayerPosition
     })
@@ -872,13 +793,8 @@ async def admin_player_create_form(request: Request, db: AsyncSession = Depends(
 
 @router.post("/admin/players/create")
 async def admin_player_create(
-        request: Request,
-        first_name: str = Form(...),
-        last_name: str = Form(...),
-        date_of_birth: str = Form(None),
-        position: PlayerPosition = Form(None),
-        photo: UploadFile = File(None),
-        db: AsyncSession = Depends(get_db)
+        request: Request, first_name: str = Form(...), last_name: str = Form(...), date_of_birth: str = Form(None),
+        position: PlayerPosition = Form(None), photo: UploadFile = File(None), db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
@@ -887,8 +803,7 @@ async def admin_player_create(
     parsed_date = datetime.strptime(date_of_birth, "%Y-%m-%d").date() if date_of_birth else None
 
     player_in = PlayerCreate(
-        first_name=first_name, last_name=last_name,
-        date_of_birth=parsed_date, position=position, photo_url=photo_url
+        first_name=first_name, last_name=last_name, date_of_birth=parsed_date, position=position, photo_url=photo_url
     )
     await crud_player.create(db, obj_in=player_in)
     return RedirectResponse(url="/admin/players", status_code=303)
@@ -909,14 +824,9 @@ async def admin_player_edit_form(player_id: int, request: Request, db: AsyncSess
 
 @router.post("/admin/players/{player_id}/edit")
 async def admin_player_edit(
-        player_id: int,
-        request: Request,
-        first_name: str = Form(...),
-        last_name: str = Form(...),
-        date_of_birth: str = Form(None),
-        position: PlayerPosition = Form(None),
-        photo: UploadFile = File(None),
-        db: AsyncSession = Depends(get_db)
+        player_id: int, request: Request, first_name: str = Form(...), last_name: str = Form(...),
+        date_of_birth: str = Form(None), position: PlayerPosition = Form(None),
+        photo: UploadFile = File(None), db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
@@ -930,8 +840,8 @@ async def admin_player_edit(
     parsed_date = datetime.strptime(date_of_birth, "%Y-%m-%d").date() if date_of_birth else None
 
     player_in = PlayerUpdate(
-        first_name=first_name, last_name=last_name,
-        date_of_birth=parsed_date, position=position, photo_url=final_photo_url
+        first_name=first_name, last_name=last_name, date_of_birth=parsed_date, position=position,
+        photo_url=final_photo_url
     )
     await crud_player.update(db, db_obj=player, obj_in=player_in)
     return RedirectResponse(url="/admin/players", status_code=303)
@@ -948,14 +858,9 @@ async def admin_player_delete(player_id: int, request: Request, db: AsyncSession
     return RedirectResponse(url="/admin/players", status_code=303)
 
 
-# --- ЗАЯВКИ КОМАНД (ROSTER) ---
-
 @router.get("/admin/teams/{team_id}/roster")
 async def admin_team_roster(
-        team_id: int,
-        request: Request,
-        tournament_id: int = None,  # Получаем из URL параметра ?tournament_id=1
-        db: AsyncSession = Depends(get_db)
+        team_id: int, request: Request, tournament_id: int = None, db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
@@ -963,42 +868,29 @@ async def admin_team_roster(
     team = await crud_team.get(db, team_id)
     if not team: return RedirectResponse(url="/admin/teams", status_code=303)
 
-    # Все турниры (для выпадающего списка) и все игроки (для добавления)
     tournaments = (await db.execute(select(Tournament).order_by(Tournament.created_at.desc()))).scalars().all()
     all_players = (await db.execute(select(Player).order_by(Player.last_name))).scalars().all()
 
-    # Если турнир выбран, получаем заявку
     roster = []
     if tournament_id:
         roster = await crud_team_player.get_by_tournament_and_team(db, tournament_id=tournament_id, team_id=team_id)
 
     return await render_page(request, db, "admin_roster.html", context={
-        "user": user,
-        "team": team,
-        "tournaments": tournaments,
-        "all_players": all_players,
-        "roster": roster,
-        "selected_tournament_id": tournament_id
+        "user": user, "team": team, "tournaments": tournaments,
+        "all_players": all_players, "roster": roster, "selected_tournament_id": tournament_id
     })
 
 
 @router.post("/admin/teams/{team_id}/roster/add")
 async def admin_team_roster_add(
-        team_id: int,
-        request: Request,
-        tournament_id: int = Form(...),
-        player_id: int = Form(...),
-        jersey_number: int = Form(None),
-        is_captain: bool = Form(False),
-        db: AsyncSession = Depends(get_db)
+        team_id: int, request: Request, tournament_id: int = Form(...), player_id: int = Form(...),
+        jersey_number: int = Form(None), is_captain: bool = Form(False), db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Проверяем, нет ли игрока уже в заявке
     existing = await crud_team_player.get_by_tournament_and_team(db, tournament_id=tournament_id, team_id=team_id)
     if any(tp.player_id == player_id for tp in existing):
-        # Если есть, просто редиректим обратно
         return RedirectResponse(url=f"/admin/teams/{team_id}/roster?tournament_id={tournament_id}", status_code=303)
 
     obj_in = TeamPlayerCreate(
@@ -1012,10 +904,7 @@ async def admin_team_roster_add(
 
 @router.post("/admin/roster/{roster_id}/delete")
 async def admin_roster_delete(
-        roster_id: int,
-        request: Request,
-        team_id: int = Form(...),
-        tournament_id: int = Form(...),
+        roster_id: int, request: Request, team_id: int = Form(...), tournament_id: int = Form(...),
         db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
@@ -1028,9 +917,6 @@ async def admin_roster_delete(
     return RedirectResponse(url=f"/admin/teams/{team_id}/roster?tournament_id={tournament_id}", status_code=303)
 
 
-# --- ПРОТОКОЛ МАТЧА (СОБЫТИЯ) ---
-
-# Вспомогательная функция для пересчета счета
 async def recalculate_match_score(match: Match, db: AsyncSession):
     events = (await db.execute(select(MatchEvent).where(MatchEvent.match_id == match.id))).scalars().all()
 
@@ -1044,7 +930,6 @@ async def recalculate_match_score(match: Match, db: AsyncSession):
             elif e.team_id == match.away_team_id:
                 away_goals += 1
         elif e.event_type == MatchEventType.OWN_GOAL:
-            # Автогол: забивает команда e.team_id, но гол идет в счет соперника
             if e.team_id == match.home_team_id:
                 away_goals += 1
             elif e.team_id == match.away_team_id:
@@ -1064,34 +949,22 @@ async def admin_match_events(match_id: int, request: Request, db: AsyncSession =
     match = await crud_match.get_with_teams(db, match_id=match_id)
     if not match: return RedirectResponse(url="/admin/matches", status_code=303)
 
-    # Получаем все события этого матча
     events = await crud_match_event.get_by_match(db, match_id=match_id)
-
-    # Получаем игроков обеих команд для выпадающего списка
     home_players = await crud_team_player.get_by_tournament_and_team(db, tournament_id=match.tournament_id,
                                                                      team_id=match.home_team_id)
     away_players = await crud_team_player.get_by_tournament_and_team(db, tournament_id=match.tournament_id,
                                                                      team_id=match.away_team_id)
 
     return await render_page(request, db, "admin_match_events.html", context={
-        "user": user,
-        "match": match,
-        "events": events,
-        "home_players": home_players,
-        "away_players": away_players,
-        "event_types": MatchEventType
+        "user": user, "match": match, "events": events,
+        "home_players": home_players, "away_players": away_players, "event_types": MatchEventType
     })
 
 
 @router.post("/admin/matches/{match_id}/events/add")
 async def admin_match_event_add(
-        match_id: int,
-        request: Request,
-        team_id: int = Form(...),
-        player_id: int = Form(...),
-        event_type: MatchEventType = Form(...),
-        minute: int = Form(...),
-        comment: str = Form(None),
+        match_id: int, request: Request, team_id: int = Form(...), player_id: int = Form(...),
+        event_type: MatchEventType = Form(...), minute: int = Form(...), comment: str = Form(None),
         db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
@@ -1101,21 +974,16 @@ async def admin_match_event_add(
     if not match: return RedirectResponse(url="/admin/matches", status_code=303)
 
     event_in = MatchEventCreate(
-        match_id=match_id, team_id=team_id, player_id=player_id,
-        event_type=event_type, minute=minute, comment=comment
+        match_id=match_id, team_id=team_id, player_id=player_id, event_type=event_type, minute=minute, comment=comment
     )
     await crud_match_event.create(db, obj_in=event_in)
-
-    # Пересчитываем счет
     await recalculate_match_score(match, db)
 
     return RedirectResponse(url=f"/admin/matches/{match_id}/events", status_code=303)
 
 
 @router.post("/admin/matches/{match_id}/events/{event_id}/delete")
-async def admin_match_event_delete(
-        match_id: int, event_id: int, request: Request, db: AsyncSession = Depends(get_db)
-):
+async def admin_match_event_delete(match_id: int, event_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
@@ -1128,49 +996,6 @@ async def admin_match_event_delete(
 
     return RedirectResponse(url=f"/admin/matches/{match_id}/events", status_code=303)
 
-from app.services.match import MatchService
-from app.schemas.match import MatchCreate
-
-@router.post("/admin/tournaments/{tournament_id}/generate-calendar")
-async def admin_generate_calendar(
-    tournament_id: int,
-    request: Request,
-    db: AsyncSession = Depends(get_db)
-):
-    user = await get_admin_from_cookie(request, db)
-    if isinstance(user, RedirectResponse): return user
-
-    # 1. Проверяем турнир
-    tournament = await crud_tournament.get(db, tournament_id)
-    if not tournament:
-        return RedirectResponse(url="/admin/tournaments", status_code=303)
-
-    # 2. Берем все активные команды
-    teams = (await db.execute(select(Team).where(Team.is_active == True))).scalars().all()
-    if len(teams) < 2:
-        # Если команд меньше 2, календарь не построить
-        return RedirectResponse(url="/admin/tournaments", status_code=303)
-
-    team_ids = [t.id for t in teams]
-
-    # 3. Генерируем пары
-    pairs = MatchService.generate_round_robin(team_ids)
-
-    # 4. Создаем матчи в базе
-    for home_id, away_id in pairs:
-        match_in = MatchCreate(
-            tournament_id=tournament_id,
-            home_team_id=home_id,
-            away_team_id=away_id,
-            status=MatchStatus.SCHEDULED,
-            round=1
-        )
-        await crud_match.create(db, obj_in=match_in)
-
-    return RedirectResponse(url="/admin/tournaments", status_code=303)
-
-
-# --- НОВОСТИ ---
 
 @router.get("/admin/news")
 async def admin_news_list(request: Request, db: AsyncSession = Depends(get_db)):
@@ -1185,19 +1010,13 @@ async def admin_news_list(request: Request, db: AsyncSession = Depends(get_db)):
 async def admin_news_create_form(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
-
     return await render_page(request, db, "admin_news_form.html", context={"user": user, "news": None})
 
 
 @router.post("/admin/news/create")
 async def admin_news_create(
-        request: Request,
-        title: str = Form(...),
-        slug: str = Form(...),
-        content: str = Form(...),
-        published_at: str = Form(None),
-        is_published: bool = Form(False),
-        image: UploadFile = File(None),
+        request: Request, title: str = Form(...), slug: str = Form(...), content: str = Form(...),
+        published_at: str = Form(None), is_published: bool = Form(False), image: UploadFile = File(None),
         db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
@@ -1207,8 +1026,8 @@ async def admin_news_create(
     parsed_date = datetime.fromisoformat(published_at) if published_at else datetime.now()
 
     news_in = NewsCreate(
-        title=title, slug=slug, content=content,
-        image_url=image_url, is_published=is_published, published_at=parsed_date
+        title=title, slug=slug, content=content, image_url=image_url, is_published=is_published,
+        published_at=parsed_date
     )
     await crud_news.create(db, obj_in=news_in)
     return RedirectResponse(url="/admin/news", status_code=303)
@@ -1227,14 +1046,8 @@ async def admin_news_edit_form(news_id: int, request: Request, db: AsyncSession 
 
 @router.post("/admin/news/{news_id}/edit")
 async def admin_news_edit(
-        news_id: int,
-        request: Request,
-        title: str = Form(...),
-        slug: str = Form(...),
-        content: str = Form(...),
-        published_at: str = Form(None),
-        is_published: bool = Form(False),
-        image: UploadFile = File(None),
+        news_id: int, request: Request, title: str = Form(...), slug: str = Form(...), content: str = Form(...),
+        published_at: str = Form(None), is_published: bool = Form(False), image: UploadFile = File(None),
         db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
@@ -1248,8 +1061,8 @@ async def admin_news_edit(
     parsed_date = datetime.fromisoformat(published_at) if published_at else news_item.published_at
 
     news_in = NewsUpdate(
-        title=title, slug=slug, content=content,
-        image_url=final_image_url, is_published=is_published, published_at=parsed_date
+        title=title, slug=slug, content=content, image_url=final_image_url,
+        is_published=is_published, published_at=parsed_date
     )
     await crud_news.update(db, db_obj=news_item, obj_in=news_in)
     return RedirectResponse(url="/admin/news", status_code=303)
@@ -1268,11 +1081,8 @@ async def admin_news_delete(news_id: int, request: Request, db: AsyncSession = D
 
 @router.get("/matches/{match_id}/print")
 async def match_protocol_print(match_id: int, request: Request, db: AsyncSession = Depends(get_db)):
-    """Страница для печати официального протокола матча."""
     stmt = select(Match).where(Match.id == match_id).options(
-        selectinload(Match.home_team),
-        selectinload(Match.away_team),
-        selectinload(Match.tournament),
+        selectinload(Match.home_team), selectinload(Match.away_team), selectinload(Match.tournament),
         selectinload(Match.events).selectinload(MatchEvent.player),
         selectinload(Match.events).selectinload(MatchEvent.team)
     )
@@ -1284,32 +1094,22 @@ async def match_protocol_print(match_id: int, request: Request, db: AsyncSession
     if match.events:
         match.events.sort(key=lambda e: e.minute)
 
-    # Разделяем события на голы хозяев и гостей (для красивого вывода)
     home_events = [e for e in match.events if e.team_id == match.home_team_id]
     away_events = [e for e in match.events if e.team_id == match.away_team_id]
 
     return templates.TemplateResponse(
-        request=request,
-        name="protocol_print.html",
-        context={
-            "match": match,
-            "home_events": home_events,
-            "away_events": away_events
-        }
+        request=request, name="protocol_print.html",
+        context={"match": match, "home_events": home_events, "away_events": away_events}
     )
 
-
-# --- МЕДИА (АЛЬБОМЫ И ФОТО) ---
 
 @router.get("/admin/media")
 async def admin_media_list(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Получаем альбомы вместе с их элементами (фото)
     stmt = select(MediaAlbum).options(selectinload(MediaAlbum.items)).order_by(MediaAlbum.created_at.desc())
     albums = (await db.execute(stmt)).scalars().all()
-
     return await render_page(request, db, "admin_media.html", context={"user": user, "albums": albums})
 
 
@@ -1325,10 +1125,7 @@ async def admin_media_create_form(request: Request, db: AsyncSession = Depends(g
 
 @router.post("/admin/media/create")
 async def admin_media_create(
-        request: Request,
-        title: str = Form(...),
-        tournament_id: int = Form(None),
-        db: AsyncSession = Depends(get_db)
+        request: Request, title: str = Form(...), tournament_id: int = Form(None), db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
@@ -1354,7 +1151,6 @@ async def admin_media_delete(album_id: int, request: Request, db: AsyncSession =
     return RedirectResponse(url="/admin/media", status_code=303)
 
 
-# Управление фото внутри альбома
 @router.get("/admin/media/{album_id}")
 async def admin_media_album_detail(album_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -1369,10 +1165,7 @@ async def admin_media_album_detail(album_id: int, request: Request, db: AsyncSes
 
 @router.post("/admin/media/{album_id}/upload")
 async def admin_media_upload(
-        album_id: int,
-        request: Request,
-        photos: list[UploadFile] = File(...),  # Поддерживаем загрузку сразу нескольких файлов
-        db: AsyncSession = Depends(get_db)
+        album_id: int, request: Request, photos: list[UploadFile] = File(...), db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user

@@ -1,50 +1,37 @@
 import asyncio
-from sqlalchemy import delete
+from sqlalchemy import update
+
 from app.db.session import session_factory
 from app.models.tournament import Tournament
-from app.models.tournament_team import TournamentTeam
-from app.models.tournament_standing import TournamentStanding
-from app.models.match import Match
-from app.models.match_event import MatchEvent
-from app.models.disqualification import Disqualification
-from app.models.news import News
-from app.models.document import Document
 
-async def clear_tournaments_only():
+
+async def fix_specific_seasons():
     async with session_factory() as db:
-        print("🧹 Начинаем очистку данных турниров...")
+        print("🔧 Ищем турниры для переноса в сезон 2024...")
 
-        # 1. Удаляем события матчей
-        await db.execute(delete(MatchEvent))
-        print("  ✅ События матчей удалены")
+        # Список названий турниров со скриншотов
+        # Используем ilike, чтобы регистр букв не имел значения
+        names_to_fix = [
+            "OFL J-LIGA. QYSQY KUBOGY 2025.",
+            "OFL J-LIGA. QYSQY KUBOGY 2025. JUNIOR U17",
+            "OFL J-LIGA. QYSQY KUBOGY 2025. JUNIOR U15",
+            "Море футбола 2015г - Наурыз",
+            "МОРЕ ФУТБОЛА 2013г. - НАУРЫЗ"
+        ]
 
-        # 2. Удаляем сами матчи
-        await db.execute(delete(Match))
-        print("  ✅ Матчи удалены")
+        for name in names_to_fix:
+            # Обновляем сезон на 2024 там, где название совпадает
+            stmt = update(Tournament).where(
+                Tournament.name.ilike(f"%{name}%")
+            ).values(season="2024")
 
-        # 3. Удаляем турнирные таблицы
-        await db.execute(delete(TournamentStanding))
-        print("  ✅ Турнирные таблицы удалены")
+            result = await db.execute(stmt)
+            print(f"✅ Обновлен турнир '{name}': затронуто строк {result.rowcount}")
 
-        # 4. Удаляем заявки команд
-        await db.execute(delete(TournamentTeam))
-        print("  ✅ Заявки команд удалены")
-
-        # 5. Удаляем дисквалификации
-        await db.execute(delete(Disqualification))
-        print("  ✅ Дисквалификации удалены")
-
-        # 6. Отвязываем новости и документы от турниров (сами новости оставляем)
-        await db.execute(News.__table__.update().values(tournament_id=None))
-        await db.execute(Document.__table__.update().values(tournament_id=None))
-        print("  ✅ Новости и документы отвязаны от турниров")
-
-        # 7. Удаляем сами турниры
-        await db.execute(delete(Tournament))
-        print("  ✅ Турниры удалены")
-
+        # Сохраняем изменения
         await db.commit()
-        print("🎉 База очищена! Все пользователи, команды, игроки и стадионы остались на месте.")
+        print("\n🎉 ГОТОВО! Все указанные турниры теперь относятся к 2024 году.")
+
 
 if __name__ == "__main__":
-    asyncio.run(clear_tournaments_only())
+    asyncio.run(fix_specific_seasons())
