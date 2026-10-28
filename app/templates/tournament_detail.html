@@ -1,73 +1,328 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-    <div>
-        <h3 class="text-uppercase fw-bold m-0">{{ tournament.name }}</h3>
-        <span class="text-muted">{{ tournament.season }} • {{ tournament.division }}</span>
+<!-- Стили для всплывающего окна -->
+<style>
+    #match-popup {
+        display: none;
+        position: absolute;
+        z-index: 1050;
+        width: 320px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        pointer-events: none; /* Чтобы не мешало курсору при наведении */
+    }
+    .grid-match-cell { cursor: pointer; }
+    .grid-match-cell:hover { opacity: 0.8; }
+    .match-popup-trigger { cursor: pointer; }
+    .match-popup-trigger:hover { transform: scale(1.05); transition: 0.2s; }
+</style>
+
+<!-- Шапка турнира -->
+<div class="card border-0 shadow-sm mb-4 bg-dark text-white">
+    <div class="card-body p-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div class="d-flex align-items-center gap-4">
+            {% if tournament.logo_url %}
+                <img src="{{ tournament.logo_url }}" alt="logo" style="height: 80px; width: 80px; object-fit: contain; background: white; border-radius: 10px; padding: 5px;">
+            {% endif %}
+            <div>
+                <h2 class="fw-bold text-uppercase m-0">{{ tournament.name }}</h2>
+                <div class="d-flex gap-4 mt-2 text-light opacity-75">
+                    <span><i class="bi bi-calendar-event me-1"></i> {{ tournament.start_at.strftime('%d %B %Y') if tournament.start_at else 'TBA' }} - {{ tournament.end_at.strftime('%d %B %Y') if tournament.end_at else 'TBA' }}</span>
+                    <span><i class="bi bi-people-fill me-1"></i> {{ tournament.max_teams }} команд</span>
+                </div>
+            </div>
+        </div>
+        <a href="/tournaments" class="btn btn-outline-light"><i class="bi bi-arrow-left"></i> Назад</a>
     </div>
-    <a href="/tournaments" class="btn btn-outline-dark">← Назад</a>
 </div>
 
 <div class="row">
-    <!-- Таблица (широкая) -->
+    <!-- ЛЕВАЯ ЧАСТЬ -->
     <div class="col-xl-8 mb-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-dark text-white fw-bold py-3">Турнирная таблица</div>
-            <div class="card-body p-0">
-                <table class="table table-hover table-custom mb-0 text-center">
-                    <thead>
-                        <tr>
-                            <th class="py-3">#</th><th class="text-start py-3">Команда</th>
-                            <th>И</th><th>В</th><th>Н</th><th>П</th><th>МЗ</th><th>МП</th><th>О</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for standing in standings %}
-                        <tr>
-                            <td class="fw-bold text-muted">{{ loop.index }}</td>
-                            <td class="text-start fw-bold">{{ standing.team.name }}</td>
-                            <td>{{ standing.games_played }}</td>
-                            <td>{{ standing.wins }}</td>
-                            <td>{{ standing.draws }}</td>
-                            <td>{{ standing.losses }}</td>
-                            <td>{{ standing.goals_for }}</td>
-                            <td>{{ standing.goals_against }}</td>
-                            <td><span class="badge bg-dark fs-6">{{ standing.points }}</span></td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="9" class="text-muted py-4">Нет данных</td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+        <ul class="nav nav-pills nav-fill mb-3 shadow-sm bg-white rounded p-1" id="tournamentTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active fw-bold text-uppercase" id="table-tab" data-bs-toggle="pill" data-bs-target="#table-pane" type="button" role="tab">Таблица</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold text-uppercase" id="grid-tab" data-bs-toggle="pill" data-bs-target="#grid-pane" type="button" role="tab">Шахматка</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-bold text-uppercase" id="progress-tab" data-bs-toggle="pill" data-bs-target="#progress-pane" type="button" role="tab">Прогресс</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="tournamentTabsContent">
+            <!-- 1. ТАБЛИЦА -->
+            <div class="tab-pane fade show active" id="table-pane" role="tabpanel">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0 text-center align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="py-3 px-2" style="width: 40px;">#</th>
+                                        <th class="text-start py-3">Команда</th>
+                                        <th>И</th><th>В</th><th>Н</th><th>П</th><th>МЗ</th><th>МП</th>
+                                        <th class="bg-secondary">О</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for standing in standings %}
+                                    <tr>
+                                        <td class="fw-bold text-muted px-2">{{ loop.index }}</td>
+                                        <td class="text-start fw-bold">
+                                            <div class="d-flex align-items-center">
+                                                {% if standing.team.logo_url %}<img src="{{ standing.team.logo_url }}" style="height: 24px; width: 24px; object-fit: contain;" class="me-2">{% endif %}
+                                                <a href="/teams/{{ standing.team.id }}" class="text-decoration-none text-dark hover-lift">{{ standing.team.name }}</a>
+                                            </div>
+                                        </td>
+                                        <td>{{ standing.games_played }}</td>
+                                        <td>{{ standing.wins }}</td>
+                                        <td>{{ standing.draws }}</td>
+                                        <td>{{ standing.losses }}</td>
+                                        <td>{{ standing.goals_for }}</td>
+                                        <td>{{ standing.goals_against }}</td>
+                                        <td><span class="badge bg-dark fs-6 rounded-pill px-3 shadow-sm">{{ standing.points }}</span></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+                        <!-- 2. ШАХМАТКА -->
+            <div class="tab-pane fade" id="grid-pane" role="tabpanel">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-0 overflow-auto" style="max-height: 85vh;">
+                        <table class="table table-bordered table-sm text-center align-middle mb-0" style="min-width: 800px; font-size: 12px;">
+                            <thead class="table-dark sticky-top">
+                                <tr>
+                                    <th style="width: 150px; text-align: left; padding-left: 10px;">Команда</th>
+                                    {% for team in teams_list %}
+                                        <th title="{{ team.name }}">
+                                            {% if team.logo_url %}<img src="{{ team.logo_url }}" style="height: 20px; width: 20px; object-fit: contain;">{% else %}{{ team.name[:3] }}{% endif %}
+                                        </th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for home_team in teams_list %}
+                                <tr>
+                                    <td class="text-start fw-bold bg-light" style="padding-left: 10px;">
+                                        <a href="/teams/{{ home_team.id }}" class="text-decoration-none text-dark d-flex align-items-center">
+                                            {% if home_team.logo_url %}<img src="{{ home_team.logo_url }}" style="height: 20px; width: 20px; object-fit: contain;" class="me-1">{% endif %}
+                                            {{ home_team.name }}
+                                        </a>
+                                    </td>
+                                    {% for away_team in teams_list %}
+                                        {% if home_team.id == away_team.id %}
+                                            <td class="bg-secondary"></td>
+                                        {% else %}
+                                            {% set data = matrix.get((home_team.id, away_team.id)) %}
+
+                                            {# Проверяем, словарь это или строка #}
+                                            {% if data is mapping %}
+                                                {% set score_text = data.score %}
+                                                {% set match_id = data.match_id %}
+                                            {% else %}
+                                                {% set score_text = data %}
+                                                {% set match_id = '' %}
+                                            {% endif %}
+
+                                            {% if score_text and score_text != '-:-' %}
+                                                {% set h_g = score_text.split('-')[0] | trim | int %}
+                                                {% set a_g = score_text.split('-')[1] | trim | int %}
+                                                <td class="grid-match-cell fw-bold {% if h_g > a_g %}bg-success text-white{% elif h_g < a_g %}bg-danger text-white{% else %}bg-light{% endif %}"
+                                                    data-match-id="{{ match_id }}">
+                                                    {{ score_text }}
+                                                </td>
+                                            {% else %}
+                                                <td class="text-muted">-</td>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. ПРОГРЕСС -->
+            <div class="tab-pane fade" id="progress-pane" role="tabpanel">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-0">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="py-3 px-4" style="width: 50px;">#</th>
+                                    <th>Команда</th>
+                                    <th class="text-center">Последние 5 матчей</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for standing in standings %}
+                                <tr>
+                                    <td class="px-4 fw-bold text-muted">{{ loop.index }}</td>
+                                    <td class="fw-bold">
+                                        <a href="/teams/{{ standing.team.id }}" class="text-decoration-none text-dark hover-lift">{{ standing.team.name }}</a>
+                                    </td>
+                                    <td class="text-center">
+                                        {% for item in progress.get(standing.team.id, []) %}
+                                            <span class="badge match-popup-trigger {% if item.result == 'B' %}bg-success{% elif item.result == 'Н' %}bg-secondary{% else %}bg-danger{% endif %} mx-1 fs-6 shadow-sm"
+                                                  data-match-id="{{ item.match_id }}" style="width: 30px; height: 30px; line-height: 22px;">
+                                                {{ item.result }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted small">Нет данных</span>
+                                        {% endfor %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Матчи -->
-    <div class="col-xl-4">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-dark text-white fw-bold py-3">Матчи</div>
-            <div class="card-body p-0" style="max-height: 700px; overflow-y: auto;">
-                <ul class="list-group list-group-flush">
+    <!-- ПРАВАЯ ЧАСТЬ: КАЛЕНДАРЬ -->
+    <div class="col-xl-4 mb-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-dark text-white fw-bold py-3 text-uppercase text-center" style="letter-spacing: 1px;">Календарь</div>
+            <div class="card-body p-0" style="max-height: 850px; overflow-y: auto;">
+                {% set ns = namespace(current_round=None) %}
+                <div class="list-group list-group-flush">
                     {% for match in matches %}
-                    <li class="list-group-item p-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <small class="text-muted">{{ match.match_date.strftime('%d.%m.%Y %H:%M') if match.match_date else 'Дата TBA' }}</small>
-                            <span class="badge bg-{{ 'success' if match.status.value == 'FINISHED' else 'secondary' }}">{{ match.status.value }}</span>
+                        {% if ns.current_round != match.round %}
+                            {% set ns.current_round = match.round %}
+                            <div class="list-group-item bg-secondary text-white fw-bold text-uppercase text-center py-2 border-top border-bottom border-dark" style="font-size: 14px; letter-spacing: 1.5px;">
+                                {{ match.round }} ТУР
+                            </div>
+                        {% endif %}
+
+                        <div class="list-group-item p-3 bg-white">
+                            <div class="row align-items-center">
+                                <div class="col-4 pe-2 text-start">
+                                    <div class="fw-bold text-dark" style="font-size: 13px;">{{ match.match_date.strftime('%d %b, %a') if match.match_date else 'TBA' }}</div>
+                                    <div class="text-muted" style="font-size: 12px;"><i class="bi bi-clock me-1"></i> {{ match.match_date.strftime('%H:%M') if match.match_date else '--:--' }}</div>
+                                    <div class="text-muted text-truncate mt-1" style="font-size: 11px;" title="{{ match.stadium }}"><i class="bi bi-geo-alt-fill text-danger me-1"></i> {{ match.stadium or 'Стадион TBA' }}</div>
+                                </div>
+                                <div class="col-8">
+                                    <a href="/matches/{{ match.id }}" class="text-decoration-none text-dark d-block">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div class="text-end text-truncate" style="width: 42%; font-size: 14px; font-weight: 600;">{{ match.home_team.name }}</div>
+                                            <div class="text-center" style="width: 16%;">
+                                                <span class="badge bg-light text-dark border px-2 py-1 fs-6 shadow-sm match-popup-trigger" data-match-id="{{ match.id }}">
+                                                    {{ match.home_score or 0 }} : {{ match.away_score or 0 }}
+                                                </span>
+                                            </div>
+                                            <div class="text-start text-truncate" style="width: 42%; font-size: 14px; font-weight: 600;">{{ match.away_team.name }}</div>
+                                        </div>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-truncate" style="max-width: 40%;">{{ match.home_team.name }}</span>
-                            <span class="badge bg-light text-dark fs-6 border">{{ match.home_score or 0 }} : {{ match.away_score or 0 }}</span>
-                            <span class="fw-bold text-end text-truncate" style="max-width: 40%;">{{ match.away_team.name }}</span>
-                        </div>
-                        <a href="/matches/{{ match.id }}" class="btn btn-sm btn-outline-dark w-100 mt-2">Протокол</a>
-                    </li>
                     {% else %}
-                    <li class="list-group-item p-4 text-center text-muted">Матчи не назначены.</li>
+                        <div class="list-group-item p-5 text-center text-muted"><i class="bi bi-calendar-x fs-1 d-block mb-3 text-secondary"></i> Матчи не назначены.</div>
                     {% endfor %}
-                </ul>
+                </div>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Всплывающее окно (Попап) -->
+<div id="match-popup"></div>
+
+<!-- Кнопка Наверх -->
+<div class="text-center mt-4 mb-5">
+    <a href="#" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">
+        <i class="bi bi-arrow-up-circle me-1"></i> Наверх
+    </a>
+</div>
+
+<!-- JS для работы попапа -->
+<script>
+    const matchData = {{ matches_dict | tojson }};
+    const popup = document.getElementById('match-popup');
+
+    function buildPopupHtml(matchId) {
+        const data = matchData[matchId];
+        if (!data) return '';
+
+        let eventsHtml = '';
+        data.events.forEach(e => {
+            let icon = e.type === 'GOAL' ? '⚽' : (e.type === 'YELLOW_CARD' ? '🟨' : '🟥');
+            eventsHtml += `<div class="text-start small mb-1"><span class="badge bg-light text-dark me-1">${e.minute}'</span> ${icon} ${e.player}</div>`;
+        });
+
+        return `
+            <div class="p-2 text-center border-bottom bg-light rounded-top">
+                <small class="fw-bold">${data.date}</small><br>
+                <small class="text-muted"><i class="bi bi-geo-alt-fill text-danger"></i> ${data.stadium}</small>
+            </div>
+            <div class="p-3 d-flex justify-content-between align-items-center bg-white">
+                <div class="text-end fw-bold w-35" style="font-size: 13px;">${data.home_name}</div>
+                <div class="fs-5 fw-bold bg-dark text-white rounded px-2 py-1">${data.home_score} : ${data.away_score}</div>
+                <div class="text-start fw-bold w-35" style="font-size: 13px;">${data.away_name}</div>
+            </div>
+            ${eventsHtml ? `<div class="p-2 border-top bg-light rounded-bottom" style="max-height: 150px; overflow-y: auto;">${eventsHtml}</div>` : ''}
+        `;
+    }
+
+    // Наведение на Шахматку
+    document.querySelectorAll('.grid-match-cell').forEach(cell => {
+        cell.addEventListener('mouseenter', (e) => {
+            const matchId = cell.getAttribute('data-match-id');
+            if(!matchId) return;
+
+            popup.innerHTML = buildPopupHtml(matchId);
+            popup.style.display = 'block';
+
+            // Позиционируем рядом с курсором
+            let x = e.pageX + 15;
+            let y = e.pageY + 15;
+
+            // Проверка, чтобы не уходило за экран
+            if (x + 320 > window.innerWidth) x = e.pageX - 335;
+            popup.style.left = x + 'px';
+            popup.style.top = y + 'px';
+        });
+
+        cell.addEventListener('mouseleave', () => {
+            popup.style.display = 'none';
+        });
+    });
+
+    // Клик на счет в Календаре или Прогрессе
+    document.querySelectorAll('.match-popup-trigger').forEach(el => {
+        el.addEventListener('click', (e) => {
+            e.preventDefault(); // Останавливаем переход по ссылке
+            e.stopPropagation();
+
+            const matchId = el.getAttribute('data-match-id');
+            popup.innerHTML = buildPopupHtml(matchId);
+            popup.style.display = 'block';
+
+            // Позиционируем по центру экрана (как модалку)
+            popup.style.left = (window.innerWidth / 2 - 160) + 'px';
+            popup.style.top = (window.innerHeight / 2 - 100) + window.scrollY + 'px';
+        });
+    });
+
+    // Скрываем попап при клике в любое другое место
+    document.addEventListener('click', (e) => {
+        if (!popup.contains(e.target) && !e.target.classList.contains('match-popup-trigger') && !e.target.classList.contains('grid-match-cell')) {
+            popup.style.display = 'none';
+        }
+    });
+</script>
 {% endblock %}

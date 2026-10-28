@@ -1,5 +1,5 @@
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 import shutil
 import uuid
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, UploadFile, File
@@ -16,10 +16,8 @@ from app.core.config import settings
 from app.models.tournament import Tournament
 from app.models.tournament_standing import TournamentStanding
 from app.models.match import Match
-from app.models.match_event import MatchEvent
 from app.models.news import News
 from app.models.team import Team
-from app.models.player import Player
 from app.models.user import User
 from app.models.enums import MatchStatus, TournamentStatus, UserRole, TournamentFormat, PlayerPosition, MatchEventType
 from app.models.media import MediaAlbum, MediaItem
@@ -46,6 +44,9 @@ from app.schemas.player import PlayerCreate, PlayerUpdate
 from app.schemas.team_player import TeamPlayerCreate
 from app.schemas.match_event import MatchEventCreate
 from app.schemas.news import NewsCreate, NewsUpdate
+from app.models.team_player import TeamPlayer
+from app.models.player import Player
+from app.models.match_event import MatchEvent
 
 router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -175,7 +176,7 @@ async def home_page(request: Request, db: AsyncSession = Depends(get_db)):
     active_tournament = tournaments[0] if tournaments else None
 
     if active_tournament:
-        await StandingsService.recalculate_standings(db, active_tournament.id)
+        # await StandingsService.recalculate_standings(db, active_tournament.id)
         stmt_standings = select(TournamentStanding).where(
             TournamentStanding.tournament_id == active_tournament.id
         ).options(selectinload(TournamentStanding.team)).order_by(TournamentStanding.points.desc()).limit(5)
@@ -224,24 +225,96 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
     if not tournament:
         raise HTTPException(status_code=404, detail="Турнир не найден")
 
-    tournament.logo_url = fix_logo_url(tournament.logo_url)
+    # 1. Таблица
+    stmt_standings = select(TournamentStanding).where(TournamentStanding.tournament_id == tournament_id).options(
+        selectinload(TournamentStanding.team)
+    ).order_by(TournamentStanding.points.desc(), TournamentStanding.goals_for.desc())
+    standings = (await db.execute(stmt_standings)).scalars().all()
 
-    await StandingsService.recalculate_standings(db, tournament_id)
+    # 2. Матчи (с загрузкой событий для попапа)
+    stmt_matches = select(Match).where(Match.tournament_id == tournament_id).options(
+        selectinload(Match.home_team),
+        selectinload(Match.away_team),
+        selectinload(Match.events).selectinload(MatchEvent.player)
+    )
+    matches_raw = (await db.execute(stmt_matches)).scalars().all()
 
-    stmt = select(TournamentStanding).where(TournamentStanding.tournament_id == tournament_id).options(
-        selectinload(TournamentStanding.team)).order_by(TournamentStanding.points.desc(),
-                                                        TournamentStanding.goals_for.desc())
-    standings = (await db.execute(stmt)).scalars().all()
+    fallback_date = datetime.min.replace(tzinfo=timezone.utc)
+    matches = sorted(
+        matches_raw,
+        key=lambda x: (
+            int(x.round) if x.round and str(x.round).isdigit() else 0,
+            x.match_date or fallback_date
+        )
+    )
 
-    stmt_matches = select(Match).where(Match.tournament_id == tournament_id).options(selectinload(Match.home_team),
-                                                                                     selectinload(
-                                                                                         Match.away_team)).order_by(
-        Match.match_date)
-    matches = (await db.execute(stmt_matches)).scalars().all()
+    # 3. Подготовка словаря для попапа (JSON)
+    matches_dict = {}
+    for m in matches:
+        matches_dict[m.id] = {
+            "home_name": m.home_team.name,
+            "away_name": m.away_team.name,
+            "home_score": m.home_score or 0,
+            "away_score": m.away_score or 0,
+            "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
+            "stadium": m.stadium or 'Стадион TBA',
+            "events": [
+                {
+                    "minute": e.minute,
+                    "team_id": e.team_id,
+                    "player": f"{e.player.last_name}" if e.player else "Игрок",
+                    "type": e.event_type.value
+                } for e in m.events
+            ] if m.events else []
+        }
 
-    return await render_page(request, db, "tournament_detail.html",
-                             context={"tournament": tournament, "standings": standings, "matches": matches})
+    # 4. Шахматка (ПЕРЕДАЕМ СЛОВАРИ, А НЕ СТРОКИ)
+    matrix_data = {}
+    for m in matches:
+        if m.home_score is not None and m.away_score is not None:
+            matrix_data[(m.home_team_id, m.away_team_id)] = {"score": f"{m.home_score}-{m.away_score}",
+                                                             "match_id": m.id}
+        else:
+            matrix_data[(m.home_team_id, m.away_team_id)] = {"score": "-:-", "match_id": m.id}
 
+    teams_list = [s.team for s in standings]
+
+    # 5. Прогресс
+    progress_data = {}
+    for team in teams_list:
+        team_matches = [m for m in matches if m.home_team_id == team.id or m.away_team_id == team.id]
+        team_matches.sort(key=lambda x: x.match_date or fallback_date, reverse=True)
+
+        recent_form = []
+        for m in team_matches[:5]:
+            if m.home_score is not None and m.away_score is not None:
+                res = ""
+                if m.home_team_id == team.id:
+                    if m.home_score > m.away_score:
+                        res = 'B'
+                    elif m.home_score < m.away_score:
+                        res = 'П'
+                    else:
+                        res = 'Н'
+                else:
+                    if m.away_score > m.home_score:
+                        res = 'B'
+                    elif m.away_score < m.home_score:
+                        res = 'П'
+                    else:
+                        res = 'Н'
+                recent_form.append({"result": res, "match_id": m.id})
+        progress_data[team.id] = recent_form
+
+    return await render_page(request, db, "tournament_detail.html", context={
+        "tournament": tournament,
+        "standings": standings,
+        "matches": matches,
+        "teams_list": teams_list,
+        "matrix": matrix_data,
+        "progress": progress_data,
+        "matches_dict": matches_dict
+    })
 
 @router.get("/participants/teams")
 async def participants_teams_page(request: Request, page: int = 1, db: AsyncSession = Depends(get_db)):
@@ -306,13 +379,14 @@ async def media_page(request: Request, db: AsyncSession = Depends(get_db)):
 @router.get("/matches/{match_id}")
 async def match_protocol_page(match_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     stmt = select(Match).where(Match.id == match_id).options(
-        selectinload(Match.home_team), selectinload(Match.away_team), selectinload(Match.tournament),
+        selectinload(Match.home_team),
+        selectinload(Match.away_team),
+        selectinload(Match.tournament),
         selectinload(Match.events).selectinload(MatchEvent.player),
         selectinload(Match.events).selectinload(MatchEvent.team)
     )
     match = (await db.execute(stmt)).scalar_one_or_none()
-    if not match:
-        raise HTTPException(status_code=404, detail="Матч не найден")
+    if not match: raise HTTPException(status_code=404, detail="Матч не найден")
 
     if match.events:
         match.events.sort(key=lambda e: e.minute)
@@ -1195,3 +1269,44 @@ async def admin_media_item_delete(item_id: int, request: Request, db: AsyncSessi
         await db.commit()
 
     return RedirectResponse(url=f"/admin/media/{album_id}", status_code=303)
+
+@router.get("/teams/{team_id}")
+async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    team = await db.get(Team, team_id)
+    if not team:
+        raise HTTPException(status_code=404, detail="Команда не найдена")
+
+    # Получаем последние 10 матчей команды
+    stmt_m = select(Match).where(
+        (Match.home_team_id == team.id) | (Match.away_team_id == team.id),
+        Match.status == MatchStatus.FINISHED
+    ).options(selectinload(Match.home_team), selectinload(Match.away_team)).order_by(Match.match_date.desc()).limit(10)
+    matches = (await db.execute(stmt_m)).scalars().all()
+
+    # Считаем статистику
+    wins, draws, losses = 0, 0, 0
+    goals_for, goals_against = 0, 0
+    for m in matches:
+        if m.home_team_id == team.id:
+            goals_for += m.home_score or 0
+            goals_against += m.away_score or 0
+            if m.home_score > m.away_score: wins += 1
+            elif m.home_score < m.away_score: losses += 1
+            else: draws += 1
+        else:
+            goals_for += m.away_score or 0
+            goals_against += m.home_score or 0
+            if m.away_score > m.home_score: wins += 1
+            elif m.away_score < m.home_score: losses += 1
+            else: draws += 1
+
+    # Получаем заявку (игроков)
+    stmt_roster = select(TeamPlayer).where(TeamPlayer.team_id == team.id).options(selectinload(TeamPlayer.player))
+    roster = (await db.execute(stmt_roster)).scalars().all()
+
+    return await render_page(request, db, "team_detail.html", context={
+        "team": team,
+        "matches": matches,
+        "stats": {"wins": wins, "draws": draws, "losses": losses, "gf": goals_for, "ga": goals_against},
+        "roster": roster
+    })

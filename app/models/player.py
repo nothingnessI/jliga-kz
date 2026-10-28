@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import Date, Enum, String
+from sqlalchemy import Date, Enum, String, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.enums import PlayerPosition
@@ -11,6 +11,7 @@ class Player(TimestampMixin, Base):
     __tablename__ = "players"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    jliga_id: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True, index=True)
     first_name: Mapped[str] = mapped_column(String(100), nullable=False)
     last_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     date_of_birth: Mapped[date | None] = mapped_column(Date)

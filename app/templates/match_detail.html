@@ -1,51 +1,170 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="mb-4 border-bottom pb-3">
-    <a href="/tournaments/{{ match.tournament_id }}" class="text-decoration-none text-muted small">← К турниру</a>
-    <h4 class="fw-bold mt-1">{{ match.tournament.name }}</h4>
-    <p class="text-muted small">{{ match.match_date.strftime('%d %B %Y, %H:%M') if match.match_date else 'Дата не указана' }} | {{ match.stadium or 'Стадион не указан' }}</p>
+<style>
+    html { scroll-behavior: smooth; }
+    .nav-pills .nav-link.active { background-color: #0d6efd; color: white !important; }
+    .event-icon { width: 24px; text-align: center; }
+</style>
+
+<!-- Шапка (Навигация по якорям) -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <a href="/tournaments/{{ match.tournament_id }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> К турниру
+    </a>
+    <div class="text-muted small fw-bold text-uppercase">
+        {{ match.tournament.name }} / {{ match.round }} Тур
+    </div>
 </div>
 
-<div class="row justify-content-center mb-5">
-    <div class="col-xl-8">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-5 text-center">
-                <div class="row align-items-center">
-                    <div class="col-4 text-end"><h3 class="fw-bold">{{ match.home_team.name }}</h3></div>
-                    <div class="col-4">
-                        <h1 class="display-3 fw-bold">{{ match.home_score or 0 }} : {{ match.away_score or 0 }}</h1>
-                        <span class="badge bg-{{ 'success' if match.status.value == 'FINISHED' else 'secondary' }} fs-6">{{ match.status.value }}</span>
-                    </div>
-                    <div class="col-4 text-start"><h3 class="fw-bold">{{ match.away_team.name }}</h3></div>
+<!-- Табло матча -->
+<div class="card border-0 shadow-lg mb-4">
+    <div class="card-header bg-dark text-white text-center py-2">
+        <span class="fw-bold text-uppercase">{{ match.tournament.division }}</span>
+    </div>
+    <div class="card-body p-5 text-center bg-light">
+        <div class="mb-4">
+            <div class="fw-bold fs-5 text-dark">{{ match.match_date.strftime('%d %B %Y, %A') if match.match_date else 'Дата TBA' }} / {{ match.match_date.strftime('%H:%M') if match.match_date else '' }}</div>
+            <div class="text-muted mt-1 fs-6"><i class="bi bi-geo-alt-fill text-danger me-1"></i> {{ match.stadium or 'Стадион не указан' }}</div>
+        </div>
+
+        <div class="row align-items-center justify-content-center">
+            <div class="col-4 text-end">
+                <h3 class="fw-bold text-dark text-truncate">{{ match.home_team.name }}</h3>
+            </div>
+            <div class="col-3">
+                <div class="bg-dark text-white rounded px-4 py-3 fs-1 fw-bold shadow">
+                    {{ match.home_score or 0 }} : {{ match.away_score or 0 }}
                 </div>
+                <div class="mt-2">
+                    <span class="badge bg-{{ 'success' if match.status.value == 'FINISHED' else 'danger' if match.status.value == 'LIVE' else 'secondary' }} fs-6 text-uppercase px-3 py-2">
+                        {{ match.status.value }}
+                    </span>
+                </div>
+            </div>
+            <div class="col-4 text-start">
+                <h3 class="fw-bold text-dark text-truncate">{{ match.away_team.name }}</h3>
             </div>
         </div>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-xl-8 mx-auto">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-dark text-white fw-bold py-3">События матча</div>
-            <ul class="list-group list-group-flush">
-                {% for event in match.events %}
-                <li class="list-group-item p-3 d-flex justify-content-between align-items-center">
-                    <div>
-                        <span class="badge bg-secondary me-3 fs-6">{{ event.minute }}'</span>
-                        {% if event.event_type.value == 'GOAL' %} ⚽ <strong>Гол!</strong>
-                        {% elif event.event_type.value == 'YELLOW_CARD' %} 🟨 Жёлтая карточка
-                        {% elif event.event_type.value == 'RED_CARD' %} 🟥 Красная карточка
-                        {% else %} {{ event.event_type.value }} {% endif %}
-                        
-                        {% if event.player %} — {{ event.player.first_name }} {{ event.player.last_name }}{% endif %}
-                    </div>
-                    <span class="text-muted fw-bold">{{ event.team.name }}</span>
-                </li>
-                {% else %}
-                <li class="list-group-item p-4 text-center text-muted">Событий в этом матче пока нет.</li>
-                {% endfor %}
-            </ul>
+<!-- Табы (Якоря) -->
+<div class="mb-4 sticky-top bg-white py-2 shadow-sm" style="z-index: 100;">
+    <ul class="nav nav-pills nav-fill">
+        <li class="nav-item">
+            <a class="nav-link text-dark fw-bold" href="#preview">Превью</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-dark fw-bold" href="#protocol">Протокол</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="#events">События</a>
+        </li>
+    </ul>
+</div>
+
+<!-- БЛОК 1: ПРЕВЬЮ -->
+<div id="preview" class="mb-5">
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-dark text-white fw-bold text-uppercase py-3">Турнирное положение</div>
+        <div class="card-body text-center text-muted py-5">
+            <i class="bi bi-bar-chart-line fs-1 mb-2 d-block"></i>
+            Статистика команд и история личных встреч скоро появятся здесь.
         </div>
     </div>
+</div>
+
+<!-- БЛОК 2: ПРОТОКОЛ -->
+<div id="protocol" class="mb-5">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-dark text-white fw-bold text-uppercase py-3 text-center">Стартовые составы</div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped text-center mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 45%;">{{ match.home_team.name }}</th>
+                            <th style="width: 10%;">Позиция</th>
+                            <th style="width: 45%;">{{ match.away_team.name }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Здесь в будущем можно вывести состав, если спарсим -->
+                        <tr><td colspan="3" class="text-muted py-4">Составы пока не спарсены</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- БЛОК 3: СОБЫТИЯ -->
+<div id="events" class="mb-5">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-dark text-white fw-bold text-uppercase py-3 text-center">Хронология матча</div>
+        <div class="card-body p-4 bg-light">
+            {% if not match.events %}
+                <div class="text-center text-muted py-5">
+                    <i class="bi bi-activity fs-1 d-block mb-3 text-secondary"></i>
+                    Событий в этом матче пока нет.
+                </div>
+            {% else %}
+                <div class="position-relative py-3">
+                    <!-- Центральная линия таймлайна -->
+                    <div class="position-absolute top-0 bottom-0 start-50 border-start border-3 border-secondary opacity-25" style="transform: translateX(-50%); z-index: 0;"></div>
+
+                    {% for event in match.events %}
+                        {% if event.team_id == match.home_team_id %}
+                        <!-- ДОМАШНЯЯ КОМАНДА (Слева) -->
+                        <div class="row mb-4 position-relative align-items-center" style="z-index: 1;">
+                            <div class="col-5 text-end">
+                                <div class="fw-bold fs-6 text-dark">{{ event.player.last_name if event.player else 'Неизвестный' }}</div>
+                                <small class="text-muted">{{ event.player.first_name if event.player else '' }}</small>
+                            </div>
+                            <div class="col-2 text-center">
+                                <span class="badge bg-dark rounded-pill px-3 py-2 fs-6 border border-3 border-white shadow">{{ event.minute }}'</span>
+                            </div>
+                            <div class="col-5 text-start d-flex align-items-center">
+                                {% if event.event_type.value == 'GOAL' %}<span class="fs-4" title="Гол">⚽</span>
+                                {% elif event.event_type.value == 'PENALTY_GOAL' %}<span class="fs-4" title="Пенальти">⚽ (П)</span>
+                                {% elif event.event_type.value == 'OWN_GOAL' %}<span class="fs-4 text-danger" title="Автогол">⚽ (АГ)</span>
+                                {% elif event.event_type.value == 'YELLOW_CARD' %}<div class="bg-warning rounded shadow-sm" style="width: 16px; height: 22px;" title="Жёлтая карточка"></div>
+                                {% elif event.event_type.value == 'RED_CARD' %}<div class="bg-danger rounded shadow-sm" style="width: 16px; height: 22px;" title="Красная карточка"></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <!-- ГОСТЕВАЯ КОМАНДА (Справа) -->
+                        <div class="row mb-4 position-relative align-items-center" style="z-index: 1;">
+                            <div class="col-5 text-end d-flex align-items-center justify-content-end">
+                                {% if event.event_type.value == 'GOAL' %}<span class="fs-4" title="Гол">⚽</span>
+                                {% elif event.event_type.value == 'PENALTY_GOAL' %}<span class="fs-4" title="Пенальти">⚽ (П)</span>
+                                {% elif event.event_type.value == 'OWN_GOAL' %}<span class="fs-4 text-danger" title="Автогол">⚽ (АГ)</span>
+                                {% elif event.event_type.value == 'YELLOW_CARD' %}<div class="bg-warning rounded shadow-sm" style="width: 16px; height: 22px;" title="Жёлтая карточка"></div>
+                                {% elif event.event_type.value == 'RED_CARD' %}<div class="bg-danger rounded shadow-sm" style="width: 16px; height: 22px;" title="Красная карточка"></div>
+                                {% endif %}
+                            </div>
+                            <div class="col-2 text-center">
+                                <span class="badge bg-dark rounded-pill px-3 py-2 fs-6 border border-3 border-white shadow">{{ event.minute }}'</span>
+                            </div>
+                            <div class="col-5 text-start">
+                                <div class="fw-bold fs-6 text-dark">{{ event.player.last_name if event.player else 'Неизвестный' }}</div>
+                                <small class="text-muted">{{ event.player.first_name if event.player else '' }}</small>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Кнопка Наверх -->
+<div class="text-center mt-4 mb-5">
+    <a href="#" class="btn btn-outline-secondary rounded-pill px-4 shadow-sm" onclick="window.scrollTo({top: 0, behavior: 'smooth'}); return false;">
+        <i class="bi bi-arrow-up-circle me-1"></i> Наверх
+    </a>
 </div>
 {% endblock %}

@@ -40,3 +40,5 @@ class MatchEvent(TimestampMixin, Base):
     # Связи
     match: Mapped["Match"] = relationship(back_populates="events")
     player: Mapped["Player"] = relationship(back_populates="match_events")
+
+    team: Mapped["Team"] = relationship("Team")
