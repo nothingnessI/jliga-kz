@@ -223,6 +223,21 @@ import json
 from datetime import datetime, timezone
 from app.models.enums import MatchStatus, MatchStage
 
+import json
+from datetime import datetime, timezone
+from fastapi import Depends, HTTPException, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from app.db.session import get_db
+from app.models.tournament import Tournament
+from app.models.tournament_standing import TournamentStanding
+from app.models.match import Match
+from app.models.match_event import MatchEvent
+from app.models.enums import MatchStatus, MatchStage
+from app.services.standings import StandingsService
+from app.services.stats import StatsService
+
 
 @router.get("/tournaments/{tournament_id}")
 async def tournament_page(tournament_id: int, request: Request, db: AsyncSession = Depends(get_db)):
@@ -235,15 +250,20 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
         selectinload(TournamentStanding.team)
     )
     standings_raw = (await db.execute(stmt_standings)).scalars().all()
-
-    # Определяем, кубок это или лига
     is_cup = any(s.group_name for s in standings_raw) or tournament.division == "CUP"
 
-    # Сортируем
     if is_cup:
         standings = sorted(standings_raw, key=lambda x: (x.group_name or 'ZZZ', -x.points, -x.goals_for))
     else:
         standings = sorted(standings_raw, key=lambda x: (-x.points, -x.goals_for))
+
+    # Группируем таблицы
+    grouped_standings = {}
+    for s in standings:
+        group_name = s.group_name if s.group_name else "Общая таблица"
+        if group_name not in grouped_standings:
+            grouped_standings[group_name] = []
+        grouped_standings[group_name].append(s)
 
     # ================= 2. МАТЧИ =================
     stmt_matches = select(Match).where(Match.tournament_id == tournament_id).options(
@@ -252,7 +272,6 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
         selectinload(Match.events).selectinload(MatchEvent.player)
     )
     matches_raw = (await db.execute(stmt_matches)).scalars().all()
-
     fallback_date = datetime.min.replace(tzinfo=timezone.utc)
     matches = sorted(
         matches_raw,
@@ -265,16 +284,8 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
     # ================= 3. ШАХМАТКА =================
     matrix_data = {}
     for m in matches:
-        if m.home_score is not None and m.away_score is not None:
-            matrix_data[(m.home_team_id, m.away_team_id)] = {
-                "score": f"{m.home_score}-{m.away_score}",
-                "match_id": m.id
-            }
-        else:
-            matrix_data[(m.home_team_id, m.away_team_id)] = {
-                "score": "-:-",
-                "match_id": m.id
-            }
+        score = f"{m.home_score}-{m.away_score}" if m.home_score is not None and m.away_score is not None else "-:-"
+        matrix_data[(m.home_team_id, m.away_team_id)] = {"score": score, "match_id": m.id}
 
     teams_list = [s.team for s in standings]
 
@@ -283,25 +294,13 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
     for team in teams_list:
         team_matches = [m for m in matches if m.home_team_id == team.id or m.away_team_id == team.id]
         team_matches.sort(key=lambda x: x.match_date or fallback_date, reverse=True)
-
         recent_form = []
         for m in team_matches[:5]:
             if m.home_score is not None and m.away_score is not None:
-                res = ""
                 if m.home_team_id == team.id:
-                    if m.home_score > m.away_score:
-                        res = 'B'
-                    elif m.home_score < m.away_score:
-                        res = 'П'
-                    else:
-                        res = 'Н'
+                    res = 'В' if m.home_score > m.away_score else ('П' if m.home_score < m.away_score else 'Н')
                 else:
-                    if m.away_score > m.home_score:
-                        res = 'B'
-                    elif m.away_score < m.home_score:
-                        res = 'П'
-                    else:
-                        res = 'Н'
+                    res = 'В' if m.away_score > m.home_score else ('П' if m.away_score < m.home_score else 'Н')
                 recent_form.append({"result": res, "match_id": m.id})
         progress_data[team.id] = recent_form
 
@@ -314,43 +313,57 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
                 etype = "GOAL" if "GOAL" in str(e.event_type) else (
                     "YELLOW" if "YELLOW" in str(e.event_type) else "RED")
                 events_list.append({
-                    "minute": e.minute,
-                    "team_id": e.team_id,
+                    "minute": e.minute, "team_id": e.team_id,
                     "player": f"{e.player.last_name} {e.player.first_name[0]}." if e.player else "Игрок",
                     "type": etype
                 })
-
         matches_dict[m.id] = {
-            "id": m.id,
-            "home_name": m.home_team.name,
-            "away_name": m.away_team.name,
-            "home_team_id": m.home_team_id,
-            "away_team_id": m.away_team_id,
+            "id": m.id, "home_name": m.home_team.name, "away_name": m.away_team.name,
+            "home_team_id": m.home_team_id, "away_team_id": m.away_team_id,
             "home_score": m.home_score if m.home_score is not None else 0,
             "away_score": m.away_score if m.away_score is not None else 0,
             "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
-            "stadium": m.stadium or 'Стадион TBA',
-            "events": events_list
+            "stadium": m.stadium or 'Стадион TBA', "events": events_list
         }
 
-    # ================= 6. ПЛЕЙ-ОФФ СЕТКА =================
-    playoff_matches = []
+    # ================= 6. СЕТКИ ПЛЕЙ-ОФФ (ГРУППИРОВКА ПО КУБКАМ) =================
+    playoff_brackets = {}
     if is_cup:
-        playoff_matches = [m for m in matches if m.stage == MatchStage.PLAYOFF]
-        playoff_matches = sorted(playoff_matches, key=lambda x: (int(x.round) if x.round else 0))
+        # Берем все матчи, у которых есть group_name (это и есть кубки) и указан раунд
+        knockout_matches = [m for m in matches if m.group_name and m.round is not None]
+
+        for m in knockout_matches:
+            cup_name = m.group_name if m.group_name else "Плей-офф"
+            round_num = int(m.round) if m.round and str(m.round).isdigit() else 1
+
+            if cup_name not in playoff_brackets:
+                playoff_brackets[cup_name] = {}
+            if round_num not in playoff_brackets[cup_name]:
+                playoff_brackets[cup_name][round_num] = []
+
+            playoff_brackets[cup_name][round_num].append(m)
+
+        # Сортируем раунды
+        for cup in playoff_brackets:
+            playoff_brackets[cup] = dict(sorted(playoff_brackets[cup].items()))
+
+    round_names = {1: "Четвертьфинал", 2: "Полуфинал", 3: "ФИНАЛ", 4: "Финал"}
 
     # ================= 7. РЕНДЕР =================
     return await render_page(request, db, "tournament_detail.html", context={
         "tournament": tournament,
-        "standings": standings,
-        "matches": matches,
+        "grouped_standings": grouped_standings,
         "is_cup": is_cup,
-        "playoff_matches": playoff_matches,
+        "playoff_brackets": playoff_brackets,  # <--- Множественное число
+        "round_names": round_names,
+        "matches": matches,
+        "standings": standings,
         "teams_list": teams_list,
         "matrix": matrix_data,
         "progress": progress_data,
         "matches_dict": matches_dict
     })
+
 
 @router.get("/participants/teams")
 async def participants_teams_page(request: Request, page: int = 1, db: AsyncSession = Depends(get_db)):
