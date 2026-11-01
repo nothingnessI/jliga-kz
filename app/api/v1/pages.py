@@ -427,6 +427,7 @@ async def media_page(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/matches/{match_id}")
 async def match_protocol_page(match_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    # Загружаем матч со всеми связями
     stmt = select(Match).where(Match.id == match_id).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
@@ -435,12 +436,16 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
         selectinload(Match.events).selectinload(MatchEvent.team)
     )
     match = (await db.execute(stmt)).scalar_one_or_none()
-    if not match: raise HTTPException(status_code=404, detail="Матч не найден")
+    if not match:
+        raise HTTPException(status_code=404, detail="Матч не найден")
 
+    # Сортируем события по минутам
     if match.events:
         match.events.sort(key=lambda e: e.minute)
 
-    return await render_page(request, db, "match_detail.html", context={"match": match})
+    return await render_page(request, db, "match_detail.html", context={
+        "match": match,
+    })
 
 
 @router.get("/stadiums")
