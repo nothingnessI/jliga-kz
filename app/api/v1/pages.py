@@ -439,12 +439,44 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
     if not match:
         raise HTTPException(status_code=404, detail="Матч не найден")
 
-    # Сортируем события по минутам
     if match.events:
         match.events.sort(key=lambda e: e.minute)
 
+    # Загружаем составы
+    home_roster = await crud_team_player.get_by_tournament_and_team(
+        db, tournament_id=match.tournament_id, team_id=match.home_team_id
+    )
+    away_roster = await crud_team_player.get_by_tournament_and_team(
+        db, tournament_id=match.tournament_id, team_id=match.away_team_id
+    )
+
+    # Загружаем таблицу (только для расчета позиций)
+    stmt_standings = select(TournamentStanding).where(
+        TournamentStanding.tournament_id == match.tournament_id
+    ).order_by(TournamentStanding.points.desc())
+    standings = (await db.execute(stmt_standings)).scalars().all()
+
+    # Ищем позиции команд
+    home_pos = next((i + 1 for i, s in enumerate(standings) if s.team_id == match.home_team_id), None)
+    away_pos = next((i + 1 for i, s in enumerate(standings) if s.team_id == match.away_team_id), None)
+
+    home_standing = next((s for s in standings if s.team_id == match.home_team_id), None)
+    away_standing = next((s for s in standings if s.team_id == match.away_team_id), None)
+
+    # Топ бомбардир турнира (используем твой сервис StatsService)
+    top_scorers = await StatsService.get_top_scorers(db, match.tournament_id, limit=1)
+    top_scorer = top_scorers[0] if top_scorers else None
+
     return await render_page(request, db, "match_detail.html", context={
         "match": match,
+        "home_roster": home_roster,
+        "away_roster": away_roster,
+        "home_standing": home_standing,
+        "away_standing": away_standing,
+        "home_pos": home_pos,
+        "away_pos": away_pos,
+        "top_scorer": top_scorer,
+        "active_tab": request.query_params.get("tab", "preview")
     })
 
 

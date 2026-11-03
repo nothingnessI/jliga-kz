@@ -1,12 +1,16 @@
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import Integer, ForeignKey, Enum, String
+from sqlalchemy import Integer, ForeignKey, Enum, String, UniqueConstraint
 from app.core import Base, TimestampMixin
 from app.models.enums import MatchEventType
 
 
 class MatchEvent(TimestampMixin, Base):
     __tablename__ = "match_events"
+
+    __table_args__ = (
+        UniqueConstraint('match_id', 'player_id', 'minute', 'event_type', name='uq_match_event'),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
 

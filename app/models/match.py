@@ -12,6 +12,8 @@ class Match(TimestampMixin, Base):
     __tablename__ = "matches"
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    jliga_id: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True, index=True)
+
     tournament_id: Mapped[int] = mapped_column(
         ForeignKey("tournaments.id", ondelete="CASCADE"), nullable=False, index=True
     )
