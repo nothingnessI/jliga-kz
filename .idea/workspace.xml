@@ -5,12 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7e289f6c-8968-49f0-ac18-b3bedd7dea2b" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/app/templates/news_detail.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/parser_1.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/api/v1/pages.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/v1/pages.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/db/session.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/db/session.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/match.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/match.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/match_event.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/match_event.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/match_detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/match_detail.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/news.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/news.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/team.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/team.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/tournament.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/tournament.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/tournament_standing.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/tournament_standing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/standings.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/standings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/admin_news_form.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_news_form.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/news.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/news.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/participants.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/participants.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/team_detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/team_detail.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/parser.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -41,8 +49,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="HTML File" />
         <option value="Python Script" />
+        <option value="HTML File" />
       </list>
     </option>
   </component>
@@ -51,62 +59,65 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0000000015975024" />
-      <entry key="MS500" value="1.0537368825799183" />
-      <entry key="S2" value="4.1038597307245785" />
-      <entry key="S5" value="10.365004833353925" />
-      <entry key="S10" value="15.168191525432976" />
-      <entry key="S30" value="20.25667017670708" />
-      <entry key="S60" value="24.151986539503575" />
-      <entry key="M2" value="30.36280832724553" />
-      <entry key="M5" value="39.90270990892743" />
-      <entry key="M10" value="51.861175115911514" />
-      <entry key="M15" value="64.43928395435077" />
-      <entry key="M30" value="101.9206800488246" />
-      <entry key="H1" value="162.91732008574678" />
-      <entry key="H2" value="230.5442012404089" />
-      <entry key="H4" value="291.89502963818546" />
-      <entry key="D1" value="1038.0980924134847" />
-      <entry key="W1" value="2229.5371000988002" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0" />
+      <entry key="S10" value="1.0" />
+      <entry key="S30" value="1.0" />
+      <entry key="S60" value="1.0000000000114089" />
+      <entry key="M2" value="1.0000142364579567" />
+      <entry key="M5" value="1.0680262943811074" />
+      <entry key="M10" value="2.3021058783334185" />
+      <entry key="M15" value="4.797651312348475" />
+      <entry key="M30" value="15.804126408033023" />
+      <entry key="H1" value="44.23200383273675" />
+      <entry key="H2" value="89.31135060684248" />
+      <entry key="H4" value="146.83055994323945" />
+      <entry key="D1" value="831.0575207628949" />
+      <entry key="W1" value="2331.126485416641" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
-      <entry key="S2" value="1.4980567640884458E-256" />
-      <entry key="S5" value="4.679627753179983E-103" />
-      <entry key="S10" value="6.840780476802317E-52" />
-      <entry key="S30" value="8.811203222933478E-18" />
-      <entry key="S60" value="2.9683670970642223E-9" />
-      <entry key="M2" value="5.448272292263125E-5" />
-      <entry key="M5" value="0.01970169861016049" />
-      <entry key="M10" value="0.14047045863354657" />
-      <entry key="M15" value="0.27336869727741675" />
-      <entry key="M30" value="0.6379321817952325" />
-      <entry key="H1" value="1.476257518279143" />
-      <entry key="H2" value="2.791815586477317" />
-      <entry key="H4" value="4.826823020975851" />
-      <entry key="D1" value="98.81514057535298" />
-      <entry key="W1" value="258.32178295482635" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="3.1350113562284044E-129" />
+      <entry key="S60" value="5.657631007409706E-65" />
+      <entry key="M2" value="8.564882438438222E-33" />
+      <entry key="M5" value="2.3981727604589287E-13" />
+      <entry key="M10" value="8.199248238325129E-7" />
+      <entry key="M15" value="1.2541866132763217E-4" />
+      <entry key="M30" value="0.01932784858739663" />
+      <entry key="H1" value="0.24059627329517477" />
+      <entry key="H2" value="0.8555840626656073" />
+      <entry key="H4" value="1.8195189648828638" />
+      <entry key="D1" value="59.97380632695977" />
+      <entry key="W1" value="242.48006729783762" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="8.75220499831969E-5" />
-      <entry key="MS500" value="0.20164716743218689" />
-      <entry key="S2" value="3.686957981983959" />
-      <entry key="S5" value="10.158578019079743" />
-      <entry key="S10" value="15.05568394803688" />
-      <entry key="S30" value="20.216663099072807" />
-      <entry key="S60" value="24.131499035301246" />
-      <entry key="M2" value="30.352369115120876" />
-      <entry key="M5" value="39.91785731672668" />
-      <entry key="M10" value="51.99854033694288" />
-      <entry key="M15" value="64.70994060980057" />
-      <entry key="M30" value="102.55636781623335" />
-      <entry key="H1" value="164.39151018248236" />
-      <entry key="H2" value="233.33374553818263" />
-      <entry key="H4" value="296.7177353770968" />
-      <entry key="D1" value="1136.9067069055575" />
-      <entry key="W1" value="2487.856951473953" />
+      <entry key="MS100" value="0.7169776240079136" />
+      <entry key="MS500" value="0.9356234978314001" />
+      <entry key="S2" value="0.9835020740262483" />
+      <entry key="S5" value="0.9933678773166055" />
+      <entry key="S10" value="0.9966784222188245" />
+      <entry key="S30" value="0.9988915792636801" />
+      <entry key="S60" value="0.9994456359835102" />
+      <entry key="M2" value="0.9997370152858048" />
+      <entry key="M5" value="1.0679138243815072" />
+      <entry key="M10" value="2.302023272649242" />
+      <entry key="M15" value="4.797657087680704" />
+      <entry key="M30" value="15.82320503303285" />
+      <entry key="H1" value="44.472217633219266" />
+      <entry key="H2" value="90.16651570569765" />
+      <entry key="H4" value="148.64959772508988" />
+      <entry key="D1" value="891.0274868731526" />
+      <entry key="W1" value="2573.6047525673666" />
     </decayedShown>
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 5,
@@ -125,11 +136,13 @@
     &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
     &quot;JavaScript Debug.tournament_detail.html.executor&quot;: &quot;Run&quot;,
     &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.check.executor&quot;: &quot;Run&quot;,
     &quot;Python.create_admin.executor&quot;: &quot;Run&quot;,
     &quot;Python.main.executor&quot;: &quot;Run&quot;,
     &quot;Python.news.executor&quot;: &quot;Run&quot;,
     &quot;Python.pages.executor&quot;: &quot;Run&quot;,
     &quot;Python.parser.executor&quot;: &quot;Run&quot;,
+    &quot;Python.parser_1.executor&quot;: &quot;Run&quot;,
     &quot;Python.tournament.executor&quot;: &quot;Run&quot;,
     &quot;Python.tournaments.executor&quot;: &quot;Run&quot;,
     &quot;Python.update_stadium.executor&quot;: &quot;Run&quot;,
@@ -198,7 +211,11 @@
       <workItem from="1793521848801" duration="9734000" />
       <workItem from="1793535407396" duration="64000" />
       <workItem from="1793685177642" duration="9685000" />
-      <workItem from="1793712916438" duration="4371000" />
+      <workItem from="1793712916438" duration="20664000" />
+      <workItem from="1793785923369" duration="182000" />
+      <workItem from="1793793094741" duration="4312000" />
+      <workItem from="1793811808596" duration="203000" />
+      <workItem from="1793863476558" duration="17668000" />
     </task>
     <servers />
   </component>
@@ -207,12 +224,14 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/jliga_kz$tournaments.coverage" NAME="tournaments Coverage Results" MODIFIED="1792242300277" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/api/v1/endpoints" />
-    <SUITE FILE_PATH="coverage/jliga_kz$parser.coverage" NAME="parser Coverage Results" MODIFIED="1793720612151" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/jliga_kz$parser.coverage" NAME="parser Coverage Results" MODIFIED="1793766894889" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/jliga_kz$pages.coverage" NAME="pages Coverage Results" MODIFIED="1792299063100" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/api/v1" />
     <SUITE FILE_PATH="coverage/jliga_kz$update_stadium.coverage" NAME="update_stadium Coverage Results" MODIFIED="1792326343165" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/jliga_kz$news.coverage" NAME="news Coverage Results" MODIFIED="1791879114486" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/models" />
-    <SUITE FILE_PATH="coverage/jliga_kz$main.coverage" NAME="main Coverage Results" MODIFIED="1793713669635" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app" />
+    <SUITE FILE_PATH="coverage/jliga_kz$main.coverage" NAME="main Coverage Results" MODIFIED="1793874300667" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app" />
     <SUITE FILE_PATH="coverage/jliga_kz$create_admin.coverage" NAME="create_admin Coverage Results" MODIFIED="1792471731358" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/jliga_kz$parser_1.coverage" NAME="parser_1 Coverage Results" MODIFIED="1793877164586" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
     <SUITE FILE_PATH="coverage/jliga_kz$tournament.coverage" NAME="tournament Coverage Results" MODIFIED="1792239693571" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/models" />
+    <SUITE FILE_PATH="coverage/jliga_kz$check.coverage" NAME="check Coverage Results" MODIFIED="1793795711598" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>

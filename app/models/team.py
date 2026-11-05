@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, String, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core import Base, TimestampMixin
@@ -15,6 +15,13 @@ class Team(TimestampMixin, Base):
     cover_url: Mapped[str | None] = mapped_column(String(500))
     coach_name: Mapped[str | None] = mapped_column(String(200))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+
+    jliga_id: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True, index=True)
+    stats_games: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    stats_wins: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    stats_goals: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    stats_tournaments: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     # Связи
     players: Mapped[list["TeamPlayer"]] = relationship(

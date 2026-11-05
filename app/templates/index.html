@@ -1,107 +1,246 @@
 {% extends "base.html" %}
 
 {% block content %}
-{% if request.query_params.get('login_error') %}
-<div class="alert alert-danger alert-dismissible fade show" role="alert">
-    <strong>Ошибка!</strong> Неверный email или пароль.
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-</div>
-{% endif %}
+<div class="container-fluid py-4" style="max-width: 1400px; margin: 0 auto; background-color: #f4f6f9;">
 
-<div class="row">
-    <!-- Левая часть: Матчи и Новости -->
-    <div class="col-xl-9 col-lg-8">
-        <h5 class="mb-3 text-uppercase fw-bold border-bottom pb-2">Матчи</h5>
-        <div class="row">
-            {% for match in upcoming_matches %}
-            <div class="col-md-6 col-xl-4">
-                <div class="match-card">
-                    <div class="match-date">{{ match.match_date.strftime('%d %B / %H:%M') if match.match_date else 'Дата не указана' }}</div>
-                    <div class="match-team">
-                        <span class="text-truncate" style="max-width: 40%;">{{ match.home_team.name }}</span>
-                        <span class="match-score">{{ match.home_score or 0 }} - {{ match.away_score or 0 }}</span>
-                        <span class="text-truncate text-end" style="max-width: 40%;">{{ match.away_team.name }}</span>
-                    </div>
-                    <div class="text-center mt-2">
-                        <a href="/matches/{{ match.id }}" class="btn btn-sm btn-outline-dark w-100">Протокол</a>
+    <!-- ================= ГЛАВНЫЙ БЛОК (2 колонки) ================= -->
+    <div class="row g-4">
+
+        <!-- ЛЕВАЯ КОЛОНКА (Матчи и Новости) -->
+        <div class="col-lg-8">
+
+            <!-- БЛИЖАЙШИЕ МАТЧИ -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px;">Ближайшие матчи</h4>
+                <a href="/matches" class="text-decoration-none fw-bold small" style="color: #3092b8;">Все матчи <i class="bi bi-arrow-right"></i></a>
+            </div>
+
+            <div class="row g-3 mb-5">
+                {% for match in upcoming_matches %}
+                <div class="col-md-6">
+                    <a href="/matches/{{ match.id }}" class="text-decoration-none">
+                        <div class="card border-0 shadow-sm h-100" style="transition: transform 0.2s;">
+                            <div class="card-header bg-white border-0 pt-3 pb-0 d-flex justify-content-between text-muted small">
+                                <span>{{ match.tournament.name }}</span>
+                                <span>{{ match.match_date.strftime('%d.%m.%Y %H:%M') if match.match_date else 'TBA' }}</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="d-flex align-items-center gap-2 w-75">
+                                        <img src="{{ match.home_team.logo_url or '/static/default_team.png' }}" width="24" height="24" style="object-fit: contain;">
+                                        <span class="fw-bold text-dark text-truncate">{{ match.home_team.name }}</span>
+                                    </div>
+                                    <span class="badge bg-light text-dark border">- : -</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-2 w-75">
+                                        <img src="{{ match.away_team.logo_url or '/static/default_team.png' }}" width="24" height="24" style="object-fit: contain;">
+                                        <span class="fw-bold text-dark text-truncate">{{ match.away_team.name }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <div class="alert alert-light border text-center py-4 text-muted">Нет запланированных матчей.</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- ПОСЛЕДНИЕ РЕЗУЛЬТАТЫ -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px;">Результаты</h4>
+            </div>
+
+            <div class="row g-3 mb-5">
+                {% for match in last_matches %}
+                <div class="col-md-6">
+                    <a href="/matches/{{ match.id }}" class="text-decoration-none">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-header bg-white border-0 pt-3 pb-0 d-flex justify-content-between text-muted small">
+                                <span>{{ match.tournament.name }}</span>
+                                <span>{{ match.match_date.strftime('%d.%m.%Y') if match.match_date else '' }}</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="d-flex align-items-center gap-2 w-75">
+                                        <img src="{{ match.home_team.logo_url or '/static/default_team.png' }}" width="24" height="24" style="object-fit: contain;">
+                                        <span class="fw-bold text-dark text-truncate {% if match.home_score > match.away_score %}text-success{% endif %}">{{ match.home_team.name }}</span>
+                                    </div>
+                                    <span class="fw-bold fs-5">{{ match.home_score }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center gap-2 w-75">
+                                        <img src="{{ match.away_team.logo_url or '/static/default_team.png' }}" width="24" height="24" style="object-fit: contain;">
+                                        <span class="fw-bold text-dark text-truncate {% if match.away_score > match.home_score %}text-success{% endif %}">{{ match.away_team.name }}</span>
+                                    </div>
+                                    <span class="fw-bold fs-5">{{ match.away_score }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <div class="alert alert-light border text-center py-4 text-muted">Нет завершенных матчей.</div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- НОВОСТИ ЛИГИ (Горизонтальные карточки) -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px;">Новости лиги</h4>
+                <a href="/news" class="btn btn-sm btn-outline-primary fw-bold" style="border-color: #3092b8; color: #3092b8;">
+                    Все новости <i class="bi bi-arrow-right ms-1"></i>
+                </a>
+            </div>
+
+            <div class="row g-3 mb-4">
+                {% for news in latest_news %}
+                <div class="col-md-4">
+                    <div class="card border-0 shadow-sm h-100 flex-row text-decoration-none" style="border-radius: 4px; overflow: hidden;">
+                        <a href="/news/{{ news.id }}" class="d-block" style="width: 40%; background-color: #e9ecef;">
+                            {% if news.image_url %}
+                                <img src="{{ news.image_url }}" class="w-100 h-100 object-fit-cover" alt="{{ news.title }}">
+                            {% else %}
+                                <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                                    <i class="bi bi-image fs-3"></i>
+                                </div>
+                            {% endif %}
+                        </a>
+                        <div class="card-body p-3 d-flex flex-column" style="width: 60%;">
+                            <div class="text-muted small mb-1">{{ news.published_at.strftime('%d.%m.%Y') if news.published_at else '' }}</div>
+                            <h6 class="fw-bold mb-2">
+                                <a href="/news/{{ news.id }}" class="text-dark text-decoration-none" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;" title="{{ news.title }}">
+                                    {{ news.title }}
+                                </a>
+                            </h6>
+                            <div class="mt-auto">
+                                <a href="/news/{{ news.id }}" class="text-decoration-none small fw-bold" style="color: #3092b8;">
+                                    Читать <i class="bi bi-chevron-right" style="font-size: 10px;"></i>
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
+                {% else %}
+                <div class="col-12">
+                    <div class="alert alert-light border text-center py-4 text-muted">Новостей пока нет.</div>
+                </div>
+                {% endfor %}
             </div>
-            {% else %}
-            <div class="col-12"><div class="alert alert-secondary">Нет ближайших матчей.</div></div>
-            {% endfor %}
+
         </div>
 
-        <h5 class="mb-3 mt-5 text-uppercase fw-bold border-bottom pb-2">Результаты</h5>
-        <div class="row">
-            {% for match in last_matches %}
-            <div class="col-md-6 col-xl-4">
-                <div class="match-card">
-                    <div class="match-date">{{ match.match_date.strftime('%d %B / %H:%M') if match.match_date else 'Дата не указана' }}</div>
-                    <div class="match-team">
-                        <span class="text-truncate" style="max-width: 40%;">{{ match.home_team.name }}</span>
-                        <span class="match-score bg-dark text-white">{{ match.home_score }} : {{ match.away_score }}</span>
-                        <span class="text-truncate text-end" style="max-width: 40%;">{{ match.away_team.name }}</span>
+        <!-- ПРАВАЯ КОЛОНКА (Турнирная таблица и Статистика) -->
+        <div class="col-lg-4">
+
+            <!-- БЛИЖАЙШИЙ ТУРНИР -->
+            {% if active_tournament %}
+            <div class="mb-4">
+                <a href="/tournaments/{{ active_tournament.id }}" class="text-decoration-none">
+                    <div class="p-3 text-white fw-bold text-uppercase d-flex justify-content-between align-items-center shadow-sm" style="background-color: #3092b8;">
+                        <span class="text-truncate" style="max-width: 85%;">{{ active_tournament.name }}</span>
+                        <i class="bi bi-chevron-right"></i>
                     </div>
+                </a>
+            </div>
+
+            <!-- ТАБЛИЦА -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-dark text-white fw-bold text-uppercase text-center py-3" style="background-color: #0f2537 !important;">
+                    Турнирная таблица
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover text-center mb-0 align-middle">
+                        <thead>
+                            <tr style="background-color: #3092b8; color: white;">
+                                <th class="py-2 border-0" style="width: 40px;">#</th>
+                                <th class="py-2 text-start border-0">Команда</th>
+                                <th class="py-2 border-0" style="width: 40px;">И</th>
+                                <th class="py-2 border-0" style="width: 40px;">О</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in standings %}
+                            <tr>
+                                <td>{{ loop.index }}</td>
+                                <td class="text-start text-truncate" style="max-width: 150px;">
+                                    <img src="{{ s.team.logo_url or '/static/default_team.png' }}" width="16" height="16" class="me-1" style="object-fit: contain;">
+                                    {{ s.team.name }}
+                                </td>
+                                <td>{{ s.games_played }}</td>
+                                <td>{{ s.points }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="text-muted py-3">Нет данных</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
                 </div>
             </div>
-            {% else %}
-            <div class="col-12"><div class="alert alert-secondary">Нет завершенных матчей.</div></div>
-            {% endfor %}
-        </div>
 
-        <h5 class="mb-3 mt-5 text-uppercase fw-bold border-bottom pb-2">Новости лиги</h5>
-        <div class="row">
-            {% for news in latest_news %}
-            <div class="col-md-6 col-xl-4 mb-3">
-                <div class="card border-0 shadow-sm h-100 hover-lift">
-                    <div class="card-body">
-                        <small class="text-muted">{{ news.published_at.strftime('%d.%m.%Y') if news.published_at else '' }}</small>
-                        <h6 class="fw-bold mt-2 text-truncate">{{ news.title }}</h6>
-                        <p class="small text-muted mb-0">{{ news.content[:80] }}...</p>
-                    </div>
+            <!-- ЛУЧШИЕ БОМБАРДИРЫ -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-dark text-white fw-bold text-uppercase text-center py-3" style="background-color: #0f2537 !important;">
+                    Бомбардиры
                 </div>
-            </div>
-            {% else %}
-            <div class="col-12"><div class="alert alert-secondary">Новостей пока нет.</div></div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Правая часть: Таблица -->
-    <div class="col-xl-3 col-lg-4">
-        {% if active_tournament %}
-        <div class="card border-0 shadow-sm mb-4">
-            <div class="sidebar-title">{{ active_tournament.name }}</div>
-            <div class="card-body p-0">
-                <table class="table table-custom mb-0 text-center">
-                    <thead><tr><th>#</th><th class="text-start">Команда</th><th>И</th><th>О</th></tr></thead>
-                    <tbody>
-                        {% for standing in standings %}
-                        <tr>
-                            <td>{{ loop.index }}</td>
-                            <td class="text-start fw-bold text-truncate" style="max-width: 120px;">{{ standing.team.name }}</td>
-                            <td>{{ standing.games_played }}</td>
-                            <td><strong>{{ standing.points }}</strong></td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="card border-0 shadow-sm">
-            <div class="sidebar-title bg-success">Бомбардиры</div>
-            <div class="card-body p-0">
-                <table class="table table-custom mb-0 text-center">
-                    <tbody>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
                         {% for scorer in top_scorers %}
-                        <tr><td class="text-start">{{ loop.index }}. {{ scorer.name }}</td><td class="fw-bold">{{ scorer.goals }}</td></tr>
+                        <li class="list-group-item d-flex justify-content-between align-items-center py-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge bg-secondary rounded-circle" style="width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">{{ loop.index }}</span>
+                                <span class="fw-bold text-dark text-truncate" style="max-width: 180px;">{{ scorer.name }}</span>
+                            </div>
+                            <span class="badge bg-light text-dark border">{{ scorer.goals }} Г</span>
+                        </li>
+                        {% else %}
+                        <li class="list-group-item text-center text-muted py-3">Нет данных</li>
                         {% endfor %}
-                    </tbody>
-                </table>
+                    </ul>
+                </div>
             </div>
+            {% else %}
+            <div class="alert alert-light border text-center text-muted">Активных турниров пока нет.</div>
+            {% endif %}
+
+            <!-- БЛОК ТУРНИРОВ (Ссылки) -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-dark text-white fw-bold text-uppercase py-3" style="background-color: #0f2537 !important;">
+                    Активные турниры
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for t in tournaments %}
+                        <a href="/tournaments/{{ t.id }}" class="list-group-item list-group-item-action py-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center gap-2">
+                                    <img src="{{ t.logo_url or '/static/default_tournament.png' }}" width="30" height="30" style="object-fit: contain;">
+                                    <span class="fw-bold text-truncate" style="max-width: 200px;">{{ t.name }}</span>
+                                </div>
+                                <i class="bi bi-chevron-right text-muted"></i>
+                            </div>
+                        </a>
+                        {% else %}
+                        <div class="text-center text-muted py-3">Нет турниров</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
         </div>
-        {% endif %}
     </div>
 </div>
+
+<style>
+    /* Эффект при наведении для карточек */
+    a.text-decoration-none:hover .card {
+        transform: translateY(-3px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+    }
+    .object-fit-cover { object-fit: cover; }
+</style>
 {% endblock %}

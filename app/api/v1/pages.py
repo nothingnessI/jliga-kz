@@ -1,29 +1,22 @@
 from pathlib import Path
-from datetime import datetime, timezone
 import shutil
 import uuid
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, UploadFile, File
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
-from sqlalchemy import select, func
 from jose import jwt, JWTError
 from app.db.session import get_db
 from app.core.security import create_access_token, verify_password, ALGORITHM
 from app.core.config import settings
 
-from app.models.tournament import Tournament
-from app.models.tournament_standing import TournamentStanding
-from app.models.match import Match
+
 from app.models.news import News
 from app.models.team import Team
 from app.models.user import User
 from app.models.enums import MatchStatus, TournamentStatus, UserRole, TournamentFormat, PlayerPosition, MatchEventType
 from app.models.media import MediaAlbum, MediaItem
 
-from app.services.standings import StandingsService
-from app.services.stats import StatsService
 from app.services.match import MatchService
 
 from app.crud.user import user as crud_user
@@ -44,9 +37,8 @@ from app.schemas.player import PlayerCreate, PlayerUpdate
 from app.schemas.team_player import TeamPlayerCreate
 from app.schemas.match_event import MatchEventCreate
 from app.schemas.news import NewsCreate, NewsUpdate
-from app.models.team_player import TeamPlayer
 from app.models.player import Player
-from app.models.match_event import MatchEvent
+from models import TournamentTeam
 
 router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -197,20 +189,17 @@ async def about_page(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/tournaments")
 async def tournaments_list_page(request: Request, season: str = None, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(Tournament.season).distinct().order_by(Tournament.season.desc()))
-    available_seasons = result.scalars().all()
+    # 1. Получаем все доступные сезоны
+    seasons_result = await db.execute(select(Tournament.season).distinct().order_by(Tournament.season.desc()))
+    available_seasons = [s[0] for s in seasons_result.all() if s[0]]
 
+    # 2. Если сезон не выбран, берем последний
     if not season and available_seasons:
         season = available_seasons[0]
 
-    stmt = select(Tournament)
-    if season:
-        stmt = stmt.where(Tournament.season == season)
-
-    tournaments = (await db.execute(stmt.order_by(Tournament.division, Tournament.name))).scalars().all()
-
-    for t in tournaments:
-        t.logo_url = fix_logo_url(t.logo_url)
+    # 3. Достаем ВСЕ турниры за этот год (вообще без фильтров!)
+    stmt = select(Tournament).where(Tournament.season == season).order_by(Tournament.name)
+    tournaments = (await db.execute(stmt)).scalars().all()
 
     return await render_page(request, db, "tournaments.html", context={
         "tournaments": tournaments,
@@ -218,17 +207,9 @@ async def tournaments_list_page(request: Request, season: str = None, db: AsyncS
         "current_season": season
     })
 
-
-import json
-from datetime import datetime, timezone
-from app.models.enums import MatchStatus, MatchStage
-
-import json
 from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 from app.db.session import get_db
 from app.models.tournament import Tournament
 from app.models.tournament_standing import TournamentStanding
@@ -257,7 +238,6 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
     else:
         standings = sorted(standings_raw, key=lambda x: (-x.points, -x.goals_for))
 
-    # Группируем таблицы
     grouped_standings = {}
     for s in standings:
         group_name = s.group_name if s.group_name else "Общая таблица"
@@ -326,10 +306,9 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
             "stadium": m.stadium or 'Стадион TBA', "events": events_list
         }
 
-    # ================= 6. СЕТКИ ПЛЕЙ-ОФФ (ГРУППИРОВКА ПО КУБКАМ) =================
+    # ================= 6. СЕТКИ ПЛЕЙ-ОФФ =================
     playoff_brackets = {}
     if is_cup:
-        # Берем все матчи, у которых есть group_name (это и есть кубки) и указан раунд
         knockout_matches = [m for m in matches if m.group_name and m.round is not None]
 
         for m in knockout_matches:
@@ -343,7 +322,6 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
 
             playoff_brackets[cup_name][round_num].append(m)
 
-        # Сортируем раунды
         for cup in playoff_brackets:
             playoff_brackets[cup] = dict(sorted(playoff_brackets[cup].items()))
 
@@ -354,7 +332,7 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
         "tournament": tournament,
         "grouped_standings": grouped_standings,
         "is_cup": is_cup,
-        "playoff_brackets": playoff_brackets,  # <--- Множественное число
+        "playoff_brackets": playoff_brackets,
         "round_names": round_names,
         "matches": matches,
         "standings": standings,
@@ -364,20 +342,46 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
         "matches_dict": matches_dict
     })
 
-
 @router.get("/participants/teams")
-async def participants_teams_page(request: Request, page: int = 1, db: AsyncSession = Depends(get_db)):
+async def participants_teams_page(
+        request: Request,
+        page: int = 1,
+        season: str = None,  # Добавили параметр сезона
+        db: AsyncSession = Depends(get_db)
+):
     limit = 24
     skip = (page - 1) * limit
 
-    total_teams = await db.scalar(select(func.count()).select_from(Team))
-    stmt = select(Team).order_by(Team.name).offset(skip).limit(limit)
-    teams = (await db.execute(stmt)).scalars().all()
+    # 1. Получаем список доступных сезонов из БД
+    seasons_result = await db.execute(select(Tournament.season).distinct().order_by(Tournament.season.desc()))
+    available_seasons = [s[0] for s in seasons_result.all() if s[0]]
 
+    # Если сезон не выбран, берем последний (например, 2026)
+    if not season and available_seasons:
+        season = available_seasons[0]
+
+    # 2. Формируем запрос команд (с учетом сезона)
+    stmt = select(Team)
+    count_stmt = select(func.count()).select_from(Team)
+
+    if season:
+        # Джоиним через таблицу связей, чтобы найти команды, игравшие в этом сезоне
+        stmt = stmt.join(TournamentTeam).join(Tournament).where(Tournament.season == season).distinct()
+        count_stmt = count_stmt.join(TournamentTeam).join(Tournament).where(Tournament.season == season)
+
+    total_teams = await db.scalar(count_stmt)
+    stmt = stmt.order_by(Team.name).offset(skip).limit(limit)
+
+    teams = (await db.execute(stmt)).scalars().all()
     total_pages = (total_teams + limit - 1) // limit if total_teams > 0 else 1
 
     return await render_page(request, db, "participants.html", context={
-        "teams": teams, "page": page, "total_pages": total_pages, "total_teams": total_teams
+        "teams": teams,
+        "page": page,
+        "total_pages": total_pages,
+        "total_teams": total_teams,
+        "available_seasons": available_seasons,
+        "current_season": season
     })
 
 
@@ -412,10 +416,66 @@ async def participants_hall_page(request: Request, db: AsyncSession = Depends(ge
 
 
 @router.get("/news")
-async def news_page(request: Request, db: AsyncSession = Depends(get_db)):
-    news_list = (await db.execute(
-        select(News).where(News.is_published == True).order_by(News.published_at.desc()))).scalars().all()
-    return await render_page(request, db, "news.html", context={"news_list": news_list})
+async def news_page(
+    request: Request,
+    page: int = 1,
+    tournament_id: int = None,
+    team_id: int = None,
+    db: AsyncSession = Depends(get_db)
+):
+    limit = 10 # На оригинальном сайте новости крупные, поэтому по 10 штук на страницу
+    skip = (page - 1) * limit
+
+    # Получаем списки для фильтров
+    tournaments = (await db.execute(select(Tournament).order_by(Tournament.name))).scalars().all()
+    teams = (await db.execute(select(Team).order_by(Team.name))).scalars().all()
+
+    # Базовый запрос
+    stmt = select(News).where(News.is_published == True)
+    count_stmt = select(func.count()).select_from(News).where(News.is_published == True)
+
+    # Применяем фильтры
+    if tournament_id:
+        stmt = stmt.where(News.tournament_id == tournament_id)
+        count_stmt = count_stmt.where(News.tournament_id == tournament_id)
+
+    if team_id:
+        stmt = stmt.join(News.teams).where(Team.id == team_id)
+        count_stmt = count_stmt.join(News.teams).where(Team.id == team_id)
+
+    # Загружаем связи и сортируем
+    stmt = stmt.options(
+        selectinload(News.teams),
+        selectinload(News.tournament)
+    ).order_by(News.published_at.desc()).offset(skip).limit(limit)
+
+    total_news = await db.scalar(count_stmt)
+    news_list = (await db.execute(stmt)).scalars().all()
+    total_pages = (total_news + limit - 1) // limit if total_news > 0 else 1
+
+    return await render_page(request, db, "news.html", context={
+        "news_list": news_list,
+        "page": page,
+        "total_pages": total_pages,
+        "tournaments": tournaments,
+        "teams": teams,
+        "selected_tournament": tournament_id,
+        "selected_team": team_id
+    })
+
+
+@router.get("/news/{news_id}")
+async def news_detail_page(news_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    stmt = select(News).where(News.id == news_id).options(
+        selectinload(News.teams),
+        selectinload(News.tournament)
+    )
+    news_item = (await db.execute(stmt)).scalar_one_or_none()
+
+    if not news_item:
+        raise HTTPException(status_code=404, detail="Новость не найдена")
+
+    return await render_page(request, db, "news_detail.html", context={"news": news_item})
 
 
 @router.get("/media")
@@ -870,8 +930,12 @@ async def admin_match_create(
         match_date=parsed_date, stadium=stadium, status=status, round=round, group_name=group_name
     )
     await crud_match.create(db, obj_in=match_in)
-    return RedirectResponse(url="/admin/matches", status_code=303)
 
+    # Если матч сразу создан как завершенный — пересчитываем таблицу
+    if status == MatchStatus.FINISHED:
+        await StandingsService.recalculate_standings(db, tournament_id)
+
+    return RedirectResponse(url="/admin/matches", status_code=303)
 
 @router.get("/admin/matches/{match_id}/edit")
 async def admin_match_edit_form(match_id: int, request: Request, db: AsyncSession = Depends(get_db)):
@@ -1356,43 +1420,94 @@ async def admin_media_item_delete(item_id: int, request: Request, db: AsyncSessi
 
     return RedirectResponse(url=f"/admin/media/{album_id}", status_code=303)
 
+
+from sqlalchemy import select, func, or_
+from sqlalchemy.orm import selectinload
+from datetime import datetime
+
+
 @router.get("/teams/{team_id}")
 async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     team = await db.get(Team, team_id)
     if not team:
         raise HTTPException(status_code=404, detail="Команда не найдена")
 
-    # Получаем последние 10 матчей команды
-    stmt_m = select(Match).where(
-        (Match.home_team_id == team.id) | (Match.away_team_id == team.id),
-        Match.status == MatchStatus.FINISHED
-    ).options(selectinload(Match.home_team), selectinload(Match.away_team)).order_by(Match.match_date.desc()).limit(10)
-    matches = (await db.execute(stmt_m)).scalars().all()
+    # Достаем все матчи команды (включая будущие)
+    stmt = select(Match).where(
+        or_(Match.home_team_id == team.id, Match.away_team_id == team.id)
+    ).options(
+        selectinload(Match.home_team),
+        selectinload(Match.away_team),
+        selectinload(Match.tournament)
+    ).order_by(Match.match_date.desc())
 
-    # Считаем статистику
-    wins, draws, losses = 0, 0, 0
-    goals_for, goals_against = 0, 0
-    for m in matches:
+    all_matches = (await db.execute(stmt)).scalars().all()
+
+    # Считаем статистику (только по завершенным)
+    finished_matches = [m for m in all_matches if m.status == MatchStatus.FINISHED]
+    total_games = len(finished_matches)
+    total_wins = 0
+    total_goals = 0
+    tournaments_set = set()
+
+    for m in finished_matches:
+        tournaments_set.add(m.tournament_id)
         if m.home_team_id == team.id:
-            goals_for += m.home_score or 0
-            goals_against += m.away_score or 0
-            if m.home_score > m.away_score: wins += 1
-            elif m.home_score < m.away_score: losses += 1
-            else: draws += 1
+            total_goals += (m.home_score or 0)
+            if (m.home_score or 0) > (m.away_score or 0): total_wins += 1
         else:
-            goals_for += m.away_score or 0
-            goals_against += m.home_score or 0
-            if m.away_score > m.home_score: wins += 1
-            elif m.away_score < m.home_score: losses += 1
-            else: draws += 1
+            total_goals += (m.away_score or 0)
+            if (m.away_score or 0) > (m.home_score or 0): total_wins += 1
 
-    # Получаем заявку (игроков)
-    stmt_roster = select(TeamPlayer).where(TeamPlayer.team_id == team.id).options(selectinload(TeamPlayer.player))
-    roster = (await db.execute(stmt_roster)).scalars().all()
+    # Форма (последние 5)
+    recent_form = []
+    for m in finished_matches[:5]:
+        if m.home_team_id == team.id:
+            if (m.home_score or 0) > (m.away_score or 0):
+                recent_form.append("В")
+            elif (m.home_score or 0) < (m.away_score or 0):
+                recent_form.append("П")
+            else:
+                recent_form.append("Н")
+        else:
+            if (m.away_score or 0) > (m.home_score or 0):
+                recent_form.append("В")
+            elif (m.away_score or 0) < (m.home_score or 0):
+                recent_form.append("П")
+            else:
+                recent_form.append("Н")
+
+    # Группируем матчи по турнирам для календаря
+    grouped_matches = {}
+    for m in all_matches:
+        t_name = m.tournament.name if m.tournament else "Товарищеские матчи"
+        if t_name not in grouped_matches:
+            grouped_matches[t_name] = []
+        grouped_matches[t_name].append(m)
+
+    # Получаем текущий турнир и таблицу (по последнему матчу)
+    active_tournament = all_matches[0].tournament if all_matches else None
+    standings = []
+    if active_tournament:
+        stmt_standings = select(TournamentStanding).where(
+            TournamentStanding.tournament_id == active_tournament.id
+        ).options(selectinload(TournamentStanding.team)).order_by(
+            TournamentStanding.points.desc()
+        ).limit(5)
+        standings = (await db.execute(stmt_standings)).scalars().all()
 
     return await render_page(request, db, "team_detail.html", context={
         "team": team,
-        "matches": matches,
-        "stats": {"wins": wins, "draws": draws, "losses": losses, "gf": goals_for, "ga": goals_against},
-        "roster": roster
+        "stats": {
+            "games": total_games,
+            "wins": total_wins,
+            "goals": total_goals,
+            "tournaments": len(tournaments_set)
+        },
+        "recent_form": recent_form,
+        "grouped_matches": grouped_matches,  # <--- Передаем сгруппированные матчи
+        "active_tournament": active_tournament,
+        "standings": standings
     })
+
+

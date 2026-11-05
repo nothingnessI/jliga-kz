@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5" style="max-width: 1000px;">
+    <!-- Кнопка назад -->
+    <a href="/news" class="btn btn-outline-secondary btn-sm mb-4"><i class="bi bi-arrow-left"></i> Ко всем новостям</a>
+
+    <div class="bg-white shadow-sm p-4 p-md-5" style="border-radius: 4px;">
+        <!-- Заголовок и Дата -->
+        <h1 class="fw-bold mb-3" style="color: #0f2537;">{{ news.title }}</h1>
+        <div class="text-muted mb-4 pb-3 border-bottom">
+            <i class="bi bi-calendar3 me-1"></i> {{ news.published_at.strftime('%d %B %Y') if news.published_at else '' }}
+        </div>
+
+        <!-- Главная картинка -->
+        {% if news.image_url %}
+            <img src="{{ news.image_url }}" class="img-fluid w-100 mb-4 rounded" alt="{{ news.title }}" style="max-height: 500px; object-fit: cover;">
+        {% endif %}
+
+        <!-- Полный HTML контент (с таблицами) -->
+        <!-- ВАЖНО: используем |safe, чтобы теги и таблицы отрисовались -->
+        <div class="news-content lh-lg" style="font-size: 16px;">
+            {{ news.content | safe }}
+        </div>
+
+        <!-- Теги -->
+        <div class="mt-5 pt-4 border-top">
+            <span class="text-muted fw-bold me-2">Теги:</span>
+            {% if news.tournament %}
+                <a href="/tournaments/{{ news.tournament.id }}" class="btn btn-sm btn-outline-primary mb-1">
+                    {{ news.tournament.name }}
+                </a>
+            {% endif %}
+            {% for team in news.teams %}
+                <a href="/teams/{{ team.id }}" class="btn btn-sm btn-outline-dark mb-1">
+                    {{ team.name }}
+                </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Стили для таблиц внутри новостей (чтобы они не вылезали за края) */
+    .news-content table {
+        width: 100%;
+        margin-bottom: 1rem;
+        color: #212529;
+        border-collapse: collapse;
+    }
+    .news-content table th, .news-content table td {
+        padding: 0.75rem;
+        border: 1px solid #dee2e6;
+    }
+    .news-content table thead {
+        background-color: #0f2537;
+        color: white;
+    }
+    .news-content img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 4px;
+        margin: 15px 0;
+    }
+</style>
+{% endblock %}
