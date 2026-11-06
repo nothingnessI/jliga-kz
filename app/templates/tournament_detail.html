@@ -312,16 +312,9 @@
             <div class="fs-3 fw-bold bg-dark text-white rounded px-3 py-1 shadow-sm" id="modalScore"></div>
             <div class="text-start fw-bold fs-5 w-40" id="modalAwayName"></div>
         </div>
-        <div class="row g-0 border-top pt-3">
-            <div class="col-6 pe-2 border-end">
-                <div class="text-end text-muted fw-bold small mb-2 text-uppercase">Хозяева</div>
-                <div id="modalHomeEvents" class="d-flex flex-column align-items-end"></div>
-            </div>
-            <div class="col-6 ps-2">
-                <div class="text-start text-muted fw-bold small mb-2 text-uppercase">Гости</div>
-                <div id="modalAwayEvents" class="d-flex flex-column align-items-start"></div>
-            </div>
-        </div>
+
+        <!-- Блок событий, который наполняется через JS -->
+        <div class="row g-0 border-top pt-3" id="modalEventsRow"></div>
       </div>
       <div class="modal-footer border-0 bg-light p-3">
         <a href="#" id="modalProtocolLink" class="btn btn-dark w-100 fw-bold py-2 rounded-3">Перейти к протоколу</a>
@@ -350,6 +343,7 @@
             const data = matchData[matchId];
             if (!data) return;
 
+            // Заполняем базовую инфу
             document.getElementById('modalDate').textContent = data.date;
             document.getElementById('modalStadium').innerHTML = `<i class="bi bi-geo-alt-fill text-danger"></i> ${data.stadium}`;
             document.getElementById('modalHomeName').textContent = data.home_name;
@@ -357,26 +351,50 @@
             document.getElementById('modalScore').textContent = `${data.home_score} : ${data.away_score}`;
             document.getElementById('modalProtocolLink').href = `/matches/${data.id}`;
 
-            const homeEventsContainer = document.getElementById('modalHomeEvents');
-            const awayEventsContainer = document.getElementById('modalAwayEvents');
-            homeEventsContainer.innerHTML = '';
-            awayEventsContainer.innerHTML = '';
+            const eventsRow = document.getElementById('modalEventsRow');
+
+            // Счетчики голов для проверки
+            let homeGoals = 0;
+            let awayGoals = 0;
 
             if (data.events && data.events.length > 0) {
+                // Если события есть, рендерим две колонки
+                eventsRow.innerHTML = `
+                    <div class="col-6 pe-2 border-end" id="modalHomeCol">
+                        <div class="text-end text-muted fw-bold small mb-2 text-uppercase">Хозяева</div>
+                        <div id="modalHomeEvents" class="d-flex flex-column align-items-end"></div>
+                    </div>
+                    <div class="col-6 ps-2" id="modalAwayCol">
+                        <div class="text-start text-muted fw-bold small mb-2 text-uppercase">Гости</div>
+                        <div id="modalAwayEvents" class="d-flex flex-column align-items-start"></div>
+                    </div>
+                `;
+
+                const hContainer = document.getElementById('modalHomeEvents');
+                const aContainer = document.getElementById('modalAwayEvents');
+
                 data.events.forEach(e => {
                     let icon = '⚽';
-                    if (e.type === 'YELLOW') icon = '<div class="bg-warning rounded d-inline-block" style="width: 12px; height: 16px;"></div>';
-                    else if (e.type === 'RED') icon = '<div class="bg-danger rounded d-inline-block" style="width: 12px; height: 16px;"></div>';
+                    if (e.type === 'PENALTY') icon = '⚽ <small class="text-muted">(П)</small>';
+                    else if (e.type === 'OWN_GOAL') icon = '⚽ <small class="text-muted">(А)</small>';
+                    else if (e.type === 'YELLOW') icon = '<div class="bg-warning rounded d-inline-block align-middle" style="width: 12px; height: 16px;"></div>';
+                    else if (e.type === 'RED') icon = '<div class="bg-danger rounded d-inline-block align-middle" style="width: 12px; height: 16px;"></div>';
+
+                    // Считаем реальные голы из событий
+                    if (e.type === 'GOAL' || e.type === 'PENALTY' || e.type === 'OWN_GOAL') {
+                        if (e.team_id === data.home_team_id) homeGoals++;
+                        else awayGoals++;
+                    }
 
                     if (e.team_id === data.home_team_id) {
-                        homeEventsContainer.innerHTML += `
+                        hContainer.innerHTML += `
                             <div class="mb-2 d-flex align-items-center justify-content-end w-100" style="font-size: 13px;">
                                 <span class="text-truncate me-2" style="max-width: 120px;" title="${e.player}">${e.player}</span>
                                 ${icon}
                                 <span class="badge bg-dark ms-2" style="font-size: 11px;">${e.minute}'</span>
                             </div>`;
                     } else {
-                        awayEventsContainer.innerHTML += `
+                        aContainer.innerHTML += `
                             <div class="mb-2 d-flex align-items-center justify-content-start w-100" style="font-size: 13px;">
                                 <span class="badge bg-dark me-2" style="font-size: 11px;">${e.minute}'</span>
                                 ${icon}
@@ -384,14 +402,36 @@
                             </div>`;
                     }
                 });
+
+                // Умная проверка: если голов в счете больше, чем найдено авторов
+                if (data.home_score > homeGoals) {
+                    hContainer.innerHTML += `<div class="text-muted small mt-2 italic text-end" style="font-size: 11px;">*Голы не указаны</div>`;
+                }
+                if (data.away_score > awayGoals) {
+                    aContainer.innerHTML += `<div class="text-muted small mt-2 italic text-start" style="font-size: 11px;">*Голы не указаны</div>`;
+                }
+
             } else {
-                homeEventsContainer.innerHTML = '<span class="text-muted small w-100 text-center">Нет событий</span>';
+                // Если событий вообще нет
+                let message = "События не найдены";
+                if (data.home_score > 0 || data.away_score > 0) {
+                    message = "Протокол матча не заполнен (голы и карточки неизвестны)";
+                }
+
+                eventsRow.innerHTML = `
+                    <div class="col-12 text-center py-4">
+                        <div class="bg-light rounded p-3 border text-muted">
+                            <i class="bi bi-info-circle fs-5 d-block mb-2"></i>
+                            ${message}
+                        </div>
+                    </div>
+                `;
             }
 
             matchModal.show();
         }
 
-        // Делегирование событий для попапа
+        // Делегирование событий для попапа (чтобы работало на всех вкладках)
         document.body.addEventListener('click', function(e) {
             const trigger = e.target.closest('.match-popup-trigger');
             if (trigger) {

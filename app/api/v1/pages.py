@@ -252,12 +252,14 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
         selectinload(Match.events).selectinload(MatchEvent.player)
     )
     matches_raw = (await db.execute(stmt_matches)).scalars().all()
+
+    # Сортировка матчей: сначала по туру, потом по дате (None даты - в конец)
     fallback_date = datetime.min.replace(tzinfo=timezone.utc)
     matches = sorted(
         matches_raw,
         key=lambda x: (
             int(x.round) if x.round and str(x.round).isdigit() else 0,
-            x.match_date or fallback_date
+            x.match_date.timestamp() if x.match_date else fallback_date.timestamp()
         )
     )
 
@@ -269,11 +271,11 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
 
     teams_list = [s.team for s in standings]
 
-    # ================= 4. ПРОГРЕСС =================
+    # ================= 4. ПРОГРЕСС (ФОРМА) =================
     progress_data = {}
     for team in teams_list:
         team_matches = [m for m in matches if m.home_team_id == team.id or m.away_team_id == team.id]
-        team_matches.sort(key=lambda x: x.match_date or fallback_date, reverse=True)
+        team_matches.sort(key=lambda x: x.match_date.timestamp() if x.match_date else 0, reverse=True)
         recent_form = []
         for m in team_matches[:5]:
             if m.home_score is not None and m.away_score is not None:
@@ -288,29 +290,45 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
     matches_dict = {}
     for m in matches:
         events_list = []
+
+        # Сортируем события по минутам
         if m.events:
-            for e in m.events:
+            sorted_events = sorted(m.events, key=lambda x: x.minute)
+            for e in sorted_events:
                 etype = "GOAL" if "GOAL" in str(e.event_type) else (
                     "YELLOW" if "YELLOW" in str(e.event_type) else "RED")
+
+                player_name = f"{e.player.last_name} {e.player.first_name[0]}." if e.player else "Игрок"
+
                 events_list.append({
-                    "minute": e.minute, "team_id": e.team_id,
-                    "player": f"{e.player.last_name} {e.player.first_name[0]}." if e.player else "Игрок",
+                    "minute": e.minute,
+                    "team_id": e.team_id,
+                    "player": player_name,
                     "type": etype
                 })
+
+        # Проверяем, есть ли счет, но нет событий (частая проблема старых матчей)
+        has_score = m.home_score is not None and m.away_score is not None
+        no_events_but_score = has_score and len(events_list) == 0
+
         matches_dict[m.id] = {
-            "id": m.id, "home_name": m.home_team.name, "away_name": m.away_team.name,
-            "home_team_id": m.home_team_id, "away_team_id": m.away_team_id,
+            "id": m.id,
+            "home_name": m.home_team.name,
+            "away_name": m.away_team.name,
+            "home_team_id": m.home_team_id,
+            "away_team_id": m.away_team_id,
             "home_score": m.home_score if m.home_score is not None else 0,
             "away_score": m.away_score if m.away_score is not None else 0,
             "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
-            "stadium": m.stadium or 'Стадион TBA', "events": events_list
+            "stadium": m.stadium or 'Стадион TBA',
+            "events": events_list,
+            "no_events_but_score": no_events_but_score
         }
 
     # ================= 6. СЕТКИ ПЛЕЙ-ОФФ =================
     playoff_brackets = {}
     if is_cup:
         knockout_matches = [m for m in matches if m.group_name and m.round is not None]
-
         for m in knockout_matches:
             cup_name = m.group_name if m.group_name else "Плей-офф"
             round_num = int(m.round) if m.round and str(m.round).isdigit() else 1
@@ -319,7 +337,6 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
                 playoff_brackets[cup_name] = {}
             if round_num not in playoff_brackets[cup_name]:
                 playoff_brackets[cup_name][round_num] = []
-
             playoff_brackets[cup_name][round_num].append(m)
 
         for cup in playoff_brackets:
@@ -487,7 +504,7 @@ async def media_page(request: Request, db: AsyncSession = Depends(get_db)):
 
 @router.get("/matches/{match_id}")
 async def match_protocol_page(match_id: int, request: Request, db: AsyncSession = Depends(get_db)):
-    # Загружаем матч со всеми связями
+    # 1. Загружаем матч со всеми связями
     stmt = select(Match).where(Match.id == match_id).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
@@ -496,13 +513,15 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
         selectinload(Match.events).selectinload(MatchEvent.team)
     )
     match = (await db.execute(stmt)).scalar_one_or_none()
+
     if not match:
         raise HTTPException(status_code=404, detail="Матч не найден")
 
+    # Сортируем события по минутам
     if match.events:
         match.events.sort(key=lambda e: e.minute)
 
-    # Загружаем составы
+    # 2. Загружаем составы команд (заявки на турнир)
     home_roster = await crud_team_player.get_by_tournament_and_team(
         db, tournament_id=match.tournament_id, team_id=match.home_team_id
     )
@@ -510,23 +529,49 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
         db, tournament_id=match.tournament_id, team_id=match.away_team_id
     )
 
-    # Загружаем таблицу (только для расчета позиций)
+    # 3. Загружаем турнирную таблицу для расчета позиций
     stmt_standings = select(TournamentStanding).where(
         TournamentStanding.tournament_id == match.tournament_id
-    ).order_by(TournamentStanding.points.desc())
+    ).order_by(TournamentStanding.points.desc(), TournamentStanding.goals_for.desc())
     standings = (await db.execute(stmt_standings)).scalars().all()
 
-    # Ищем позиции команд
+    # Ищем позиции и данные команд в таблице
     home_pos = next((i + 1 for i, s in enumerate(standings) if s.team_id == match.home_team_id), None)
     away_pos = next((i + 1 for i, s in enumerate(standings) if s.team_id == match.away_team_id), None)
-
     home_standing = next((s for s in standings if s.team_id == match.home_team_id), None)
     away_standing = next((s for s in standings if s.team_id == match.away_team_id), None)
 
-    # Топ бомбардир турнира (используем твой сервис StatsService)
+    # 4. Топ бомбардир турнира
     top_scorers = await StatsService.get_top_scorers(db, match.tournament_id, limit=1)
     top_scorer = top_scorers[0] if top_scorers else None
 
+    # 5. Личные встречи (Head-to-Head)
+    # Ищем завершенные матчи между этими двумя командами в рамках этого же турнира (или вообще)
+    h2h_stmt = select(Match).where(
+        or_(
+            and_(Match.home_team_id == match.home_team_id, Match.away_team_id == match.away_team_id),
+            and_(Match.home_team_id == match.away_team_id, Match.away_team_id == match.home_team_id)
+        ),
+        Match.id != match.id,
+        Match.status == MatchStatus.FINISHED
+    ).options(
+        selectinload(Match.home_team),
+        selectinload(Match.away_team)
+    ).order_by(Match.match_date.desc()).limit(5)
+
+    h2h_matches = (await db.execute(h2h_stmt)).scalars().all()
+
+    # 6. ГРУППИРОВКА СОБЫТИЙ ПО ИГРОКАМ
+    # Это нужно для того, чтобы в протоколе выводить голы/карточки строго напротив нужного игрока
+    events_by_player = {}
+    if match.events:
+        for e in match.events:
+            if e.player_id:
+                if e.player_id not in events_by_player:
+                    events_by_player[e.player_id] = []
+                events_by_player[e.player_id].append(e)
+
+    # 7. РЕНДЕР СТРАНИЦЫ
     return await render_page(request, db, "match_detail.html", context={
         "match": match,
         "home_roster": home_roster,
@@ -536,9 +581,10 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
         "home_pos": home_pos,
         "away_pos": away_pos,
         "top_scorer": top_scorer,
+        "h2h_matches": h2h_matches,  # <--- Передаем личные встречи
+        "events_by_player": events_by_player,  # <--- Передаем сгруппированные события
         "active_tab": request.query_params.get("tab", "preview")
     })
-
 
 @router.get("/stadiums")
 async def stadiums_page(request: Request, db: AsyncSession = Depends(get_db)):
@@ -1421,7 +1467,7 @@ async def admin_media_item_delete(item_id: int, request: Request, db: AsyncSessi
     return RedirectResponse(url=f"/admin/media/{album_id}", status_code=303)
 
 
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, and_
 from sqlalchemy.orm import selectinload
 from datetime import datetime
 
@@ -1432,7 +1478,7 @@ async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(g
     if not team:
         raise HTTPException(status_code=404, detail="Команда не найдена")
 
-    # Достаем все матчи команды (включая будущие)
+    # Достаем все матчи команды
     stmt = select(Match).where(
         or_(Match.home_team_id == team.id, Match.away_team_id == team.id)
     ).options(
@@ -1443,6 +1489,14 @@ async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(g
 
     all_matches = (await db.execute(stmt)).scalars().all()
 
+    # --- ИСПРАВЛЕНИЕ 1: Сортируем матчи правильно (TBA - в конец) ---
+    # В Python нельзя напрямую сортировать datetime и None, поэтому используем ключ
+    all_matches = sorted(
+        all_matches,
+        key=lambda x: x.match_date.timestamp() if x.match_date else 0,
+        reverse=True
+    )
+
     # Считаем статистику (только по завершенным)
     finished_matches = [m for m in all_matches if m.status == MatchStatus.FINISHED]
     total_games = len(finished_matches)
@@ -1450,8 +1504,11 @@ async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(g
     total_goals = 0
     tournaments_set = set()
 
-    for m in finished_matches:
+    # --- ИСПРАВЛЕНИЕ 2: Считаем турниры по ВСЕМ матчам, а не только по завершенным ---
+    for m in all_matches:
         tournaments_set.add(m.tournament_id)
+
+    for m in finished_matches:
         if m.home_team_id == team.id:
             total_goals += (m.home_score or 0)
             if (m.home_score or 0) > (m.away_score or 0): total_wins += 1
@@ -1485,8 +1542,8 @@ async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(g
             grouped_matches[t_name] = []
         grouped_matches[t_name].append(m)
 
-    # Получаем текущий турнир и таблицу (по последнему матчу)
-    active_tournament = all_matches[0].tournament if all_matches else None
+    # Получаем текущий турнир и таблицу
+    active_tournament = next((m.tournament for m in all_matches if m.tournament), None)
     standings = []
     if active_tournament:
         stmt_standings = select(TournamentStanding).where(
@@ -1502,10 +1559,10 @@ async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(g
             "games": total_games,
             "wins": total_wins,
             "goals": total_goals,
-            "tournaments": len(tournaments_set)
+            "tournaments": len(tournaments_set) # Теперь будет 8
         },
         "recent_form": recent_form,
-        "grouped_matches": grouped_matches,  # <--- Передаем сгруппированные матчи
+        "grouped_matches": grouped_matches,
         "active_tournament": active_tournament,
         "standings": standings
     })
