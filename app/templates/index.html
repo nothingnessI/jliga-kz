@@ -12,7 +12,7 @@
             <!-- БЛИЖАЙШИЕ МАТЧИ -->
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px;">Ближайшие матчи</h4>
-                <a href="/matches" class="text-decoration-none fw-bold small" style="color: #3092b8;">Все матчи <i class="bi bi-arrow-right"></i></a>
+                <a href="/matches?year={{ latest_season }}" class="text-decoration-none fw-bold small" style="color: #3092b8;">Все матчи <i class="bi bi-arrow-right"></i></a>
             </div>
 
             <div class="row g-3 mb-5">
@@ -89,7 +89,7 @@
                 {% endfor %}
             </div>
 
-            <!-- НОВОСТИ ЛИГИ (Горизонтальные карточки) -->
+            <!-- НОВОСТИ ЛИГИ -->
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px;">Новости лиги</h4>
                 <a href="/news" class="btn btn-sm btn-outline-primary fw-bold" style="border-color: #3092b8; color: #3092b8;">
@@ -134,21 +134,28 @@
 
         </div>
 
-        <!-- ПРАВАЯ КОЛОНКА (Турнирная таблица и Статистика) -->
+        <!-- ПРАВАЯ КОЛОНКА (Выбор турнира, Таблица, Бомбардиры) -->
         <div class="col-lg-4">
 
-            <!-- БЛИЖАЙШИЙ ТУРНИР -->
-            {% if active_tournament %}
-            <div class="mb-4">
-                <a href="/tournaments/{{ active_tournament.id }}" class="text-decoration-none">
-                    <div class="p-3 text-white fw-bold text-uppercase d-flex justify-content-between align-items-center shadow-sm" style="background-color: #3092b8;">
-                        <span class="text-truncate" style="max-width: 85%;">{{ active_tournament.name }}</span>
-                        <i class="bi bi-chevron-right"></i>
-                    </div>
-                </a>
+            <!-- ВЫПАДАЮЩИЙ СПИСОК ТУРНИРОВ -->
+            {% if tournaments %}
+            <div class="mb-4 shadow-sm" style="border-radius: 6px; overflow: hidden;">
+                <form method="GET" action="/">
+                    <select name="tournament_id" class="form-select border-0 fw-bold text-white"
+                            style="background-color: #3092b8; cursor: pointer; padding: 15px; font-size: 15px; box-shadow: none;"
+                            onchange="this.form.submit()">
+                        <option disabled>Выберите турнир...</option>
+                        {% for t in tournaments %}
+                            <option value="{{ t.id }}" {% if t.id == selected_tournament_id %}selected{% endif %}
+                                    style="background-color: white; color: #212529; font-weight: 600;">
+                                {{ t.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </form>
             </div>
 
-            <!-- ТАБЛИЦА -->
+            <!-- ТАБЛИЦА ВЫБРАННОГО ТУРНИРА -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-dark text-white fw-bold text-uppercase text-center py-3" style="background-color: #0f2537 !important;">
                     Турнирная таблица
@@ -182,7 +189,7 @@
                 </div>
             </div>
 
-            <!-- ЛУЧШИЕ БОМБАРДИРЫ -->
+            <!-- БОМБАРДИРЫ ВЫБРАННОГО ТУРНИРА -->
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-header bg-dark text-white fw-bold text-uppercase text-center py-3" style="background-color: #0f2537 !important;">
                     Бомбардиры
@@ -204,32 +211,8 @@
                 </div>
             </div>
             {% else %}
-            <div class="alert alert-light border text-center text-muted">Активных турниров пока нет.</div>
+            <div class="alert alert-light border text-center text-muted">Турниров пока нет.</div>
             {% endif %}
-
-            <!-- БЛОК ТУРНИРОВ (Ссылки) -->
-            <div class="card border-0 shadow-sm">
-                <div class="card-header bg-dark text-white fw-bold text-uppercase py-3" style="background-color: #0f2537 !important;">
-                    Активные турниры
-                </div>
-                <div class="card-body p-0">
-                    <div class="list-group list-group-flush">
-                        {% for t in tournaments %}
-                        <a href="/tournaments/{{ t.id }}" class="list-group-item list-group-item-action py-3">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div class="d-flex align-items-center gap-2">
-                                    <img src="{{ t.logo_url or '/static/default_tournament.png' }}" width="30" height="30" style="object-fit: contain;">
-                                    <span class="fw-bold text-truncate" style="max-width: 200px;">{{ t.name }}</span>
-                                </div>
-                                <i class="bi bi-chevron-right text-muted"></i>
-                            </div>
-                        </a>
-                        {% else %}
-                        <div class="text-center text-muted py-3">Нет турниров</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
 
         </div>
     </div>
@@ -242,5 +225,10 @@
         box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
     }
     .object-fit-cover { object-fit: cover; }
+
+    /* Стили для выпадающего списка */
+    select.form-select option {
+        padding: 10px;
+    }
 </style>
 {% endblock %}

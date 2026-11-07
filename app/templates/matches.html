@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .match-row { transition: 0.2s; border-bottom: 1px solid #e9ecef; text-decoration: none; color: inherit; display: block; }
+    .match-row:hover { background-color: #f8f9fa; transform: scale(1.005); box-shadow: 0 4px 10px rgba(0,0,0,0.05); z-index: 10; position: relative; }
+
+    .match-date-box { width: 130px; border-right: 1px solid #e9ecef; padding-right: 15px; text-align: center; }
+    .match-date-day { font-size: 18px; font-weight: 800; color: #0f2537; line-height: 1; margin-bottom: 3px; }
+    .match-date-month { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #6c757d; }
+    .match-time { font-size: 13px; font-weight: 700; color: #3092b8; margin-top: 5px; }
+
+    .team-name { font-size: 15px; font-weight: 700; color: #212529; }
+    .team-name.winner { color: #198754; }
+    .team-logo { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
+
+    .score-badge { background: #212529; color: white; font-size: 16px; font-weight: bold; padding: 6px 14px; border-radius: 6px; min-width: 70px; text-align: center; }
+    .score-badge.empty { background: #f8f9fa; color: #adb5bd; border: 1px solid #dee2e6; }
+
+    .tournament-tag { font-size: 11px; color: #6c757d; text-transform: uppercase; font-weight: 600; }
+</style>
+
+<div class="container py-5" style="max-width: 1200px;">
+
+    <!-- Шапка и фильтры -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <div>
+            <h2 class="fw-bold text-uppercase m-0" style="color: #0f2537;">Все матчи</h2>
+            <p class="text-muted m-0 small">Найдено: {{ total_matches }}</p>
+        </div>
+
+        <form method="get" action="/matches" class="d-flex gap-2 flex-wrap shadow-sm p-2 bg-white rounded border">
+            <!-- Сезон -->
+            <select name="year" class="form-select form-select-sm fw-bold" style="width: auto;" onchange="this.form.submit()">
+                {% for y in available_years %}
+                    <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>Сезон {{ y }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Турнир -->
+            <select name="tournament_id" class="form-select form-select-sm fw-bold" style="width: auto; max-width: 250px;" onchange="this.form.submit()">
+                <option value="">Все турниры</option>
+                {% for t in tournaments %}
+                    <option value="{{ t.id }}" {% if t.id == selected_tournament_id %}selected{% endif %}>{{ t.name }}</option>
+                {% endfor %}
+            </select>
+
+            <!-- Дата -->
+            <input type="date" name="date_filter" class="form-control form-control-sm fw-bold" value="{{ date_filter or '' }}" onchange="this.form.submit()" style="width: auto;">
+
+            <!-- Кнопка сброса -->
+            {% if date_filter or selected_tournament_id %}
+                <a href="/matches?year={{ current_year }}" class="btn btn-sm btn-outline-danger fw-bold d-flex align-items-center">Сбросить</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Список матчей -->
+    <div class="card border-0 shadow-sm" style="border-radius: 8px; overflow: hidden;">
+        <div class="card-body p-0">
+            {% for m in matches %}
+            <a href="/matches/{{ m.id }}" class="match-row p-3">
+                <div class="d-flex align-items-center">
+
+                    <!-- 1. Блок с датой -->
+                    <div class="match-date-box">
+                        {% if m.match_date %}
+                            <div class="match-date-day">{{ m.match_date.strftime('%d') }}</div>
+                            <div class="match-date-month">{{ m.match_date.strftime('%b, %a') }}</div>
+                            <div class="match-time">{{ m.match_date.strftime('%H:%M') }}</div>
+                        {% else %}
+                            <div class="text-muted fw-bold small">Дата</div>
+                            <div class="text-muted fw-bold fs-5">TBA</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 2. Команды и Счет -->
+                    <div class="flex-grow-1 px-4">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <!-- Хозяева -->
+                            <div class="d-flex align-items-center gap-2 w-50">
+                                <img src="{{ m.home_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" class="team-logo">
+                                <span class="team-name text-truncate {% if m.home_score is not none and m.home_score > m.away_score %}winner{% endif %}">{{ m.home_team.name }}</span>
+                            </div>
+
+                            <!-- Счет -->
+                            <div class="text-center px-2">
+                                <div class="score-badge {% if m.home_score is none %}empty{% endif %}">
+                                    {% if m.home_score is not none %}{{ m.home_score }} : {{ m.away_score }}{% else %}- : -{% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Гости -->
+                            <div class="d-flex align-items-center justify-content-end gap-2 w-50 text-end">
+                                <span class="team-name text-truncate {% if m.away_score is not none and m.away_score > m.home_score %}winner{% endif %}">{{ m.away_team.name }}</span>
+                                <img src="{{ m.away_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" class="team-logo">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Турнир и Статус -->
+                    <div class="text-end" style="width: 200px;">
+                        <div class="tournament-tag text-truncate" title="{{ m.tournament.name }}">{{ m.tournament.name }}</div>
+                        <small class="text-muted d-block mt-1">
+                            {% if m.status.value|lower == 'finished' or m.home_score is not none %}
+                                <span class="badge bg-light text-secondary border">Завершен</span>
+                            {% else %}
+                                <span class="badge bg-light text-primary border">Скоро</span>
+                            {% endif %}
+                        </small>
+                    </div>
+
+                </div>
+            </a>
+            {% else %}
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-calendar-x fs-1 d-block mb-3"></i>
+                <h5>Матчей по выбранным фильтрам не найдено</h5>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Пагинация -->
+    {% if total_pages > 1 %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ page - 1 }}&year={{ current_year }}&tournament_id={{ selected_tournament_id or '' }}&date_filter={{ date_filter or '' }}">Назад</a>
+            </li>
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                    <li class="page-item active"><span class="page-link bg-dark border-dark">{{ p }}</span></li>
+                {% elif p >= page - 2 and p <= page + 2 %}
+                    <li class="page-item"><a class="page-link text-dark" href="?page={{ p }}&year={{ current_year }}&tournament_id={{ selected_tournament_id or '' }}&date_filter={{ date_filter or '' }}">{{ p }}</a></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                <a class="page-link" href="?page={{ page + 1 }}&year={{ current_year }}&tournament_id={{ selected_tournament_id or '' }}&date_filter={{ date_filter or '' }}">Вперед</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+
+</div>
+{% endblock %}

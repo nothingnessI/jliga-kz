@@ -26,6 +26,12 @@ class TeamPlayer(TimestampMixin, Base):
     is_captain: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
+    stats_games: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    stats_goals: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    stats_assists: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    stats_yellow_cards: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    stats_red_cards: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+
     # Связи
     player: Mapped["Player"] = relationship(back_populates="teams")
     team: Mapped["Team"] = relationship(back_populates="players")
