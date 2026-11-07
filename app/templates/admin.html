@@ -1,133 +1,360 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
-<div class="mb-4 d-flex justify-content-between align-items-center">
-    <h4 class="fw-bold">Главная</h4>
-    <span class="badge bg-success fs-6 px-3 py-2">Администратор</span>
+<style>
+    /* ================= ОБЩИЕ СТИЛИ ================= */
+    body { background-color: #f4f6f9; }
+    .dash-header { margin-bottom: 25px; }
+
+    /* ================= СТИЛИ КАРТОЧЕК ДАШБОРДА ================= */
+    .dash-card {
+        background: #fff;
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+        margin-bottom: 20px;
+        overflow: hidden;
+        transition: box-shadow 0.2s;
+    }
+    .dash-card:hover { box-shadow: 0 8px 25px rgba(0,0,0,0.08); }
+
+    .dash-card-header {
+        padding: 15px 20px;
+        background: #fff;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 700;
+        color: #2b3035;
+    }
+    .dash-card-header i { color: #0d6efd; font-size: 1.2rem; margin-right: 8px; }
+
+    .dash-list-item {
+        padding: 12px 20px;
+        border-bottom: 1px solid #f8f9fa;
+        display: flex;
+        align-items: center;
+        transition: background 0.2s;
+    }
+    .dash-list-item:hover { background: #f8f9fa; }
+    .dash-list-item:last-child { border-bottom: none; }
+
+    /* ================= СТИЛИ ИНСТРУКЦИИ (ТАЙМЛАЙН) ================= */
+    .guide-container {
+        background: #fff;
+        border-radius: 16px;
+        padding: 40px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        margin-top: 20px;
+    }
+
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+        margin-top: 30px;
+    }
+    /* Вертикальная линия */
+    .timeline::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 9px;
+        width: 3px;
+        background: #e9ecef;
+        border-radius: 3px;
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 40px;
+    }
+    .timeline-item:last-child { margin-bottom: 0; }
+
+    /* Точка на линии */
+    .timeline-marker {
+        position: absolute;
+        left: -30px;
+        top: 2px;
+        width: 21px;
+        height: 21px;
+        border-radius: 50%;
+        background: #0d6efd;
+        border: 4px solid #fff;
+        box-shadow: 0 0 0 3px #e9ecef;
+        z-index: 2;
+        transition: 0.3s;
+    }
+    .timeline-item:hover .timeline-marker {
+        background: #198754;
+        transform: scale(1.2);
+    }
+
+    .timeline-content {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 25px;
+        border: 1px solid #e9ecef;
+        transition: 0.3s;
+    }
+    .timeline-item:hover .timeline-content {
+        background: #fff;
+        border-color: #0d6efd;
+        box-shadow: 0 5px 15px rgba(13, 110, 253, 0.08);
+        transform: translateX(5px);
+    }
+
+    .timeline-title { font-size: 1.1rem; font-weight: 800; color: #2b3035; margin-bottom: 10px; }
+    .timeline-desc { font-size: 0.95rem; color: #6c757d; margin-bottom: 15px; line-height: 1.6; }
+
+    /* ================= СТИЛИ ДЛЯ МАТЧЕЙ ================= */
+    .match-team { font-size: 14px; font-weight: 600; color: #212529; }
+    .match-logo { width: 24px; height: 24px; object-fit: contain; }
+    .match-vs { font-size: 12px; color: #adb5bd; margin: 0 10px; font-weight: bold; }
+
+    .badge-soft-primary { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
+    .badge-soft-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+</style>
+
+<!-- Шапка -->
+<div class="d-flex justify-content-between align-items-center dash-header">
+    <div>
+        <h3 class="fw-bold m-0" style="color: #1e293b;">Панель управления</h3>
+        <p class="text-muted m-0 small">Добро пожаловать в центр управления лигой. Все процессы под контролем.</p>
+    </div>
+    <span class="badge bg-dark fs-6 px-3 py-2 rounded-pill shadow-sm"><i class="bi bi-shield-check me-1 text-success"></i> Администратор</span>
 </div>
 
-<!-- Верхний ряд карточек -->
+<!-- ================= БЛОК 1: АКТИВНЫЕ ДАШБОРДЫ ================= -->
 <div class="row g-4 mb-4">
-    <!-- 1. Дни рождения -->
-    <div class="col-md-3">
-        <div class="stat-card" style="background-color: #8bc34a;">
-            <i class="bi bi-gift icon"></i>
-            <div>
-                <div class="number">{{ birthdays_count|default(0) }}</div>
-                <div class="label">Дни рождения сегодня</div>
+
+    <!-- ЛЕВАЯ КОЛОНКА (Матчи и Новости) -->
+    <div class="col-lg-8">
+
+        <!-- Ближайшие матчи -->
+        <div class="dash-card">
+            <div class="dash-card-header">
+                <div><i class="bi bi-calendar-event"></i> Ближайшие матчи</div>
+                <a href="/admin/matches" class="text-decoration-none small fw-bold">Все матчи <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for m in upcoming_matches %}
+                <div class="dash-list-item">
+                    <div style="width: 100px;" class="text-muted small fw-bold">
+                        {{ m.match_date.strftime('%d.%m %H:%M') if m.match_date else 'TBA' }}
+                    </div>
+                    <div class="flex-grow-1 d-flex align-items-center justify-content-center">
+                        <div class="text-end w-50 d-flex justify-content-end align-items-center gap-2">
+                            <span class="match-team text-truncate">{{ m.home_team.name }}</span>
+                            <img src="{{ m.home_team.logo_url or '/static/default_team.png' }}" class="match-logo">
+                        </div>
+                        <div class="match-vs">VS</div>
+                        <div class="text-start w-50 d-flex align-items-center gap-2">
+                            <img src="{{ m.away_team.logo_url or '/static/default_team.png' }}" class="match-logo">
+                            <span class="match-team text-truncate">{{ m.away_team.name }}</span>
+                        </div>
+                    </div>
+                    <div class="text-end" style="width: 150px;">
+                        <span class="badge badge-soft-primary text-truncate" style="max-width: 100%;" title="{{ m.tournament.name }}">{{ m.tournament.name }}</span>
+                    </div>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-calendar-x fs-3 d-block mb-2"></i> Нет запланированных матчей
+                </div>
+                {% endfor %}
             </div>
         </div>
+
+        <!-- Последние новости -->
+        <div class="dash-card">
+            <div class="dash-card-header">
+                <div><i class="bi bi-newspaper"></i> Последние новости</div>
+                <a href="/admin/news" class="text-decoration-none small fw-bold">Все новости <i class="bi bi-arrow-right"></i></a>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for n in recent_news %}
+                <div class="dash-list-item">
+                    <div class="me-3 flex-shrink-0">
+                        {% if n.image_url %}
+                            <img src="{{ n.image_url }}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
+                        {% else %}
+                            <div class="bg-light rounded d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                <i class="bi bi-image text-muted"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <a href="/news/{{ n.id }}" target="_blank" class="fw-bold text-dark text-decoration-none d-block text-truncate" style="font-size: 14px;">{{ n.title }}</a>
+                        <small class="text-muted"><i class="bi bi-clock me-1"></i> {{ n.published_at.strftime('%d.%m.%Y') if n.published_at else '' }}</small>
+                    </div>
+                    <a href="/admin/news/{{ n.id }}/edit" class="btn btn-sm btn-outline-secondary ms-3"><i class="bi bi-pencil"></i></a>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-file-earmark-x fs-3 d-block mb-2"></i> Новостей пока нет
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
     </div>
 
-    <!-- 2. Заявки на управление -->
-    <div class="col-md-3">
-        <div class="stat-card" style="background-color: #2196f3;">
-            <i class="bi bi-person-plus icon"></i>
-            <div>
-                <div class="number">{{ manage_requests|default(0) }}</div>
-                <div class="label">Заявки на управление</div>
-            </div>
-        </div>
-    </div>
+    <!-- ПРАВАЯ КОЛОНКА (Турниры и Команды) -->
+    <div class="col-lg-4">
 
-    <!-- 3. Заявки на участие -->
-    <div class="col-md-3">
-        <div class="stat-card" style="background-color: #03a9f4;">
-            <i class="bi bi-crosshair icon"></i>
-            <div>
-                <div class="number">{{ participation_requests|default(0) }}</div>
-                <div class="label">Заявки на участие</div>
+        <!-- Активные турниры -->
+        <div class="dash-card">
+            <div class="dash-card-header">
+                <div><i class="bi bi-trophy"></i> Активные турниры</div>
+            </div>
+            <div class="p-3">
+                {% for t in active_tournaments %}
+                <a href="/tournaments/{{ t.id }}" target="_blank" class="d-block p-2 mb-2 rounded text-decoration-none border hover-bg-light" style="transition: 0.2s;">
+                    <div class="d-flex align-items-center gap-2">
+                        <img src="{{ t.logo_url or '/static/default_tournament.png' }}" width="30" height="30" style="object-fit: contain;">
+                        <div>
+                            <div class="fw-bold text-dark text-truncate" style="font-size: 13px; max-width: 200px;">{{ t.name }}</div>
+                            <div class="text-muted" style="font-size: 11px;">Сезон {{ t.season }}</div>
+                        </div>
+                    </div>
+                </a>
+                {% else %}
+                <div class="text-center text-muted small py-3">Нет активных турниров</div>
+                {% endfor %}
             </div>
         </div>
-    </div>
 
-    <!-- 4. Черновики дисквалификаций -->
-    <div class="col-md-3">
-        <div class="stat-card" style="background-color: #f44336;">
-            <i class="bi bi-slash-circle icon"></i>
-            <div>
-                <div class="number">{{ disc_drafts|default(0) }}</div>
-                <div class="label">Черновики дисквалификаций</div>
+        <!-- Недавно добавленные команды -->
+        <div class="dash-card">
+            <div class="dash-card-header">
+                <div><i class="bi bi-shield-plus"></i> Новые команды</div>
+            </div>
+            <div class="list-group list-group-flush">
+                {% for team in recent_teams %}
+                <div class="dash-list-item p-3">
+                    <img src="{{ team.logo_url or '/static/default_team.png' }}" width="35" height="35" class="me-3" style="object-fit: contain;">
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-dark" style="font-size: 13px;">{{ team.name }}</div>
+                        <div class="text-muted" style="font-size: 11px;">{{ team.city or 'Город не указан' }}</div>
+                    </div>
+                    <a href="/admin/teams/{{ team.id }}/edit" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></a>
+                </div>
+                {% else %}
+                <div class="p-4 text-center text-muted">
+                    <i class="bi bi-people fs-3 d-block mb-2"></i> Команд пока нет
+                </div>
+                {% endfor %}
             </div>
         </div>
+
     </div>
 </div>
 
-<!-- Второй ряд карточек -->
-<div class="row g-4 mb-4">
-    <!-- 1. Пользователи -->
-    <div class="col-md-3">
-        <div class="stat-card" style="background-color: #8bc34a;">
-            <i class="bi bi-person icon"></i>
-            <div>
-                <div class="number">{{ users_count }}</div>
-                <div class="label">Пользователи</div>
-            </div>
-        </div>
+<!-- ================= БЛОК 2: ИНСТРУКЦИЯ (ТАЙМЛАЙН) ================= -->
+<div class="guide-container">
+    <div class="text-center mb-4">
+        <h4 class="fw-bold" style="color: #1e293b;"><i class="bi bi-map text-primary me-2"></i> Руководство по запуску турнира</h4>
+        <p class="text-muted">Следуйте этим шагам, чтобы полностью настроить лигу и начать публиковать результаты.</p>
     </div>
 
-    <!-- 2. Новости на рассмотрении -->
-    <div class="col-md-3">
-        <div class="stat-card" style="background-color: #009688;">
-            <i class="bi bi-newspaper icon"></i>
-            <div>
-                <div class="number">{{ news_count }}</div>
-                <div class="label">Новости на рассмотрении</div>
-            </div>
-        </div>
-    </div>
+    <div class="timeline">
 
-    <!-- 3. Фото на рассмотрении -->
-    <div class="col-md-3">
-        <div class="stat-card" style="background-color: #26a69a;">
-            <i class="bi bi-image icon"></i>
-            <div>
-                <div class="number">{{ photos_count|default(0) }}</div>
-                <div class="label">Фото на рассмотрении</div>
+        <!-- ШАГ 1 -->
+        <div class="timeline-item">
+            <div class="timeline-marker"></div>
+            <div class="timeline-content">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="timeline-title">Шаг 1. Создание турнира</div>
+                        <div class="timeline-desc">
+                            Настройте фундамент вашей лиги. Укажите название (например, <i>J-LIGA. APERTURA-2026. PRIMERA</i>), выберите сезон, дивизион и возрастную категорию.
+                            От статуса турнира зависит его отображение на главной странице сайта.
+                        </div>
+                    </div>
+                    <a href="/admin/tournaments/create" class="btn btn-primary btn-sm fw-bold ms-3 flex-shrink-0"><i class="bi bi-plus-lg me-1"></i> Создать</a>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- 4. Видео на рассмотрении -->
-    <div class="col-md-3">
-        <div class="stat-card" style="background-color: #26a69a;">
-            <i class="bi bi-camera-video icon"></i>
-            <div>
-                <div class="number">{{ videos_count|default(0) }}</div>
-                <div class="label">Видео на рассмотрении</div>
+        <!-- ШАГ 2 -->
+        <div class="timeline-item">
+            <div class="timeline-marker"></div>
+            <div class="timeline-content">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="timeline-title">Шаг 2. Добавление команд и игроков</div>
+                        <div class="timeline-desc">
+                            Создайте карточки команд и загрузите их логотипы. Затем добавьте игроков в общую базу и распределите их по командам.
+                            <b>Важно:</b> заявки игроков привязываются к конкретному турниру.
+                        </div>
+                    </div>
+                    <div class="ms-3 flex-shrink-0 d-flex flex-column gap-2">
+                        <a href="/admin/teams/create" class="btn btn-outline-primary btn-sm fw-bold"><i class="bi bi-shield-plus me-1"></i> Команду</a>
+                        <a href="/admin/players/create" class="btn btn-outline-primary btn-sm fw-bold"><i class="bi bi-person-plus me-1"></i> Игрока</a>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <!-- ШАГ 3 -->
+        <div class="timeline-item">
+            <div class="timeline-marker"></div>
+            <div class="timeline-content">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="timeline-title">Шаг 3. Календарь и заявки на турнир</div>
+                        <div class="timeline-desc">
+                            Зайдите в созданный турнир и добавьте в него команды. Нажмите <b>«Сгенерировать календарь»</b>, и система автоматически создаст матчи «каждый с каждым».
+                            Вы также можете добавлять матчи вручную.
+                        </div>
+                    </div>
+                    <a href="/admin/tournaments" class="btn btn-outline-primary btn-sm fw-bold ms-3 flex-shrink-0"><i class="bi bi-calendar-plus me-1"></i> К турнирам</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ШАГ 4 -->
+        <div class="timeline-item">
+            <div class="timeline-marker"></div>
+            <div class="timeline-content">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="timeline-title">Шаг 4. Внесение результатов (Протоколы)</div>
+                        <div class="timeline-desc">
+                            После матча перейдите в раздел <b>«Матчи»</b>, найдите игру и откройте <b>«Протокол»</b>. Внесите голы, пенальти, автоголы и карточки.
+                            Счет в турнирной таблице обновится автоматически!
+                        </div>
+                    </div>
+                    <a href="/admin/matches" class="btn btn-outline-primary btn-sm fw-bold ms-3 flex-shrink-0"><i class="bi bi-activity me-1"></i> К матчам</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- ШАГ 5 -->
+        <div class="timeline-item">
+            <div class="timeline-marker"></div>
+            <div class="timeline-content">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="timeline-title">Шаг 5. Новости и Медиа</div>
+                        <div class="timeline-desc">
+                            Поддерживайте интерес болельщиков. Пишите анонсы матчей, публикуйте итоги туров и загружайте фотоотчеты в медиа-альбомы.
+                        </div>
+                    </div>
+                    <div class="ms-3 flex-shrink-0 d-flex flex-column gap-2">
+                        <a href="/admin/news/create" class="btn btn-outline-primary btn-sm fw-bold"><i class="bi bi-pencil-square me-1"></i> Новость</a>
+                        <a href="/admin/media/create" class="btn btn-outline-primary btn-sm fw-bold"><i class="bi bi-images me-1"></i> Медиа</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
 </div>
 
-<!-- Синяя плашка с инструкциями -->
-<div class="alert alert-info mb-4" role="alert">
-    Инструкции, подсказки и ответы на часто задаваемые вопросы смотрите <a href="#" class="alert-link">здесь</a>
-</div>
-
-<!-- Краткое руководство -->
-<h6 class="text-muted mb-3 text-uppercase">Краткое руководство по началу работы с системой:</h6>
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-4" style="background-color: #2b3035; color: white; border-radius: 8px;">
-        <h5 class="fw-bold mb-4">Для администраторов системы</h5>
-        <ul class="list-unstyled mb-0" style="line-height: 2.2;">
-            <li>
-                <i class="bi bi-record-circle me-2"></i>
-                Ознакомьтесь с видео-инструкцией <a href="#" class="text-info text-decoration-none">здесь</a>
-            </li>
-            <li>
-                <i class="bi bi-record-circle me-2"></i>
-                Создайте турнир <a href="/admin/tournaments" class="text-info text-decoration-none">здесь</a>
-            </li>
-            <li>
-                <i class="bi bi-record-circle me-2"></i>
-                Создайте команды <a href="/admin/teams" class="text-info text-decoration-none">здесь</a>
-            </li>
-            <li>
-                <i class="bi bi-record-circle me-2"></i>
-                Заявите команды на турнир <a href="#" class="text-info text-decoration-none">здесь</a>
-            </li>
-        </ul>
-    </div>
-</div>
+<style>
+    .hover-bg-light:hover { background-color: #f8f9fa; }
+</style>
 {% endblock %}

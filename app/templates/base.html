@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>J-LIGA | Футбольная лига</title>
+    <link rel="icon" type="image/png" href="/static/main_logo.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
@@ -35,51 +36,6 @@
             position: relative;
             z-index: 2;
         }
-
-        /* --- МЕГА-МЕНЮ (ТУРНИРЫ) --- */
-        .mega-menu {
-            display: none !important;
-            background-color: #1a85ad;
-            left: 0;
-            right: 0;
-            padding: 0;
-            border-radius: 0;
-            z-index: 1000;
-            margin-top: 0;
-            border: none;
-        }
-        @media (min-width: 992px) {
-            .nav-main .nav-item.dropdown:hover .mega-menu {
-                display: block !important;
-            }
-        }
-        .mega-title {
-            background-color: #5c6b7a;
-            color: white;
-            display: inline-block;
-            padding: 10px 30px 10px 15px;
-            font-weight: 700;
-            font-size: 14px;
-            text-transform: uppercase;
-            clip-path: polygon(0 0, 100% 0, 90% 100%, 0% 100%);
-            width: 100%;
-        }
-        .mega-link {
-            display: block;
-            color: white;
-            text-decoration: none;
-            padding: 10px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            font-size: 15px;
-            transition: color 0.2s, padding-left 0.2s;
-        }
-        .mega-link:hover {
-            color: #d8232a;
-            padding-left: 5px;
-        }
-        .mega-footer { background-color: #7a8694; }
-        .mega-footer-link { color: white; text-decoration: none; font-weight: 700; font-size: 14px; transition: color 0.2s; }
-        .mega-footer-link:hover { color: #d8232a; }
 
         /* --- ВЫПАДАЮЩЕЕ МЕНЮ УЧАСТНИКИ --- */
         .custom-dropdown {
@@ -162,68 +118,14 @@
                         <li><a class="dropdown-item" href="/stadiums">Стадионы</a></li>
                         <li><a class="dropdown-item" href="/management">Руководители</a></li>
                         <li><a class="dropdown-item" href="/partners">Партнеры</a></li>
-                        <li><a class="dropdown-item" href="/facts">Лига в цифрах и фактах</a></li>
-                        <li><a class="dropdown-item" href="/rating">Rating</a></li>
-                        <li><a class="dropdown-item" href="/disciplinary">Решения дисциплинарного комитета</a></li>
                     </ul>
                 </li>
 
-                <!-- МЕНЮ ТУРНИРЫ (Мега-меню) -->
-                <li class="nav-item dropdown position-static active">
-                    <a class="nav-link dropdown-toggle" href="/tournaments" id="tournamentsDropdown" role="button" aria-expanded="false">
+                <!-- МЕНЮ ТУРНИРЫ (Теперь просто ссылка) -->
+                <li class="nav-item active">
+                    <a class="nav-link" href="/tournaments">
                         ТУРНИРЫ
                     </a>
-                    <div class="dropdown-menu mega-menu w-100 border-0 shadow" aria-labelledby="tournamentsDropdown">
-                        <div class="container-fluid px-4 px-xl-5 py-4">
-                            <div class="row">
-                                <!-- 1. ЧЕМПИОНАТ -->
-                                <div class="col-md-3 mb-3">
-                                    <div class="mega-title">ЧЕМПИОНАТ {{ current_year }}</div>
-                                    <ul class="list-unstyled mt-4">
-                                        {% for t in menu_championship %}
-                                            <li><a class="mega-link" href="/tournaments/{{ t.id }}">{{ t.division }}</a></li>
-                                        {% else %}
-                                            <li><span class="text-white-50">Нет турниров</span></li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-
-                                <!-- 2. ЛИГА ЧЕМПИОНОВ -->
-                                <div class="col-md-3 mb-3">
-                                    <div class="mega-title">ЛИГА ЧЕМПИОНОВ {{ current_year }}</div>
-                                    <ul class="list-unstyled mt-4">
-                                        {% for t in menu_champions_league %}
-                                            <li><a class="mega-link" href="/tournaments/{{ t.id }}">{{ t.division }}</a></li>
-                                        {% else %}
-                                            <li><span class="text-white-50">Нет турниров</span></li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-
-                                <!-- 3. ДЖУНИОР -->
-                                <div class="col-md-3 mb-3">
-                                    <div class="mega-title">ДЖУНИОР {{ current_year }}</div>
-                                    <ul class="list-unstyled mt-4">
-                                        {% for t in menu_junior %}
-                                            <li><a class="mega-link" href="/tournaments/{{ t.id }}">{{ t.age_category }}</a></li>
-                                        {% else %}
-                                            <li><span class="text-white-50">Нет турниров</span></li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Нижняя серая полоса -->
-                        <div class="mega-footer">
-                            <div class="container-fluid d-flex justify-content-center align-items-center gap-4 py-3">
-                                <a href="/tournaments" class="mega-footer-link">Все турниры</a>
-                                <span class="text-white-50">/</span>
-                                <a href="/matches" class="mega-footer-link">Все матчи</a>
-                                <span class="text-white-50">/</span>
-                                <a href="/disciplinary" class="mega-footer-link">Дисквалификации</a>
-                            </div>
-                        </div>
-                    </div>
                 </li>
 
                 <!-- МЕНЮ УЧАСТНИКИ -->

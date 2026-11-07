@@ -36,7 +36,7 @@ class Tournament(Base, TimestampMixin):
     tournament_format: Mapped[TournamentFormat | None] = mapped_column(
         Enum(TournamentFormat)
     )
-
+    jliga_id: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True, index=True)
     # relationships
 
     matches: Mapped[list["Match"]] = relationship(

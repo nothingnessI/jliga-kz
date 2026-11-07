@@ -22,6 +22,7 @@ class News(Base, TimestampMixin):
     image_url: Mapped[str | None] = mapped_column(Text)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    tags: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     # Старая привязка к турниру (оставляем)
     tournament_id: Mapped[int | None] = mapped_column(ForeignKey("tournaments.id", ondelete="SET NULL"))

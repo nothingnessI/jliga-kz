@@ -39,7 +39,9 @@ class Match(TimestampMixin, Base):
     stage: Mapped[MatchStage | None] = mapped_column(
         Enum(MatchStage, name="match_stage")
     )
-
+    home_penalty: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    away_penalty: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    stage_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
     # Связи
     tournament: Mapped["Tournament"] = relationship(back_populates="matches")
     home_team: Mapped["Team"] = relationship(

@@ -2,130 +2,93 @@ import asyncio
 import random
 import re
 import time
-from datetime import datetime
 from bs4 import BeautifulSoup
-from curl_cffi import requests  # <--- НАША ГЛАВНАЯ БИБЛИОТЕКА
+from curl_cffi import requests
 from sqlalchemy import select
 
 from app.db.session import session_factory
-from app.models.match import Match
 from app.models.tournament import Tournament
-from app.models.enums import MatchStatus
-
-MONTHS = {
-    "янв": 1, "фев": 2, "мар": 3, "апр": 4, "май": 5, "июн": 6,
-    "июл": 7, "авг": 8, "сен": 9, "окт": 10, "ноя": 11, "дек": 12,
-    "января": 1, "февраля": 2, "марта": 3, "апреля": 4, "мая": 5, "июня": 6,
-    "июля": 7, "августа": 8, "сентября": 9, "октября": 10, "ноября": 11, "декабря": 12
-}
+from app.models.match import Match
+from app.models.enums import MatchStage, MatchStatus
 
 
-def parse_date_string(raw_text: str, default_year: int):
-    raw_text = raw_text.lower().strip()
-    hour, minute = 0, 0
-
-    time_match = re.search(r'(\d{1,2}):(\d{2})', raw_text)
-    if time_match:
-        hour, minute = int(time_match.group(1)), int(time_match.group(2))
-
-    # Формат DD.MM.YYYY
-    date_dot_match = re.search(r'(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?', raw_text)
-    if date_dot_match:
-        day = int(date_dot_match.group(1))
-        month = int(date_dot_match.group(2))
-        year = default_year
-        if date_dot_match.group(3):
-            y_str = date_dot_match.group(3)
-            year = int(y_str) if len(y_str) == 4 else 2000 + int(y_str)
-        return datetime(year, month, day, hour, minute)
-
-    # Текстовый формат "27 сентября"
-    text_without_time = re.sub(r'\d{1,2}:\d{2}', '', raw_text)
-    date_text_match = re.search(r'(\d{1,2})\s+([а-яa-z]+)', text_without_time)
-    if date_text_match:
-        day = int(date_text_match.group(1))
-        month_str = date_text_match.group(2)[:3]
-        month = MONTHS.get(month_str)
-        if month:
-            return datetime(default_year, month, day, hour, minute)
-
+def safe_get(session, url):
+    try:
+        r = session.get(url, timeout=25)
+        if r.status_code == 200: return r
+    except Exception:
+        pass
     return None
 
 
 async def main():
     async with session_factory() as db:
-        # 1. Получаем все турниры
-        tournaments = (await db.scalars(select(Tournament))).all()
-        print(f"📡 Найдено {len(tournaments)} турниров. Начинаем STEALTH-парсинг...\n")
-
-        # 2. Создаем сессию curl_cffi (она сохраняет куки, как реальный браузер)
-        # impersonate="chrome110" подделывает отпечаток Chrome 110
-        session = requests.Session(impersonate="chrome110")
+        session = requests.Session(impersonate="chrome124")
+        tournaments = (await db.scalars(select(Tournament).where(Tournament.jliga_id.is_not(None)))).all()
+        print(f"📡 Парсим кубковые стадии и пенальти для {len(tournaments)} турниров...")
 
         for idx, t in enumerate(tournaments):
-            print(f"[{idx + 1}/{len(tournaments)}] {t.name} (Сезон {t.season})")
-            url = f"https://jliga.ru/tournament/{t.id}/calendar"
+            url = f"https://jliga.ru/tournament/{t.jliga_id}/calendar?type=dates"
+            r = safe_get(session, url)
+            if not r: continue
 
-            try:
-                # Делаем запрос, притворяясь браузером
-                resp = session.get(url, timeout=30.0)
+            soup = BeautifulSoup(r.text, "html.parser")
+            items = soup.select(".blk-tcalendar__item")
 
-                if resp.status_code != 200:
-                    print(f"  ❌ Ошибка {resp.status_code}. Возможно, бан. Ждем 15 сек...")
-                    time.sleep(15)
-                    continue
+            updated = 0
+            for item in items:
+                score_link = item.select_one("a.blk-tcalendar__score")
+                if not score_link: continue
 
-                soup = BeautifulSoup(resp.text, "html.parser")
-                items = soup.select("li.blk-tcalendar__item")
+                m_id_match = re.search(r"/match/(\d+)", score_link.get("href", ""))
+                if not m_id_match: continue
+                jm_id = int(m_id_match.group(1))
 
-                updated_count = 0
+                db_m = await db.scalar(select(Match).where(Match.jliga_id == jm_id))
+                if not db_m: continue
 
-                for item in items:
-                    score_link = item.find("a", class_="blk-tcalendar__score")
-                    if not score_link: continue
+                # 1. Парсим стадию (справа в списке)
+                # Обычно текст стадии лежит в конце item, или в специальном div
+                stage_elem = item.select_one(".blk-tcalendar__stage-name") or item.select_one(".blk-tcalendar__stage")
+                if stage_elem:
+                    stage_text = stage_elem.text.strip()
+                    db_m.stage_name = stage_text
 
-                    m_id_match = re.search(r"/match/(\d+)", score_link.get("href", ""))
-                    if not m_id_match: continue
-                    jm_id = int(m_id_match.group(1))
+                    # Определяем тип стадии для сетки
+                    stage_lower = stage_text.lower()
+                    if "1/8" in stage_lower:
+                        db_m.round = 1; db_m.stage = MatchStage.PLAYOFF
+                    elif "1/4" in stage_lower or "четверть" in stage_lower:
+                        db_m.round = 2; db_m.stage = MatchStage.PLAYOFF
+                    elif "1/2" in stage_lower or "полу" in stage_lower:
+                        db_m.round = 3; db_m.stage = MatchStage.PLAYOFF
+                    elif "финал" in stage_lower and "1/" not in stage_lower:
+                        db_m.round = 4; db_m.stage = MatchStage.FINAL
+                    elif "3 место" in stage_lower or "третье" in stage_lower:
+                        db_m.round = 5; db_m.stage = MatchStage.FINAL
 
-                    # Дата
-                    raw_date_text = item.text.strip()
-                    parsed_date = parse_date_string(raw_date_text, int(t.season))
+                # 2. Парсим счет и пенальти
+                score_text = score_link.text.strip().replace("\n", " ")
+                # Ищем основной счет: 4 - 4
+                main_score = re.search(r'(\d+)\s*[-:]\s*(\d+)', score_text)
+                if main_score:
+                    db_m.home_score = int(main_score.group(1))
+                    db_m.away_score = int(main_score.group(2))
 
-                    # Счет
-                    score_text = score_link.text.strip()
-                    score_match = re.search(r'(\d+)\s*[-:]\s*(\d+)', score_text)
+                    # Ищем серию пенальти в скобках: (1:2)
+                    pen_score = re.search(r'\((\d+):(\d+)\)', score_text)
+                    if pen_score:
+                        db_m.home_penalty = int(pen_score.group(1))
+                        db_m.away_penalty = int(pen_score.group(2))
 
-                    # Ищем матч в базе
-                    db_m = await db.scalar(select(Match).where(Match.jliga_id == jm_id))
-                    if not db_m: continue
+                    db_m.status = MatchStatus.FINISHED
+                    updated += 1
 
-                    # Обновляем дату
-                    if parsed_date:
-                        db_m.match_date = parsed_date
+            await db.commit()
+            print(f"[{idx + 1}/{len(tournaments)}] {t.name} -> Обновлено: {updated}")
+            time.sleep(random.uniform(1.0, 2.0))
 
-                    # Обновляем счет и статус
-                    if score_match:
-                        db_m.home_score = int(score_match.group(1))
-                        db_m.away_score = int(score_match.group(2))
-                        db_m.status = MatchStatus.FINISHED
-                    else:
-                        db_m.status = MatchStatus.SCHEDULED
-
-                    updated_count += 1
-
-                await db.commit()
-                print(f"  ✅ Обновлено матчей: {updated_count}")
-
-            except Exception as e:
-                print(f"  ❌ Ошибка: {e}")
-
-            # 3. Человекоподобная пауза перед следующим турниром (4-8 секунд)
-            sleep_time = random.uniform(4.0, 8.0)
-            print(f"  💤 Отдыхаем {sleep_time:.1f} сек...\n")
-            time.sleep(sleep_time)
-
-        print("🎉 STEALTH-ПАРСИНГ ЗАВЕРШЕН!")
+    print("🎉 ПАРСИНГ КУБКОВ ЗАВЕРШЕН!")
 
 
 if __name__ == "__main__":

@@ -28,3 +28,4 @@ class Disqualification(TimestampMixin, Base):
     # Связи
     player: Mapped["Player"] = relationship(back_populates="disqualifications")
     tournament: Mapped["Tournament"] = relationship(back_populates="disqualifications")
+    team: Mapped["Team"] = relationship()
