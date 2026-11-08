@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Общие стили страницы */
+    body { background-color: #f4f6f9; }
+    .text-dark-blue { color: #0f2537; }
+    .bg-dark-blue { background-color: #0f2537; }
+
+    /* Шапка профиля */
+    .profile-header {
+        background: #fff;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: 1px solid #e2e8f0;
+    }
+    .profile-photo {
+        width: 180px;
+        height: 180px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 5px solid #fff;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        position: relative;
+        z-index: 2;
+        margin-top: -40px;
+    }
+    .profile-cover {
+        height: 120px;
+        background: linear-gradient(135deg, #1a7dab 0%, #0f2537 100%);
+        position: relative;
+    }
+
+    /* Статистические плитки */
+    .stat-box {
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        padding: 20px;
+        text-align: center;
+        transition: transform 0.2s;
+    }
+    .stat-box:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.05); }
+    .stat-icon { font-size: 28px; color: #94a3b8; margin-bottom: 10px; }
+    .stat-value { font-size: 28px; font-weight: 800; color: #0f2537; line-height: 1; margin-bottom: 5px; }
+    .stat-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+
+    /* Таблица истории */
+    .history-table { width: 100%; border-collapse: collapse; }
+    .history-table th {
+        background: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        text-transform: uppercase;
+        font-weight: 700;
+        padding: 12px 15px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+    .history-table td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+
+    /* Строка турнира */
+    .tournament-row { background: #e2e8f0; font-weight: 800; color: #0f2537; text-transform: uppercase; font-size: 14px; }
+    .tournament-row td { padding: 15px; border-bottom: none; }
+
+    /* Строка матча */
+    .match-row:hover { background: #f8fafc; }
+
+    /* Иконки событий */
+    .event-icon { font-size: 16px; margin-right: 3px; }
+    .event-icon.goal { color: #10b981; }
+    .event-icon.assist { color: #3b82f6; }
+    .event-icon.yellow { color: #f59e0b; }
+    .event-icon.red { color: #ef4444; }
+
+    .result-badge {
+        width: 24px; height: 24px; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; color: #fff;
+    }
+    .res-w { background: #10b981; }
+    .res-d { background: #94a3b8; }
+    .res-l { background: #ef4444; }
+
+</style>
+
+<div class="container py-4 mt-2">
+
+    <!-- ================= ШАПКА ПРОФИЛЯ ================= -->
+    <div class="profile-header mb-4">
+        <div class="profile-cover"></div>
+        <div class="px-4 pb-4">
+            <div class="row align-items-end">
+                <div class="col-md-3 text-center text-md-start">
+                    {% if player.photo_url %}
+                        <img src="{{ player.photo_url }}" class="profile-photo">
+                    {% else %}
+                        <div class="profile-photo bg-secondary d-inline-flex align-items-center justify-content-center">
+                            <i class="bi bi-person-fill text-white" style="font-size: 5rem;"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-9 mt-3 mt-md-0 d-flex flex-column flex-md-row justify-content-between align-items-md-end">
+                    <div>
+                        <h1 class="fw-bold mb-1 text-uppercase text-dark-blue" style="font-size: 32px;">
+                            {{ player.last_name }} {{ player.first_name }}
+                        </h1>
+                        <div class="d-flex gap-3 text-muted fs-6 mb-2">
+                            {% if player.position %}
+                                <span><i class="bi bi-hash"></i> {{ player.position.value }}</span>
+                            {% endif %}
+                            <span><i class="bi bi-calendar3"></i> {{ player.date_of_birth.strftime('%d.%m.%Y') if player.date_of_birth else 'Дата рождения не указана' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= БЛОК СТАТИСТИКИ ================= -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3 col-lg-2">
+            <div class="stat-box">
+                <i class="bi bi-controller stat-icon"></i>
+                <div class="stat-value">{{ stats.games }}</div>
+                <div class="stat-label">Игры</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+            <div class="stat-box">
+                <i class="bi bi-dribbble stat-icon" style="color: #10b981;"></i>
+                <div class="stat-value text-success">{{ stats.goals }}</div>
+                <div class="stat-label">Голы</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+            <div class="stat-box">
+                <i class="bi bi-bullseye stat-icon" style="color: #3b82f6;"></i>
+                <div class="stat-value text-primary">{{ stats.assists }}</div>
+                <div class="stat-label">Передачи</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+            <div class="stat-box">
+                <i class="bi bi-square-fill stat-icon" style="color: #f59e0b;"></i>
+                <div class="stat-value text-warning">{{ stats.yellow_cards }}</div>
+                <div class="stat-label">Жёлтые</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3 col-lg-2">
+            <div class="stat-box">
+                <i class="bi bi-square-fill stat-icon" style="color: #ef4444;"></i>
+                <div class="stat-value text-danger">{{ stats.red_cards }}</div>
+                <div class="stat-label">Красные</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= ТАБЛИЦА ИСТОРИИ ================= -->
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+        <div class="card-header bg-dark-blue text-white py-3">
+            <h5 class="m-0 fw-bold text-uppercase" style="letter-spacing: 1px;">Статистика по турнирам</h5>
+        </div>
+
+        <div class="table-responsive">
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">Турнир</th>
+                        <th style="width: 35%;">Матч</th>
+                        <th style="width: 5%; text-align: center;">Рез</th>
+                        <th style="width: 5%; text-align: center;">Г</th>
+                        <th style="width: 5%; text-align: center;">П</th>
+                        <th style="width: 5%; text-align: center;">ЖК</th>
+                        <th style="width: 5%; text-align: center;">КК</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for history in history_data %}
+                        <!-- Шапка турнира (например, BKS - CHAMPIONS LEAGUE) -->
+                        <tr class="tournament-row">
+                            <td colspan="2">
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if history.team and history.team.logo_url %}
+                                        <img src="{{ history.team.logo_url }}" width="24" height="24" style="object-fit: contain;">
+                                    {% endif %}
+                                    <span>{{ history.team.name if history.team else 'Клуб' }}</span>
+                                    <span class="text-muted mx-2">/</span>
+                                    <span class="text-secondary">{{ history.tournament.name }}</span>
+                                </div>
+                            </td>
+                            <td class="text-center">{{ history.games }}</td>
+                            <td class="text-center">{{ history.goals }}</td>
+                            <td class="text-center">{{ history.assists }}</td>
+                            <td class="text-center">{{ history.yc }}</td>
+                            <td class="text-center">{{ history.rc }}</td>
+                        </tr>
+
+                        <!-- Матчи в этом турнире -->
+                        {% for m_data in history.matches %}
+                        <tr class="match-row">
+                            <!-- Левая колонка: Этап турнира -->
+                            <td class="text-muted small ps-4">
+                                {{ m_data.match.stage_name or 'Групповой этап' }}
+                            </td>
+
+                            <!-- Центральная колонка: Дата, Команды, Счет -->
+                            <td>
+                                <div class="d-flex flex-column">
+                                    <div class="text-muted mb-1" style="font-size: 11px;">
+                                        {{ m_data.match.match_date.strftime('%d %b, %H:%M') if m_data.match.match_date else '' }}
+                                    </div>
+                                    <div class="fw-bold text-dark" style="font-size: 14px;">
+                                        {% if m_data.is_home %}
+                                            {{ history.team.name }} <span class="text-muted mx-1">{{ m_data.score }}</span> {{ m_data.opponent }}
+                                        {% else %}
+                                            {{ m_data.opponent }} <span class="text-muted mx-1">{{ m_data.score }}</span> {{ history.team.name }}
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+
+                            <!-- Результат (В/Н/П) -->
+                            <td class="text-center">
+                                <span class="result-badge {% if m_data.result == 'В' %}res-w{% elif m_data.result == 'Н' %}res-d{% else %}res-l{% endif %}">
+                                    {{ m_data.result }}
+                                </span>
+                            </td>
+
+                            <!-- События в матче (Голы, Пасы, Карточки) -->
+                            <td class="text-center">
+                                {% for e in m_data.events %}
+                                    {% if e.event_type.value in ['GOAL', 'PENALTY_GOAL'] %}
+                                        <i class="bi bi-dribbble event-icon goal" title="Гол"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td class="text-center">
+                                {% for e in m_data.events %}
+                                    {% if e.event_type.value == 'ASSIST' %}
+                                        <i class="bi bi-bullseye event-icon assist" title="Пас"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td class="text-center">
+                                {% for e in m_data.events %}
+                                    {% if e.event_type.value == 'YELLOW_CARD' %}
+                                        <i class="bi bi-square-fill event-icon yellow" title="ЖК"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                            <td class="text-center">
+                                {% for e in m_data.events %}
+                                    {% if e.event_type.value == 'RED_CARD' %}
+                                        <i class="bi bi-square-fill event-icon red" title="КК"></i>
+                                    {% endif %}
+                                {% endfor %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-info-circle fs-1 d-block mb-3"></i>
+                                У игрока пока нет статистики в матчах.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

@@ -12,6 +12,7 @@ from app.models.tournament_standing import TournamentStanding
 from app.models.tournament_team import TournamentTeam
 from app.models.user import User
 from app.models.media import MediaItem, MediaAlbum
+from app.models.coach import Coach
 
 
 __all__ = [
@@ -30,4 +31,5 @@ __all__ = [
     "User",
     "MediaItem",
     "MediaAlbum",
+    "Coach",
 ]

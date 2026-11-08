@@ -38,6 +38,7 @@ class MatchEventType(str, enum.Enum):
     OWN_GOAL = "own_goal"
     PENALTY_GOAL = "penalty_goal"
     YELLOW_CARD = "yellow_card"
+    ASSIST = "ASSIST"
     RED_CARD = "red_card"
     SUBSTITUTION_IN = "substitution_in"
     SUBSTITUTION_OUT = "substitution_out"

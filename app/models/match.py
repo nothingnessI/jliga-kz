@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Column, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core import Base, TimestampMixin
@@ -42,6 +42,8 @@ class Match(TimestampMixin, Base):
     home_penalty: Mapped[int | None] = mapped_column(Integer, nullable=True)
     away_penalty: Mapped[int | None] = mapped_column(Integer, nullable=True)
     stage_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    tech_loss = Column(Boolean, default=False, nullable=False)
+
     # Связи
     tournament: Mapped["Tournament"] = relationship(back_populates="matches")
     home_team: Mapped["Team"] = relationship(

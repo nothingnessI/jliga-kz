@@ -30,15 +30,17 @@
     <!-- Текущий состав -->
     <div class="col-md-7">
         <div class="card border-0 shadow-sm">
-            <div class="card-header bg-dark text-white fw-bold">Заявленные игроки ({{ roster|length }})</div>
+            <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center">
+                <span>Заявленные игроки ({{ roster|length }})</span>
+            </div>
             <div class="card-body p-0">
-                <table class="table table-hover mb-0">
+                <table class="table table-hover align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="px-4">№</th>
+                            <th class="px-4" style="width: 80px;">№</th>
                             <th>Игрок</th>
                             <th>Амплуа</th>
-                            <th class="text-end px-4">Удалить</th>
+                            <th class="text-end px-4" style="width: 120px;">Действия</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -47,15 +49,27 @@
                             <td class="px-4 fw-bold fs-5">{{ item.jersey_number or '-' }}</td>
                             <td>
                                 {{ item.player.last_name }} {{ item.player.first_name }}
-                                {% if item.is_captain %}<span class="badge bg-warning text-dark ms-1">К</span>{% endif %}
+                                {% if item.is_captain %}<span class="badge bg-warning text-dark ms-1" title="Капитан">К</span>{% endif %}
+                                {% if not item.is_active %}<span class="badge bg-danger ms-1" title="Отзаявлен">Не активен</span>{% endif %}
                             </td>
                             <td><small class="text-muted">{{ item.player.position.value if item.player.position else '—' }}</small></td>
                             <td class="text-end px-4">
-                                <form action="/admin/roster/{{ item.id }}/delete" method="post" onsubmit="return confirm('Убрать из заявки?');">
-                                    <input type="hidden" name="team_id" value="{{ team.id }}">
-                                    <input type="hidden" name="tournament_id" value="{{ selected_tournament_id }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-x-lg"></i></button>
-                                </form>
+                                <div class="d-flex justify-content-end gap-1">
+                                    <!-- Кнопка редактирования -->
+                                    <button type="button" class="btn btn-sm btn-outline-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editRosterModal"
+                                            onclick="fillRosterModal({{ item.id }}, '{{ item.jersey_number or '' }}', {{ 'true' if item.is_captain else 'false' }}, {{ 'true' if item.is_active else 'false' }})">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                    <!-- Кнопка удаления -->
+                                    <form action="/admin/roster/{{ item.id }}/delete" method="post" onsubmit="return confirm('Полностью удалить из заявки?');">
+                                        <input type="hidden" name="team_id" value="{{ team.id }}">
+                                        <input type="hidden" name="tournament_id" value="{{ selected_tournament_id }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </div>
                             </td>
                         </tr>
                         {% else %}
@@ -74,7 +88,7 @@
                 <h6 class="fw-bold mb-3">Добавить игрока в заявку</h6>
                 <form action="/admin/teams/{{ team.id }}/roster/add" method="post">
                     <input type="hidden" name="tournament_id" value="{{ selected_tournament_id }}">
-                    
+
                     <div class="mb-3">
                         <label class="form-label text-muted small fw-bold">ИГРОК</label>
                         <select name="player_id" class="form-select" required>
@@ -84,7 +98,7 @@
                             {% endfor %}
                         </select>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-6">
                             <label class="form-label text-muted small fw-bold">ИГРОВОЙ НОМЕР</label>
@@ -104,5 +118,49 @@
         </div>
     </div>
 </div>
+
+<!-- МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ -->
+<div class="modal fade" id="editRosterModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editRosterForm" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Изменить данные игрока</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Игровой номер</label>
+                        <input type="number" name="jersey_number" class="form-control" id="modal-jersey-number" min="1" max="99">
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" name="is_captain" id="modal-is-captain">
+                        <label class="form-check-label fw-bold" for="modal-is-captain">Капитан команды</label>
+                    </div>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="is_active" id="modal-is-active">
+                        <label class="form-check-label fw-bold" for="modal-is-active">Активен в заявке (участвует в играх)</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function fillRosterModal(id, number, isCaptain, isActive) {
+    // Устанавливаем URL для формы
+    document.getElementById("editRosterForm").action = `/admin/roster/${id}/edit`;
+
+    // Заполняем поля
+    document.getElementById("modal-jersey-number").value = number;
+    document.getElementById("modal-is-captain").checked = isCaptain;
+    document.getElementById("modal-is-active").checked = isActive;
+}
+</script>
 {% endif %}
 {% endblock %}

@@ -1,91 +1,148 @@
 {% extends "base.html" %}
+
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h3 class="text-uppercase fw-bold m-0">Игроки</h3>
-    <span class="badge bg-dark fs-6">Всего: {{ total_players }}</span>
-</div>
+<style>
+    /* Стили для таблицы */
+    .sortable-th {
+        cursor: pointer; user-select: none; position: relative;
+        background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 700;
+        text-transform: uppercase; padding: 15px 10px; border-bottom: 2px solid #e2e8f0;
+        white-space: nowrap;
+    }
+    .sortable-th:hover { background: #e2e8f0; }
+    .sortable-th::after { content: '↕'; opacity: 0.3; margin-left: 5px; font-size: 14px; }
+    .sortable-th.sort-asc::after { content: '↑'; opacity: 1; color: #0d6efd; }
+    .sortable-th.sort-desc::after { content: '↓'; opacity: 1; color: #0d6efd; }
 
-<!-- Сетка с карточками игроков -->
-<div class="row">
-    {% for player in players %}
-    <div class="col-6 col-md-4 col-lg-3 col-xl-2 mb-4">
-        <div class="card border-0 shadow-sm h-100 text-center hover-lift pt-3">
+    .table-custom td {
+        vertical-align: middle; padding: 12px 10px; font-size: 14px;
+        font-weight: 600; color: #1e293b; border-bottom: 1px solid #f1f5f9;
+        white-space: nowrap;
+    }
+    .table-custom tbody tr:hover { background-color: #f8fafc; }
+    .player-photo { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 1px solid #e2e8f0;}
 
-            <!-- Фото игрока -->
-            <div class="mx-auto rounded-circle overflow-hidden shadow-sm" style="width: 100px; height: 100px; background-color: #f8f9fa;">
-                {% if player.photo_url %}
-                    <img src="{{ player.photo_url }}" style="width: 100%; height: 100%; object-fit: cover; object-position: top;" alt="{{ player.last_name }}">
-                {% else %}
-                    <div class="d-flex align-items-center justify-content-center h-100">
-                        <i class="bi bi-person text-secondary" style="font-size: 3rem;"></i>
-                    </div>
-                {% endif %}
+    /* Стили для скролла, если таблица не влезает */
+    .table-responsive { overflow-x: auto; }
+</style>
+
+<div class="container-fluid py-5" style="max-width: 1400px;">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <h2 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px;">Игроки</h2>
+
+        <!-- Поиск -->
+        <form method="GET" action="/participants/players" class="d-flex gap-2 align-items-center flex-wrap">
+            <div class="input-group" style="width: 300px;">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" name="search" class="form-control" placeholder="Поиск по ФИО..." value="{{ current_search }}">
             </div>
+            <button type="submit" class="btn btn-primary fw-bold">НАЙТИ</button>
+            {% if current_search %}
+                <a href="/participants/players" class="btn btn-outline-danger"><i class="bi bi-x-lg"></i></a>
+            {% endif %}
+        </form>
+    </div>
 
-            <!-- Информация -->
-            <div class="card-body pt-2">
-                <h6 class="fw-bold mb-1 text-truncate" title="{{ player.last_name }} {{ player.first_name }}">
-                    {{ player.last_name }}<br>{{ player.first_name }}
-                </h6>
-                <small class="text-muted text-uppercase" style="font-size: 11px;">
-                    {{ player.position.value if player.position else 'Амплуа не указано' }}
-                </small>
-            </div>
+    <div class="card border-0 shadow-sm" style="border-radius: 8px; overflow: hidden;">
+        <div class="table-responsive">
+            <table class="table table-custom mb-0 text-center sortable-table" style="min-width: 1000px;">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;" class="text-center">#</th>
+                        <th class="text-start">ИГРОК</th>
+                        <th class="sortable-th" data-sort="number">И</th>
+                        <th class="sortable-th" data-sort="number">Г (Пн.)</th>
+                        <th class="sortable-th" data-sort="number">СР.</th>
+                        <th class="sortable-th" data-sort="number">П</th>
+                        <th class="sortable-th" data-sort="number">СР.</th>
+                        <th class="sortable-th" data-sort="number">Г+П</th>
+                        <th class="sortable-th" data-sort="number">ЖК</th>
+                        <th class="sortable-th" data-sort="number">КК</th>
+                        <th class="sortable-th" data-sort="number">ЛМ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in players_data %}
+                    <tr>
+                        <td class="fw-bold text-muted row-index">{{ loop.index }}</td>
+                        <td class="text-start">
+                            <a href="/player/{{ item.player.id }}" class="text-decoration-none text-dark d-flex align-items-center">
+                                <img src="{{ item.player.photo_url or '/static/default_player.png' }}" class="player-photo">
+                                <span class="fw-bold">{{ item.player.last_name }} {{ item.player.first_name }}</span>
+                            </a>
+                        </td>
+                        <td>{{ item.games }}</td>
+                        <td>
+                            {% if item.pen_goals > 0 %}
+                                <span class="fw-bold">{{ item.goals }}</span> <span class="text-muted small">({{ item.pen_goals }})</span>
+                            {% else %}
+                                <span class="fw-bold">{{ item.goals }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted">{{ item.avg_goals }}</td>
+                        <td>{{ item.assists }}</td>
+                        <td class="text-muted">{{ item.avg_assists }}</td>
+                        <td class="fw-bold text-primary">{{ item.goal_assist }}</td>
+                        <td>{{ item.yc }}</td>
+                        <td>{{ item.rc }}</td>
+                        <td>{{ item.best_player }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="11" class="text-center py-5 text-muted">Игроков не найдено</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-    {% else %}
-    <div class="col-12">
-        <div class="alert alert-secondary text-center py-5">Игроки пока не добавлены.</div>
-    </div>
-    {% endfor %}
 </div>
 
-<!-- УМНАЯ ПАГИНАЦИЯ -->
-{% if total_pages > 1 %}
-<nav aria-label="Page navigation" class="mt-5 mb-4">
-    <!-- flex-wrap нужен, чтобы кнопки переносились на новую строку на телефонах -->
-    <ul class="pagination justify-content-center flex-wrap gap-1">
+<!-- УНИВЕРСАЛЬНЫЙ СКРИПТ СОРТИРОВКИ -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('.sortable-table').forEach(table => {
+        const headers = table.querySelectorAll('th.sortable-th');
+        const tbody = table.querySelector('tbody');
 
-        <!-- Кнопка Назад -->
-        <li class="page-item {% if page <= 1 %}disabled{% endif %}">
-            <a class="page-link text-dark shadow-sm" href="/participants/players?page={{ page - 1 }}">Назад</a>
-        </li>
+        headers.forEach((header, index) => {
+            const colIndex = Array.from(header.parentNode.children).indexOf(header);
 
-        <!-- Первая страница и многоточие (если мы далеко) -->
-        {% if page > 3 %}
-            <li class="page-item">
-                <a class="page-link text-dark shadow-sm" href="/participants/players?page=1">1</a>
-            </li>
-            {% if page > 4 %}
-                <li class="page-item disabled"><span class="page-link text-dark shadow-sm">...</span></li>
-            {% endif %}
-        {% endif %}
+            header.addEventListener("click", () => {
+                const sortType = header.getAttribute("data-sort") || "string";
+                let isAsc = header.getAttribute("data-asc") === "true";
 
-        <!-- Страницы вокруг текущей (по 2 влево и вправо) -->
-        {% for p in range(start_page, end_page + 1) %}
-            <li class="page-item {% if p == page %}active{% endif %}">
-                <a class="page-link shadow-sm {% if p == page %}bg-dark border-dark text-white{% else %}text-dark{% endif %}" href="/participants/players?page={{ p }}">
-                    {{ p }}
-                </a>
-            </li>
-        {% endfor %}
+                headers.forEach(h => {
+                    h.classList.remove("sort-asc", "sort-desc");
+                    h.removeAttribute("data-asc");
+                });
 
-        <!-- Последняя страница и многоточие (если мы далеко) -->
-        {% if page < total_pages - 2 %}
-            {% if page < total_pages - 3 %}
-                <li class="page-item disabled"><span class="page-link text-dark shadow-sm">...</span></li>
-            {% endif %}
-            <li class="page-item">
-                <a class="page-link text-dark shadow-sm" href="/participants/players?page={{ total_pages }}">{{ total_pages }}</a>
-            </li>
-        {% endif %}
+                isAsc = !isAsc;
+                header.setAttribute("data-asc", isAsc);
+                header.classList.add(isAsc ? "sort-asc" : "sort-desc");
 
-        <!-- Кнопка Вперед -->
-        <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
-            <a class="page-link text-dark shadow-sm" href="/participants/players?page={{ page + 1 }}">Вперед</a>
-        </li>
+                const rows = Array.from(tbody.querySelectorAll("tr"));
 
-    </ul>
-</nav>
-{% endif %}
+                rows.sort((a, b) => {
+                    let valA = a.children[colIndex].textContent.trim();
+                    let valB = b.children[colIndex].textContent.trim();
+
+                    if (sortType === "number") {
+                        // parseFloat автоматически обрежет текст, например "59 (3)" станет 59
+                        valA = parseFloat(valA) || 0;
+                        valB = parseFloat(valB) || 0;
+                        return isAsc ? valA - valB : valB - valA;
+                    } else {
+                        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    }
+                });
+
+                tbody.innerHTML = "";
+                rows.forEach((row, idx) => {
+                    if (row.querySelector('.row-index')) row.querySelector('.row-index').textContent = idx + 1;
+                    tbody.appendChild(row);
+                });
+            });
+        });
+    });
+});
+</script>
 {% endblock %}

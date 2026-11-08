@@ -1,0 +1,139 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold m-0">Участники турнира</h4>
+        <span class="text-muted">{{ tournament.name }} ({{ tournament.season }})</span>
+    </div>
+    <a href="/admin/tournaments/{{ tournament.id }}/edit" class="btn btn-outline-secondary">← Назад к настройкам</a>
+</div>
+
+<div class="row g-4">
+    <!-- ЛЕВАЯ КОЛОНКА: ФОРМА ДОБАВЛЕНИЯ -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white fw-bold py-3">
+                <i class="bi bi-plus-circle text-success me-1"></i> Добавить команду
+            </div>
+            <div class="card-body">
+                <form action="/admin/tournaments/{{ tournament.id }}/teams/add" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">КОМАНДА</label>
+                        <select name="team_id" class="form-select" required>
+                            <option value="">Выберите команду...</option>
+                            {% for team in all_teams %}
+                                {% if team.id not in added_team_ids %}
+                                    <option value="{{ team.id }}">{{ team.name }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-muted small fw-bold">ГРУППА / ТАБЛИЦА</label>
+                        <input type="text" name="group_name" class="form-control" placeholder="Например: Группа А" list="groups-list">
+                        <datalist id="groups-list">
+                            {% for group in grouped_teams.keys() %}
+                                {% if group != 'Общая таблица' %}
+                                    <option value="{{ group }}">
+                                {% endif %}
+                            {% endfor %}
+                        </datalist>
+                        <small class="text-muted d-block mt-1">Оставь пустым, если турнир в один круг (общая таблица).</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 fw-bold">
+                        <i class="bi bi-plus-lg"></i> Добавить в турнир
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Подсказка -->
+        <div class="alert alert-info border-0 shadow-sm">
+            <h6 class="fw-bold"><i class="bi bi-info-circle"></i> Как добавить игроков?</h6>
+            <p class="small mb-0">После добавления команды в турнир, нажмите кнопку <b class="text-success">Заявка</b> напротив нее. Там вы сможете подписать игроков, выдать им номера и назначить капитана.</p>
+        </div>
+    </div>
+
+    <!-- ПРАВАЯ КОЛОНКА: СПИСКИ КОМАНД ПО ГРУППАМ -->
+    <div class="col-lg-8">
+        {% for group_name, teams in grouped_teams.items() %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center py-3">
+                <span><i class="bi bi-diagram-3 me-2"></i>{{ group_name }}</span>
+                <span class="badge bg-light text-dark">{{ teams|length }} команд</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="px-4" style="width: 60px;">Лого</th>
+                                <th>Команда</th>
+                                <th>Город</th>
+                                <th class="text-end px-4" style="width: 300px;">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tt in teams %}
+                            <tr>
+                                <td class="px-4">
+                                    {% if tt.team.logo_url %}
+                                        <img src="{{ tt.team.logo_url }}" style="width: 35px; height: 35px; object-fit: contain;">
+                                    {% else %}
+                                        <div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="width: 35px; height: 35px;">
+                                            <i class="bi bi-shield text-white"></i>
+                                        </div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="fw-bold fs-6">{{ tt.team.name }}</span>
+                                </td>
+                                <td class="text-muted small">{{ tt.team.city or '—' }}</td>
+                                <td class="text-end px-4">
+                                    <div class="d-flex justify-content-end align-items-center gap-2">
+
+                                        <!-- 1. КНОПКА ЗАЯВКИ (САМАЯ ВАЖНАЯ) -->
+                                        <a href="/admin/teams/{{ tt.team_id }}/roster?tournament_id={{ tournament.id }}" class="btn btn-sm btn-success fw-bold" title="Управление составом">
+                                            <i class="bi bi-person-lines-fill me-1"></i> Заявка
+                                        </a>
+
+                                        <!-- 2. СМЕНА ГРУППЫ -->
+                                        <form action="/admin/tournaments/{{ tournament.id }}/teams/{{ tt.team_id }}/change-group" method="POST" class="d-flex gap-1">
+                                            <input type="text" name="new_group_name" class="form-control form-control-sm" style="width: 100px;" value="{{ tt.group_name or '' }}" placeholder="Группа...">
+                                            <button type="submit" class="btn btn-sm btn-outline-primary" title="Перенести в другую группу">
+                                                <i class="bi bi-arrow-repeat"></i>
+                                            </button>
+                                        </form>
+
+                                        <!-- 3. УДАЛЕНИЕ -->
+                                        <form action="/admin/tournaments/{{ tournament.id }}/teams/{{ tt.team_id }}/remove" method="POST" class="d-inline" onsubmit="return confirm('Вы уверены, что хотите удалить {{ tt.team.name }} из турнира? Все их матчи останутся, но команда исчезнет из таблицы.');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить из турнира">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <!-- Если вообще нет команд -->
+        <div class="card border-0 shadow-sm py-5 text-center">
+            <div class="card-body">
+                <i class="bi bi-people fs-1 text-secondary mb-3 d-block"></i>
+                <h5 class="fw-bold">В турнире пока нет участников</h5>
+                <p class="text-muted">Используйте форму слева, чтобы добавить первые команды.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

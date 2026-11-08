@@ -6,7 +6,7 @@ from app.core import Base, TimestampMixin
 class TournamentStanding(TimestampMixin, Base):
     __tablename__ = "tournament_standings"
     __table_args__ = (
-        UniqueConstraint("tournament_id", "team_id", name="uq_standing_tournament_team"),
+        UniqueConstraint("tournament_id", "team_id", "group_name",  name="uq_standing_tournament_team"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)

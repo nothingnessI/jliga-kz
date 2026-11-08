@@ -2,101 +2,142 @@
 
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold m-0">Матчи</h4>
+    <h4 class="fw-bold m-0">Управление матчами</h4>
     <a href="/admin/matches/create" class="btn btn-primary fw-bold">
-        <i class="bi bi-plus-lg"></i> Добавить матч
+        <i class="bi bi-plus-lg me-1"></i> Добавить матч
     </a>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 text-center">
-                <thead class="table-light">
-                    <tr>
-                        <th class="py-3 px-4 text-start" style="width: 120px;">Дата</th>
-                        <th class="text-start">Турнир</th>
-                        <th class="text-end" style="width: 25%;">Хозяева</th>
-                        <th style="width: 100px;">Счет</th>
-                        <th class="text-start" style="width: 25%;">Гости</th>
-                        <th style="width: 120px;">Статус</th>
-                        <th class="text-end px-4" style="width: 200px;">Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for match in matches %}
-                    <tr>
-                        <!-- Дата и время -->
-                        <td class="px-4 text-start">
-                            <small class="fw-bold">{{ match.match_date.strftime('%d.%m.%Y') if match.match_date else 'TBA' }}</small><br>
-                            <small class="text-muted">{{ match.match_date.strftime('%H:%M') if match.match_date else '' }}</small>
-                        </td>
+<!-- РАБОЧИЙ ФИЛЬТР -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="GET" action="/admin/matches" class="d-flex gap-3 align-items-center">
+            <span class="fw-bold text-muted small text-uppercase">Быстрый поиск:</span>
 
-                        <!-- Турнир -->
-                        <td class="text-start">
-                            <small class="text-muted">{{ match.tournament.name }}</small>
-                        </td>
+            <input type="text" name="search" class="form-control form-control-sm w-25"
+                   placeholder="Название команды..." value="{{ current_search }}">
 
-                        <!-- Хозяева -->
-                        <td class="text-end fw-bold text-dark">
-                            {{ match.home_team.name }}
-                        </td>
+            <select name="tournament_id" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                <option value="">Все турниры</option>
+                {% for t in tournaments %}
+                    <option value="{{ t.id }}" {% if current_tournament_id == t.id %}selected{% endif %}>
+                        {{ t.name }} ({{ t.season }})
+                    </option>
+                {% endfor %}
+            </select>
 
-                        <!-- Счет -->
-                        <td>
-                            {% if match.status.value == 'FINISHED' or match.status.value == 'LIVE' %}
-                                <span class="badge bg-dark fs-6 px-3 py-2">{{ match.home_score or 0 }} : {{ match.away_score or 0 }}</span>
-                            {% else %}
-                                <span class="text-muted fw-bold">- : -</span>
-                            {% endif %}
-                        </td>
+            <button type="submit" class="btn btn-sm btn-secondary">Найти</button>
 
-                        <!-- Гости -->
-                        <td class="text-start fw-bold text-dark">
-                            {{ match.away_team.name }}
-                        </td>
-
-                        <!-- Статус -->
-                        <td>
-                            <span class="badge bg-{{ 'success' if match.status.value == 'FINISHED' else 'danger' if match.status.value == 'LIVE' else 'secondary' }}">
-                                {{ match.status.value }}
-                            </span>
-                        </td>
-
-                        <!-- Действия -->
-                        <td class="text-end px-4">
-                            <div class="d-flex justify-content-end gap-2">
-                                <!-- Кнопка Протокол -->
-                                <a href="/admin/matches/{{ match.id }}/events" class="btn btn-sm btn-outline-success" title="Протокол матча">
-                                    <i class="bi bi-activity me-1"></i> Протокол
-                                </a>
-
-                                <!-- Кнопка Редактировать -->
-                                <a href="/admin/matches/{{ match.id }}/edit" class="btn btn-sm btn-outline-primary" title="Редактировать">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
-
-                                <!-- Кнопка Удалить -->
-                                <form action="/admin/matches/{{ match.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Вы уверены, что хотите удалить этот матч?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="7" class="text-center py-5 text-muted">
-                            <i class="bi bi-calendar-x fs-1 d-block mb-3 text-secondary"></i>
-                            Матчи пока не назначены. <br>
-                            Нажмите «Добавить матч», чтобы создать расписание.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+            {% if current_search or current_tournament_id %}
+                <a href="/admin/matches" class="btn btn-sm btn-outline-danger">Сбросить</a>
+            {% endif %}
+        </form>
     </div>
 </div>
+
+<!-- Список матчей -->
+<div class="d-flex flex-column gap-2">
+    {% for match in matches %}
+    <div class="card border-0 shadow-sm match-card">
+        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+
+            <!-- 1. Дата и время -->
+            <div class="match-date-block" style="width: 140px;">
+                {% if match.match_date %}
+                    <div class="fw-bold text-dark">{{ match.match_date.strftime('%d.%m.%Y') }}</div>
+                    <div class="text-muted small"><i class="bi bi-clock me-1"></i>{{ match.match_date.strftime('%H:%M') }}</div>
+                {% else %}
+                    <span class="badge bg-secondary">Дата TBA</span>
+                {% endif %}
+            </div>
+
+            <!-- 2. Турнир -->
+            <div class="match-tournament-block" style="width: 180px;">
+                <a href="/admin/tournaments/{{ match.tournament_id }}/edit" class="text-decoration-none" title="{{ match.tournament.name }}">
+                    <div class="fw-bold text-truncate" style="color: #0d3b66;">{{ match.tournament.name }}</div>
+                    <div class="text-muted small text-truncate">{{ match.stage_name or 'Групповой этап' }}</div>
+                </a>
+            </div>
+
+            <!-- 3. Команды и Счет -->
+            <div class="match-teams-block d-flex align-items-center justify-content-center flex-grow-1 gap-4">
+                <!-- Хозяева -->
+                <div class="d-flex align-items-center justify-content-end gap-2" style="width: 40%;">
+                    <span class="fw-bold fs-6 text-end text-truncate">{{ match.home_team.name }}</span>
+                    {% if match.home_team.logo_url %}
+                        <img src="{{ match.home_team.logo_url }}" style="width: 30px; height: 30px; object-fit: contain;" alt="logo">
+                    {% else %}
+                        <div style="width: 30px; height: 30px; background: #eee; border-radius: 50%;"></div>
+                    {% endif %}
+                </div>
+
+                <!-- Счет (Исправлено, чтобы не разваливался) -->
+                <div class="text-center px-3 py-1 bg-light border rounded shadow-sm" style="min-width: 90px; white-space: nowrap;">
+                    <div class="fw-bold fs-4">
+                        {{ match.home_score if match.home_score is not none else '-' }} : {{ match.away_score if match.away_score is not none else '-' }}
+                    </div>
+                    {% if match.home_penalty is not none and match.away_penalty is not none %}
+                        <div class="text-danger fw-bold small mt-1" style="font-size: 11px;">
+                            Пен: {{ match.home_penalty }}:{{ match.away_penalty }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Гости -->
+                <div class="d-flex align-items-center justify-content-start gap-2" style="width: 40%;">
+                    {% if match.away_team.logo_url %}
+                        <img src="{{ match.away_team.logo_url }}" style="width: 30px; height: 30px; object-fit: contain;" alt="logo">
+                    {% else %}
+                        <div style="width: 30px; height: 30px; background: #eee; border-radius: 50%;"></div>
+                    {% endif %}
+                    <span class="fw-bold fs-6 text-start text-truncate">{{ match.away_team.name }}</span>
+                </div>
+            </div>
+
+            <!-- 4. Статус -->
+            <div class="match-status-block text-center" style="width: 100px;">
+                <span class="badge bg-{{ 'success' if match.status.value == 'FINISHED' else 'danger' if match.status.value == 'LIVE' else 'secondary' }} w-100 py-2">
+                    {{ match.status.value }}
+                </span>
+            </div>
+
+            <!-- 5. Кнопки действий -->
+            <div class="match-actions-block d-flex justify-content-end gap-1" style="width: 140px;">
+                <a href="/admin/matches/{{ match.id }}/events" class="btn btn-sm btn-outline-info" title="События матча">
+                    <i class="bi bi-activity"></i>
+                </a>
+                <a href="/admin/matches/{{ match.id }}/edit" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                <form action="/admin/matches/{{ match.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Удалить матч?');">
+                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-calendar-x fs-1 d-block mb-3 text-secondary"></i>
+            <h5>Матчей не найдено</h5>
+            <p>Попробуйте изменить параметры поиска или создайте новый матч.</p>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+    .match-card {
+        transition: all 0.2s ease;
+        border-left: 4px solid transparent !important;
+    }
+    .match-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important;
+        border-left-color: #0d3b66 !important;
+    }
+</style>
 {% endblock %}

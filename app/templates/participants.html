@@ -1,133 +1,125 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container-fluid py-4">
+<style>
+    .sortable-th { cursor: pointer; user-select: none; position: relative; background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; padding: 15px 10px; border-bottom: 2px solid #e2e8f0;}
+    .sortable-th:hover { background: #e2e8f0; }
+    .sortable-th::after { content: '↕'; opacity: 0.3; margin-left: 5px; font-size: 14px; }
+    .sortable-th.sort-asc::after { content: '↑'; opacity: 1; color: #0d6efd; }
+    .sortable-th.sort-desc::after { content: '↓'; opacity: 1; color: #0d6efd; }
 
-    <!-- Шапка раздела: Заголовок и Выбор сезона -->
-    <div class="d-flex justify-content-between align-items-end mb-4 flex-wrap gap-3">
-        <div>
-            <h2 class="text-uppercase fw-bold m-0" style="color: #0f2537; font-size: 32px;">Участники</h2>
-        </div>
+    .table-custom td { vertical-align: middle; padding: 12px 10px; font-size: 14px; font-weight: 600; color: #1e293b; border-bottom: 1px solid #f1f5f9; }
+    .table-custom tbody tr:hover { background-color: #f8fafc; }
+    .team-logo { width: 28px; height: 28px; object-fit: contain; margin-right: 10px; }
+</style>
 
-        <!-- Выпадающий список сезонов -->
-        <div class="d-flex align-items-center gap-3">
-            <form method="GET" action="/participants/teams" id="seasonFilterForm">
-                <div class="position-relative">
-                    <select name="season" class="form-select border-0 shadow-sm text-white fw-bold"
-                            style="background-color: #3092b8; min-width: 200px; padding-right: 40px; cursor: pointer;"
-                            onchange="document.getElementById('seasonFilterForm').submit();">
-                        {% for s in available_seasons %}
-                            <option value="{{ s }}" {% if s == current_season %}selected{% endif %}>
-                                Сезон {{ s }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </form>
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <h2 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px;">Команды</h2>
 
-            <span class="badge bg-dark px-3 py-2 fs-6 rounded-1">
-                Всего: {{ total_teams|default(0) }}
-            </span>
-        </div>
-    </div>
-
-    <!-- Сетка команд -->
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 row-cols-xl-5 g-4 mb-5">
-        {% for team in teams %}
-        <div class="col">
-            <a href="/teams/{{ team.id }}" class="text-decoration-none text-dark d-block h-100 team-card-link">
-                <div class="card h-100 border-0 shadow-sm overflow-hidden" style="transition: transform 0.2s;">
-
-                    <!-- Обложка команды -->
-                    <div style="height: 140px; background-color: #e9ecef; position: relative;">
-                        {% if team.cover_url %}
-                            <img src="{{ team.cover_url }}" class="w-100 h-100 object-fit-cover" alt="{{ team.name }}">
-                        {% else %}
-                            <!-- Заглушка, если нет обложки -->
-                            <img src="https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=600&auto=format&fit=crop" class="w-100 h-100 object-fit-cover" alt="Футбол">
-                        {% endif %}
-
-                        <!-- Логотип (накладывается на обложку) -->
-                        <div class="position-absolute bottom-0 start-50 translate-middle-x" style="margin-bottom: -35px;">
-                            <div class="bg-white rounded-circle border border-2 border-white shadow-sm d-flex justify-content-center align-items-center" style="width: 75px; height: 75px; overflow: hidden; padding: 5px;">
-                                {% if team.logo_url %}
-                                    <img src="{{ team.logo_url }}" class="w-100 h-100 object-fit-contain" alt="{{ team.name }}">
-                                {% else %}
-                                    <img src="https://cdn-icons-png.flaticon.com/512/53/53283.png" class="w-75 h-75 object-fit-contain" alt="Logo">
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Инфо о команде -->
-                    <div class="card-body text-center pt-5 pb-3">
-                        <h6 class="fw-bold mb-1 text-truncate" title="{{ team.name }}">{{ team.name }}</h6>
-                        <small class="text-muted">{{ team.city or '—' }}</small>
-                    </div>
-                </div>
-            </a>
-        </div>
-        {% else %}
-        <div class="col-12 text-center py-5">
-            <div class="alert alert-info border-0 shadow-sm" role="alert">
-                <i class="bi bi-info-circle fs-4 me-2"></i> В выбранном сезоне пока нет заявленных команд.
+        <!-- Фильтры -->
+        <form method="GET" action="/participants/teams" class="d-flex gap-2 align-items-center flex-wrap">
+            <div class="input-group" style="width: 250px;">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" name="search" class="form-control" placeholder="Поиск по названию..." value="{{ current_search }}">
             </div>
-        </div>
-        {% endfor %}
+            <select name="season" class="form-select fw-bold" style="width: 200px;" onchange="this.form.submit()">
+                <option value="all" {% if current_season == 'all' %}selected{% endif %}>За все время</option>
+                {% for s in available_seasons %}
+                    <option value="{{ s }}" {% if current_season == s %}selected{% endif %}>{{ s }} сезон</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-primary fw-bold">Найти</button>
+            {% if current_search %}
+                <a href="/participants/teams?season={{ current_season }}" class="btn btn-outline-danger"><i class="bi bi-x-lg"></i></a>
+            {% endif %}
+        </form>
     </div>
 
-    <!-- Пагинация -->
-    {% if total_pages > 1 %}
-    <nav aria-label="Навигация по страницам">
-        <ul class="pagination justify-content-center">
-            <!-- Назад -->
-            <li class="page-item {% if page == 1 %}disabled{% endif %}">
-                <a class="page-link text-dark" href="?season={{ current_season }}&page={{ page - 1 }}" aria-label="Предыдущая">
-                    <span aria-hidden="true">&laquo;</span>
-                </a>
-            </li>
-
-            <!-- Номера страниц -->
-            {% for p in range(1, total_pages + 1) %}
-                <li class="page-item {% if p == page %}active{% endif %}">
-                    <a class="page-link {% if p == page %}bg-danger border-danger text-white{% else %}text-dark{% endif %}"
-                       href="?season={{ current_season }}&page={{ p }}">
-                        {{ p }}
-                    </a>
-                </li>
-            {% endfor %}
-
-            <!-- Вперед -->
-            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
-                <a class="page-link text-dark" href="?season={{ current_season }}&page={{ page + 1 }}" aria-label="Следующая">
-                    <span aria-hidden="true">&raquo;</span>
-                </a>
-            </li>
-        </ul>
-    </nav>
-    {% endif %}
-
+    <div class="card border-0 shadow-sm" style="border-radius: 8px; overflow: hidden;">
+        <div class="table-responsive">
+            <table class="table table-custom mb-0 text-center sortable-table">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;" class="text-center">#</th>
+                        <th class="text-start">КОМАНДА</th>
+                        <th class="sortable-th" data-sort="number">И</th>
+                        <th class="sortable-th" data-sort="number">В</th>
+                        <th class="sortable-th" data-sort="number">'0'</th>
+                        <th class="sortable-th" data-sort="number">МЗ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in teams_data %}
+                    <tr>
+                        <td class="fw-bold text-muted row-index">{{ loop.index }}</td>
+                        <td class="text-start">
+                            <a href="/teams/{{ item.team.id }}" class="text-decoration-none text-dark d-flex align-items-center">
+                                <img src="{{ item.team.logo_url or '/static/default_team.png' }}" class="team-logo">
+                                <span class="fw-bold">{{ item.team.name }}</span>
+                            </a>
+                        </td>
+                        <td>{{ item.games }}</td>
+                        <td>{{ item.wins }}</td>
+                        <td>{{ item.clean_sheets }}</td>
+                        <td>{{ item.goals }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-5 text-muted">Команд не найдено</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-<style>
-    /* Эффект при наведении на карточку команды */
-    .team-card-link:hover .card {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-    }
+<!-- УНИВЕРСАЛЬНЫЙ СКРИПТ СОРТИРОВКИ (потом скопируем его же на страницу игроков) -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('.sortable-table').forEach(table => {
+        const headers = table.querySelectorAll('th.sortable-th');
+        const tbody = table.querySelector('tbody');
 
-    /* Адаптивные картинки */
-    .object-fit-cover {
-        object-fit: cover;
-    }
-    .object-fit-contain {
-        object-fit: contain;
-    }
+        headers.forEach((header, index) => {
+            // Ищем индекс колонки среди ВСЕХ th
+            const colIndex = Array.from(header.parentNode.children).indexOf(header);
 
-    /* Кастомный стиль для селектора */
-    .form-select:focus {
-        box-shadow: 0 0 0 0.25rem rgba(48, 146, 184, 0.25);
-        border-color: #3092b8;
-    }
-</style>
+            header.addEventListener("click", () => {
+                const sortType = header.getAttribute("data-sort") || "string";
+                let isAsc = header.getAttribute("data-asc") === "true";
+
+                headers.forEach(h => {
+                    h.classList.remove("sort-asc", "sort-desc");
+                    h.removeAttribute("data-asc");
+                });
+
+                isAsc = !isAsc;
+                header.setAttribute("data-asc", isAsc);
+                header.classList.add(isAsc ? "sort-asc" : "sort-desc");
+
+                const rows = Array.from(tbody.querySelectorAll("tr"));
+
+                rows.sort((a, b) => {
+                    let valA = a.children[colIndex].textContent.trim();
+                    let valB = b.children[colIndex].textContent.trim();
+
+                    if (sortType === "number") {
+                        valA = parseFloat(valA) || 0;
+                        valB = parseFloat(valB) || 0;
+                        return isAsc ? valA - valB : valB - valA;
+                    } else {
+                        return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                    }
+                });
+
+                tbody.innerHTML = "";
+                rows.forEach((row, idx) => {
+                    if (row.querySelector('.row-index')) row.querySelector('.row-index').textContent = idx + 1;
+                    tbody.appendChild(row);
+                });
+            });
+        });
+    });
+});
+</script>
 {% endblock %}

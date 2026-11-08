@@ -2,6 +2,7 @@
 
 {% block content %}
 <style>
+    /* ================= ОБЩИЕ СТИЛИ ================= */
     .grid-table th, .grid-table td { vertical-align: middle; text-align: center; }
     .grid-table td:first-child, .grid-table th:first-child { position: sticky; left: 0; background-color: #f8f9fa; z-index: 2; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
     .grid-table th:first-child { background-color: #212529; color: white; z-index: 3; }
@@ -10,69 +11,67 @@
     .match-popup-trigger { cursor: pointer; transition: 0.2s; }
     .match-popup-trigger:hover { background-color: #f8f9fa; }
 
-    /* Стили для сетки плей-офф */
-    .bracket-wrapper { display: flex; gap: 20px; overflow-x: auto; padding-bottom: 20px; }
-    .bracket-col { display: flex; flex-direction: column; justify-content: space-around; min-width: 260px; }
-    .bracket-match { background: #f8f9fa; border-radius: 8px; padding: 0; border: 1px solid #ddd; position: relative; transition: 0.2s; overflow: hidden; }
-    .bracket-match:hover { border-color: #0d6efd; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-    .bracket-col:not(:last-child) .bracket-match:after { content: ''; position: absolute; right: -20px; top: 50%; width: 20px; border-bottom: 2px solid #ccc; }
+    /* ================= СТИЛИ ДЛЯ СЕТКИ ПЛЕЙ-ОФФ ================= */
+    .bracket-scroll-container { overflow-x: auto; overflow-y: hidden; width: 100%; padding-bottom: 20px; }
+    .bracket-wrapper { display: flex; gap: 40px; width: max-content; min-width: 100%; padding: 20px 10px; }
+    .bracket-col { display: flex; flex-direction: column; justify-content: space-around; min-width: 260px; position: relative; }
+    .bracket-match { background: white; border-radius: 8px; padding: 0; border: 1px solid #dee2e6; position: relative; transition: 0.2s; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .bracket-match:hover { border-color: #0d6efd; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; }
 
-    /* Стили для правого меню-сайдбара */
-    .sidebar-menu .list-group-item {
-        background-color: #3b5265; color: #ffffff; border: none; border-bottom: 1px solid #4a6274;
-        font-weight: 600; text-transform: uppercase; transition: 0.2s; padding: 15px 20px; display: flex; align-items: center;
-        border-radius: 0; cursor: pointer; text-align: left; width: 100%;
-    }
+    /* Соединительные линии */
+    .bracket-col:not(:last-child) .bracket-match::after { content: ''; position: absolute; right: -40px; top: 50%; width: 40px; border-bottom: 2px solid #dee2e6; }
+    .bracket-col:not(:last-child) .bracket-match:nth-child(odd)::before { content: ''; position: absolute; right: -40px; top: 50%; height: calc(100% + 20px); border-right: 2px solid #dee2e6; }
+    .bg-winner { background-color: #e8f5e9 !important; font-weight: bold; }
+
+    /* ================= СТИЛИ ДЛЯ ПРАВОГО МЕНЮ ================= */
+    .sidebar-menu .list-group-item { background-color: #3b5265; color: #ffffff; border: none; border-bottom: 1px solid #4a6274; font-weight: 600; text-transform: uppercase; transition: 0.2s; padding: 15px 20px; display: flex; align-items: center; border-radius: 0; cursor: pointer; text-align: left; width: 100%; }
     .sidebar-menu .list-group-item:hover { background-color: #4a6274; color: #fff; }
     .sidebar-menu .list-group-item.active { background-color: #c7122f; color: #ffffff; border-left: 5px solid #fff; padding-left: 15px; }
     .sidebar-menu i { font-size: 12px; margin-right: 10px; opacity: 0.7; }
 
-    /* ================= СТИЛИ ДЛЯ КАЛЕНДАРЯ (CSS GRID) ================= */
-    .calendar-header-row { background-color: #e9ecef; font-weight: 700; text-transform: uppercase; font-size: 14px; padding: 12px 15px; border-top: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6; }
-
-    .calendar-row {
+    /* ================= НОВЫЕ СТИЛИ ДЛЯ КАЛЕНДАРЯ (CSS GRID) ================= */
+    .calendar-grid-row {
         display: grid;
-        grid-template-columns: 22% 29% 18% 29% 2%;
+        grid-template-columns: 140px 1fr 90px 1fr 90px; /* Дата | Хозяева | Счет | Гости | Стадия */
         align-items: center;
-        border-bottom: 1px solid #eee;
-        padding: 12px 15px;
-        text-decoration: none;
-        color: inherit;
+        border-bottom: 1px solid #e9ecef;
+        padding: 12px 20px;
+        background: #fff;
+        transition: background 0.2s;
     }
-    .calendar-row:hover { background-color: #f8f9fa; }
+    .calendar-grid-row:hover { background: #f8f9fa; cursor: pointer; }
 
-    .c-date { line-height: 1.2; }
-    .match-date { font-weight: 700; font-size: 12px; color: #212529; text-transform: uppercase; white-space: nowrap; }
-    .match-stadium { font-size: 11px; color: #6c757d; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
+    .cg-date { line-height: 1.2; padding-right: 15px; }
+    .cg-date-main { font-weight: 700; font-size: 13px; color: #212529; text-transform: uppercase; }
+    .cg-time { font-weight: 700; font-size: 14px; color: #0d3b66; margin-top: 2px; }
+    .cg-stadium { font-size: 11px; color: #6c757d; margin-top: 4px; }
 
-    .c-team { font-weight: 700; font-size: 14px; color: #212529; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 10px; }
-    .text-end { text-align: right; }
-    .text-start { text-align: left; }
+    .cg-team { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+    .cg-team-right { justify-content: flex-end; text-align: right; padding-right: 15px; }
+    .cg-team-left { justify-content: flex-start; text-align: left; padding-left: 15px; }
+    .cg-team span { font-weight: 700; font-size: 14px; color: #1e293b; }
+    .cg-logo { width: 24px; height: 24px; object-fit: contain; flex-shrink: 0; }
 
-    .c-score { display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .c-logo { width: 24px; height: 24px; object-fit: contain; }
-    .match-score { background-color: #212529; color: white; font-weight: bold; font-size: 14px; padding: 4px 8px; border-radius: 4px; min-width: 60px; text-align: center; }
-    .match-score.empty { background-color: #f8f9fa; color: #adb5bd; border: 1px solid #dee2e6; }
+    .cg-score-box { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .cg-score { background: #0f2537; color: #ffffff; font-weight: 800; font-size: 16px; padding: 4px 10px; border-radius: 6px; min-width: 65px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .cg-pen { font-size: 10px; font-weight: 700; color: #d8232a; margin-top: 4px; }
 
-    .c-stage { font-size: 10px; color: #6c757d; text-transform: uppercase; font-weight: 600; text-align: right; }
+    .cg-stage { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; text-align: right; }
 
-    /* Стили для карточек команд */
+    /* ================= КАРТОЧКИ И СТАТИСТИКА ================= */
     .team-card { transition: 0.2s; border-radius: 12px; }
     .team-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; border: 1px solid #0d6efd; }
 
-    /* Стили для карточек новостей */
     .news-card { transition: 0.2s; border-radius: 8px; overflow: hidden; height: 100%; }
     .news-card:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
     .news-img-wrapper { height: 160px; background: #e9ecef; overflow: hidden; }
     .news-img-wrapper img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
     .news-card:hover .news-img-wrapper img { transform: scale(1.05); }
 
-    /* Стили для статистики */
     .stats-table th { font-size: 12px; text-transform: uppercase; color: #6c757d; font-weight: 700; }
     .stats-table td { vertical-align: middle; }
     .player-photo { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: #e2e8f0; display: flex; justify-content: center; align-items: center; }
 
-    /* Стили для сортировки таблиц */
     .sortable-th { cursor: pointer; user-select: none; position: relative; }
     .sortable-th:hover { background-color: #e9ecef; }
     .sortable-th::after { content: '↕'; opacity: 0.3; margin-left: 5px; font-size: 14px; }
@@ -107,7 +106,7 @@
         <div id="view-standings">
             <ul class="nav nav-pills nav-fill mb-3 shadow-sm bg-white rounded p-1" id="tournamentTabs" role="tablist">
                 <li class="nav-item"><button class="nav-link active fw-bold text-uppercase" data-bs-toggle="pill" data-bs-target="#table-pane" type="button">Таблица</button></li>
-                {% if is_cup and playoff_brackets %}
+                {% if brackets_data %}
                 <li class="nav-item"><button class="nav-link fw-bold text-uppercase" data-bs-toggle="pill" data-bs-target="#bracket-pane" type="button">Сетка</button></li>
                 {% endif %}
                 {% if not is_cup %}
@@ -158,38 +157,116 @@
                 </div>
 
                 <!-- СЕТКА (ПЛЕЙ-ОФФ) -->
-                {% if is_cup and playoff_brackets %}
+                {% if brackets_data %}
                 <div class="tab-pane fade" id="bracket-pane" role="tabpanel">
                     <div class="card border-0 shadow-sm">
-                        <div class="card-body p-4 overflow-auto">
-                            <div class="bracket-wrapper d-flex gap-4 justify-content-center py-4">
-                                {% for round_num, round_matches in playoff_brackets.items() %}
-                                <div class="bracket-col d-flex flex-column justify-content-around" style="min-width: 260px;">
-                                    <div class="text-center fw-bold text-uppercase mb-4 pb-2 border-bottom" style="color: #0f2537; font-size: 14px;">
-                                        {{ round_names.get(round_num, "РАУНД " ~ round_num) }}
+                        <div class="card-body p-0">
+
+                            {% if brackets_data|length > 1 %}
+                            <ul class="nav nav-pills p-3 border-bottom" id="bracket-tabs" role="tablist">
+                                {% for b_name in brackets_data.keys() %}
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link {% if loop.first %}active{% endif %} fw-bold text-uppercase"
+                                            data-bs-toggle="pill" data-bs-target="#bracket-{{ loop.index }}" type="button">
+                                        {{ b_name }}
+                                    </button>
+                                </li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+
+                            <div class="tab-content">
+                                {% for b_name, rounds in brackets_data.items() %}
+                                <div class="tab-pane fade {% if loop.first %}show active{% endif %} p-3" id="bracket-{{ loop.index }}">
+
+                                    <div class="text-center mb-3">
+                                        <h4 class="fw-bold text-uppercase" style="color: #0d3b66;">{{ b_name }}</h4>
                                     </div>
-                                    {% for match in round_matches %}
-                                    <div class="bracket-match mb-4 shadow-sm match-popup-trigger" data-match-id="{{ match.id }}" style="background: white; border-radius: 8px; border: 1px solid #dee2e6; overflow: hidden; cursor: pointer;">
-                                        <div class="d-flex justify-content-between align-items-center p-2 border-bottom {% if match.home_score is not none and match.away_score is not none and match.home_score > match.away_score %}bg-success bg-opacity-10{% endif %}">
-                                            <div class="d-flex align-items-center gap-2 text-truncate">
-                                                {% if match.home_team.logo_url %}<img src="{{ match.home_team.logo_url }}" style="height: 20px; width: 20px; object-fit: contain;">{% endif %}
-                                                <span class="fw-bold" style="font-size: 13px;">{{ match.home_team.name }}</span>
-                                            </div>
-                                            <span class="badge {% if match.home_score is not none and match.away_score is not none and match.home_score > match.away_score %}bg-success{% else %}bg-dark{% endif %}">
-                                                {{ match.home_score if match.home_score is not none else '-' }}
-                                            </span>
-                                        </div>
-                                        <div class="d-flex justify-content-between align-items-center p-2 {% if match.home_score is not none and match.away_score is not none and match.away_score > match.home_score %}bg-success bg-opacity-10{% endif %}">
-                                            <div class="d-flex align-items-center gap-2 text-truncate">
-                                                {% if match.away_team.logo_url %}<img src="{{ match.away_team.logo_url }}" style="height: 20px; width: 20px; object-fit: contain;">{% endif %}
-                                                <span class="fw-bold" style="font-size: 13px;">{{ match.away_team.name }}</span>
-                                            </div>
-                                            <span class="badge {% if match.home_score is not none and match.away_score is not none and match.away_score > match.home_score %}bg-success{% else %}bg-dark{% endif %}">
-                                                {{ match.away_score if match.away_score is not none else '-' }}
-                                            </span>
+
+                                    <!-- ОСНОВНАЯ СЕТКА (БЕЗ МАТЧА ЗА 3 МЕСТО) -->
+                                    <div class="bracket-scroll-container">
+                                        <div class="bracket-wrapper">
+                                            <!-- Сортируем раунды по порядку (1, 2, 3, 4) -->
+                                            {% for round_num, round_matches in rounds|dictsort %}
+                                                {% if round_num != 5 %} <!-- Пропускаем матч за 3 место в основной сетке -->
+                                                <div class="bracket-col">
+                                                    <div class="text-center fw-bold text-uppercase mb-4 pb-2 border-bottom" style="color: #0f2537; font-size: 14px;">
+                                                        {{ round_names.get(round_num, "РАУНД " ~ round_num) }}
+                                                    </div>
+
+                                                    {% for match in round_matches %}
+                                                    <div class="bracket-match match-popup-trigger" data-match-id="{{ match.id }}">
+                                                        <!-- Хозяева -->
+                                                        <div class="d-flex justify-content-between align-items-center p-2 border-bottom {% if match.home_score is not none and match.away_score is not none and match.home_score > match.away_score %}bg-winner{% endif %}">
+                                                            <div class="d-flex align-items-center gap-2 text-truncate">
+                                                                {% if match.home_team.logo_url %}<img src="{{ match.home_team.logo_url }}" style="height: 20px; width: 20px; object-fit: contain;">{% endif %}
+                                                                <span class="text-truncate" style="font-size: 13px;">{{ match.home_team.name }}</span>
+                                                            </div>
+                                                            <span class="fw-bold ms-2">{{ match.home_score if match.home_score is not none else '-' }}</span>
+                                                        </div>
+                                                        <!-- Гости -->
+                                                        <div class="d-flex justify-content-between align-items-center p-2 {% if match.home_score is not none and match.away_score is not none and match.away_score > match.home_score %}bg-winner{% endif %}">
+                                                            <div class="d-flex align-items-center gap-2 text-truncate">
+                                                                {% if match.away_team.logo_url %}<img src="{{ match.away_team.logo_url }}" style="height: 20px; width: 20px; object-fit: contain;">{% endif %}
+                                                                <span class="text-truncate" style="font-size: 13px;">{{ match.away_team.name }}</span>
+                                                            </div>
+                                                            <span class="fw-bold ms-2">{{ match.away_score if match.away_score is not none else '-' }}</span>
+                                                        </div>
+                                                        <!-- Пенальти и ТП -->
+                                                        {% if match.home_penalty is not none %}
+                                                        <div class="text-center text-danger fw-bold border-top py-1" style="font-size: 11px; background: #fff3f3;">
+                                                            Пен: {{ match.home_penalty }}:{{ match.away_penalty }}
+                                                        </div>
+                                                        {% endif %}
+                                                        {% if match.tech_loss %}
+                                                        <div class="text-center text-danger fw-bold border-top py-1" style="font-size: 11px;">Тех. поражение</div>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                                {% endif %}
+                                            {% endfor %}
                                         </div>
                                     </div>
-                                    {% endfor %}
+
+                                    <!-- МАТЧ ЗА 3 МЕСТО (ВЫВОДИМ ОТДЕЛЬНО СНИЗУ) -->
+                                    {% if 5 in rounds %}
+                                    <div class="mt-5 pt-4 border-top text-center">
+                                        <h5 class="fw-bold text-uppercase mb-3 text-secondary" style="font-size: 14px;">Матч за 3-е место</h5>
+                                        <div class="d-flex justify-content-center">
+                                            {% for match in rounds[5] %}
+                                            <div class="bracket-match match-popup-trigger shadow-sm" data-match-id="{{ match.id }}" style="min-width: 280px;">
+                                                <!-- Хозяева -->
+                                                <div class="d-flex justify-content-between align-items-center p-2 border-bottom {% if match.home_score is not none and match.away_score is not none and match.home_score > match.away_score %}bg-winner{% endif %}">
+                                                    <div class="d-flex align-items-center gap-2 text-truncate">
+                                                        {% if match.home_team.logo_url %}<img src="{{ match.home_team.logo_url }}" style="height: 20px; width: 20px; object-fit: contain;">{% endif %}
+                                                        <span class="text-truncate" style="font-size: 13px;">{{ match.home_team.name }}</span>
+                                                    </div>
+                                                    <span class="fw-bold ms-2">{{ match.home_score if match.home_score is not none else '-' }}</span>
+                                                </div>
+                                                <!-- Гости -->
+                                                <div class="d-flex justify-content-between align-items-center p-2 {% if match.home_score is not none and match.away_score is not none and match.away_score > match.home_score %}bg-winner{% endif %}">
+                                                    <div class="d-flex align-items-center gap-2 text-truncate">
+                                                        {% if match.away_team.logo_url %}<img src="{{ match.away_team.logo_url }}" style="height: 20px; width: 20px; object-fit: contain;">{% endif %}
+                                                        <span class="text-truncate" style="font-size: 13px;">{{ match.away_team.name }}</span>
+                                                    </div>
+                                                    <span class="fw-bold ms-2">{{ match.away_score if match.away_score is not none else '-' }}</span>
+                                                </div>
+                                                <!-- Пенальти и ТП -->
+                                                {% if match.home_penalty is not none %}
+                                                <div class="text-center text-danger fw-bold border-top py-1" style="font-size: 11px; background: #fff3f3;">
+                                                    Пен: {{ match.home_penalty }}:{{ match.away_penalty }}
+                                                </div>
+                                                {% endif %}
+                                                {% if match.tech_loss %}
+                                                <div class="text-center text-danger fw-bold border-top py-1" style="font-size: 11px;">Тех. поражение</div>
+                                                {% endif %}
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                    {% endif %}
+
                                 </div>
                                 {% endfor %}
                             </div>
@@ -299,120 +376,122 @@
         <div id="view-calendar" style="display: none;">
             <div class="card border-0 shadow-sm">
                 <!-- Навигация календаря -->
-                <div class="card-header bg-white p-0 border-bottom">
-                    <ul class="nav nav-tabs nav-fill border-0">
-                        {% if is_cup and playoff_brackets %}
-                        <li class="nav-item">
-                            <button class="nav-link fw-bold text-uppercase py-3 border-0" data-bs-toggle="tab" data-bs-target="#cal-playoff" type="button">Плей-офф</button>
-                        </li>
-                        {% endif %}
-                        <li class="nav-item">
-                            <button class="nav-link {% if not is_cup or not playoff_brackets %}active{% endif %} fw-bold text-uppercase py-3 border-0" data-bs-toggle="tab" data-bs-target="#cal-group" type="button">Общая таблица</button>
-                        </li>
-                    </ul>
+                <div class="card-header bg-white p-3 border-bottom d-flex justify-content-between align-items-center">
+                    <div class="btn-group shadow-sm" role="group">
+                        <button type="button" class="btn btn-outline-dark active fw-bold" id="btn-view-rounds" onclick="toggleCalendarView('rounds')">ПО ТУРАМ</button>
+                        <button type="button" class="btn btn-outline-dark fw-bold" id="btn-view-dates" onclick="toggleCalendarView('dates')">ПО ДАТАМ</button>
+                    </div>
                 </div>
 
                 <div class="card-body p-0">
-                    <div class="tab-content">
 
-                        <!-- ПЛЕЙ-ОФФ -->
-                        {% if is_cup and playoff_brackets %}
-                        <div class="tab-pane fade {% if is_cup and playoff_brackets %}show active{% endif %}" id="cal-playoff">
-                            <div class="p-4 overflow-auto">
-                                <div class="bracket-wrapper d-flex gap-4 justify-content-center py-4">
-                                    {% for round_num, round_matches in playoff_brackets.items() %}
-                                    <div class="bracket-col d-flex flex-column justify-content-around" style="min-width: 260px;">
-                                        <div class="text-center fw-bold text-uppercase mb-4 pb-2 border-bottom" style="color: #0f2537; font-size: 14px;">
-                                            {{ round_names.get(round_num, "РАУНД " ~ round_num) }}
-                                        </div>
-                                        {% for match in round_matches %}
-                                        <div class="bracket-match mb-4 shadow-sm match-popup-trigger" data-match-id="{{ match.id }}" style="background: white; border-radius: 8px; border: 1px solid #dee2e6; overflow: hidden; cursor: pointer;">
-                                            <div class="d-flex justify-content-between align-items-center p-2 border-bottom {% if match.home_score is not none and match.away_score is not none and match.home_score > match.away_score %}bg-success bg-opacity-10{% endif %}">
-                                                <div class="d-flex align-items-center gap-2 text-truncate">
-                                                    {% if match.home_team.logo_url %}<img src="{{ match.home_team.logo_url }}" style="height: 20px; width: 20px; object-fit: contain;">{% endif %}
-                                                    <span class="fw-bold" style="font-size: 13px;">{{ match.home_team.name }}</span>
-                                                </div>
-                                                <span class="badge {% if match.home_score is not none and match.away_score is not none and match.home_score > match.away_score %}bg-success{% else %}bg-dark{% endif %}">{{ match.home_score if match.home_score is not none else '-' }}</span>
-                                            </div>
-                                            <div class="d-flex justify-content-between align-items-center p-2 {% if match.home_score is not none and match.away_score is not none and match.away_score > match.home_score %}bg-success bg-opacity-10{% endif %}">
-                                                <div class="d-flex align-items-center gap-2 text-truncate">
-                                                    {% if match.away_team.logo_url %}<img src="{{ match.away_team.logo_url }}" style="height: 20px; width: 20px; object-fit: contain;">{% endif %}
-                                                    <span class="fw-bold" style="font-size: 13px;">{{ match.away_team.name }}</span>
-                                                </div>
-                                                <span class="badge {% if match.home_score is not none and match.away_score is not none and match.away_score > match.home_score %}bg-success{% else %}bg-dark{% endif %}">{{ match.away_score if match.away_score is not none else '-' }}</span>
-                                            </div>
-                                        </div>
-                                        {% endfor %}
+                    <!-- ============ ПО ТУРАМ ============ -->
+                    <div id="calendar-view-rounds">
+                        {% for round_name, round_matches in matches_by_round.items() %}
+                            <!-- Заголовок группы -->
+                            <div class="bg-light p-2 px-4 border-top border-bottom fw-bold text-uppercase text-secondary" style="font-size: 13px; letter-spacing: 0.5px;">
+                                {{ round_name }}
+                            </div>
+
+                            {% for m in round_matches %}
+                            <!-- Строка матча (CSS Grid для идеального выравнивания) -->
+                            <div class="calendar-grid-row match-popup-trigger" data-match-id="{{ m.id }}">
+
+                                <!-- 1. Дата и Стадион -->
+                                <div class="cg-date">
+                                    <div class="cg-date-main">
+                                        {% if m.match_date %}
+                                            {{ m.match_date.strftime('%d %b, %a')|upper }}
+                                        {% else %}
+                                            <span class="text-muted">ДАТА TBA</span>
+                                        {% endif %}
                                     </div>
-                                    {% endfor %}
+                                    <div class="cg-time">
+                                        {% if m.match_date %}{{ m.match_date.strftime('%H:%M') }}{% endif %}
+                                    </div>
+                                    <div class="cg-stadium text-truncate" title="{{ m.stadium }}">
+                                        <i class="bi bi-geo-alt-fill text-danger"></i> {{ m.stadium or 'Стадион TBA' }}
+                                    </div>
                                 </div>
+
+                                <!-- 2. Хозяева -->
+                                <div class="cg-team cg-team-right">
+                                    <span class="text-truncate">{{ m.home_team.name }}</span>
+                                    {% if m.home_team.logo_url %}
+                                        <img src="{{ m.home_team.logo_url }}" class="cg-logo">
+                                    {% endif %}
+                                </div>
+
+                                <!-- 3. Счет -->
+                                <div class="cg-score-box">
+                                    <div class="cg-score">
+                                        {% if m.home_score is not none %}
+                                            {{ m.home_score }} - {{ m.away_score }}
+                                        {% else %}
+                                            - : -
+                                        {% endif %}
+                                    </div>
+                                    {% if m.home_penalty is not none %}
+                                        <div class="cg-pen">Пен: {{ m.home_penalty }}:{{ m.away_penalty }}</div>
+                                    {% endif %}
+                                    {% if m.tech_loss %}
+                                        <div class="cg-pen text-danger">ТП</div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- 4. Гости -->
+                                <div class="cg-team cg-team-left">
+                                    {% if m.away_team.logo_url %}
+                                        <img src="{{ m.away_team.logo_url }}" class="cg-logo">
+                                    {% endif %}
+                                    <span class="text-truncate">{{ m.away_team.name }}</span>
+                                </div>
+
+                                <!-- 5. Стадия (справа) -->
+                                <div class="cg-stage">
+                                    {{ m.stage_name or 'Матч' }}
+                                </div>
+
                             </div>
-                        </div>
-                        {% endif %}
-
-                        <!-- ОБЩАЯ ТАБЛИЦА (ГРУППЫ) -->
-                        <div class="tab-pane fade {% if not is_cup or not playoff_brackets %}show active{% endif %}" id="cal-group">
-                            <div class="p-3 bg-white border-bottom d-flex justify-content-between align-items-center">
-                                <div class="btn-group shadow-sm" role="group">
-                                    <button type="button" class="btn btn-outline-dark active fw-bold" id="btn-view-rounds" onclick="toggleCalendarView('rounds')">ПО ТУРАМ</button>
-                                    <button type="button" class="btn btn-outline-dark fw-bold" id="btn-view-dates" onclick="toggleCalendarView('dates')">ПО ДАТАМ</button>
-                                </div>
-                            </div>
-
-                            <div class="card-body p-0">
-                                <!-- ПО ТУРАМ -->
-                                <div id="calendar-view-rounds">
-                                    {% for round_name, round_matches in matches_by_round.items() %}
-                                        <div class="calendar-header-row">{{ round_name }}</div>
-                                        {% for m in round_matches %}
-                                            <div class="calendar-row match-popup-trigger" data-match-id="{{ m.id }}">
-                                                <div class="c-date">
-                                                    <div class="match-date">{% if m.match_date %}{{ m.match_date.strftime('%d %b, %a %H:%M').upper() }}{% else %}TBA{% endif %}</div>
-                                                    <div class="match-stadium"><i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ m.stadium or 'Стадион TBA' }}</div>
-                                                </div>
-                                                <div class="c-team text-end">{{ m.home_team.name }}</div>
-                                                <div class="c-score">
-                                                    {% if m.home_team.logo_url %}<img src="{{ m.home_team.logo_url }}" class="c-logo">{% endif %}
-                                                    <div class="match-score {% if m.home_score is none %}empty{% endif %}">
-                                                        {% if m.home_score is not none %}{{ m.home_score }} - {{ m.away_score }}{% else %}- : -{% endif %}
-                                                    </div>
-                                                    {% if m.away_team.logo_url %}<img src="{{ m.away_team.logo_url }}" class="c-logo">{% endif %}
-                                                </div>
-                                                <div class="c-team text-start">{{ m.away_team.name }}</div>
-                                                <div class="c-stage">{{ m.stage.value.upper() if m.stage else '' }}</div>
-                                            </div>
-                                        {% endfor %}
-                                    {% endfor %}
-                                </div>
-
-                                <!-- ПО ДАТАМ -->
-                                <div id="calendar-view-dates" style="display: none;">
-                                    {% for date_str, date_matches in matches_by_date.items() %}
-                                        <div class="calendar-header-row">{{ date_str }}</div>
-                                        {% for m in date_matches %}
-                                            <div class="calendar-row match-popup-trigger" data-match-id="{{ m.id }}">
-                                                <div class="c-date">
-                                                    <div class="match-date">{% if m.match_date %}{{ m.match_date.strftime('%H:%M') }}{% else %}TBA{% endif %}</div>
-                                                    <div class="match-stadium"><i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ m.stadium or 'Стадион TBA' }}</div>
-                                                </div>
-                                                <div class="c-team text-end">{{ m.home_team.name }}</div>
-                                                <div class="c-score">
-                                                    {% if m.home_team.logo_url %}<img src="{{ m.home_team.logo_url }}" class="c-logo">{% endif %}
-                                                    <div class="match-score {% if m.home_score is none %}empty{% endif %}">
-                                                        {% if m.home_score is not none %}{{ m.home_score }} - {{ m.away_score }}{% else %}- : -{% endif %}
-                                                    </div>
-                                                    {% if m.away_team.logo_url %}<img src="{{ m.away_team.logo_url }}" class="c-logo">{% endif %}
-                                                </div>
-                                                <div class="c-team text-start">{{ m.away_team.name }}</div>
-                                                <div class="c-stage">{{ m.stage.value.upper() if m.stage else '' }}</div>
-                                            </div>
-                                        {% endfor %}
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
-
+                            {% endfor %}
+                        {% endfor %}
                     </div>
+
+                    <!-- ============ ПО ДАТАМ ============ -->
+                    <div id="calendar-view-dates" style="display: none;">
+                        {% for date_str, date_matches in matches_by_date.items() %}
+                            <div class="bg-light p-2 px-4 border-top border-bottom fw-bold text-uppercase text-secondary" style="font-size: 13px; letter-spacing: 0.5px;">
+                                {{ date_str }}
+                            </div>
+                            {% for m in date_matches %}
+                            <div class="calendar-grid-row match-popup-trigger" data-match-id="{{ m.id }}">
+                                <div class="cg-date">
+                                    <div class="cg-date-main">
+                                        {% if m.match_date %}{{ m.match_date.strftime('%H:%M') }}{% else %}TBA{% endif %}
+                                    </div>
+                                    <div class="cg-stadium text-truncate" title="{{ m.stadium }}">
+                                        <i class="bi bi-geo-alt-fill text-danger"></i> {{ m.stadium or 'Стадион TBA' }}
+                                    </div>
+                                </div>
+                                <div class="cg-team cg-team-right">
+                                    <span class="text-truncate">{{ m.home_team.name }}</span>
+                                    {% if m.home_team.logo_url %}<img src="{{ m.home_team.logo_url }}" class="cg-logo">{% endif %}
+                                </div>
+                                <div class="cg-score-box">
+                                    <div class="cg-score">
+                                        {% if m.home_score is not none %}{{ m.home_score }} - {{ m.away_score }}{% else %}- : -{% endif %}
+                                    </div>
+                                </div>
+                                <div class="cg-team cg-team-left">
+                                    {% if m.away_team.logo_url %}<img src="{{ m.away_team.logo_url }}" class="cg-logo">{% endif %}
+                                    <span class="text-truncate">{{ m.away_team.name }}</span>
+                                </div>
+                                <div class="cg-stage">{{ m.stage_name or '' }}</div>
+                            </div>
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -454,7 +533,7 @@
             </div>
         </div>
 
-        <!-- ================= БЛОК 4: НОВОСТИ ТУРНИРА ================= -->
+        <!-- ================= БЛОК 4: НОВОСТИ ================= -->
         <div id="view-news" style="display: none;">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white p-3 border-bottom d-flex justify-content-between align-items-center">
@@ -493,7 +572,7 @@
             </div>
         </div>
 
-        <!-- ================= БЛОК 5: СТАТИСТИКА (С ВКЛАДКАМИ И СОРТИРОВКОЙ) ================= -->
+        <!-- ================= БЛОК 5: СТАТИСТИКА ================= -->
         <div id="view-stats" style="display: none;">
             <div class="card border-0 shadow-sm">
                 <div class="card-header bg-white p-0 border-bottom">
@@ -508,8 +587,7 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="tab-content">
-
-                        <!-- ВКЛАДКА: БОМБАРДИРЫ -->
+                        <!-- БОМБАРДИРЫ -->
                         <div class="tab-pane fade show active" id="stats-goals">
                             <div class="table-responsive">
                                 <table class="table table-hover stats-table align-middle mb-0 sortable-table">
@@ -534,7 +612,7 @@
                                                     {% else %}
                                                         <div class="player-photo border"><i class="bi bi-person text-muted"></i></div>
                                                     {% endif %}
-                                                    <a href="/teams/{{ s.team_id }}" class="text-dark text-decoration-none fw-bold">{{ s.player.last_name }} {{ s.player.first_name }}</a>
+                                                    <a href="/player/{{ s.player.id }}" class="text-dark text-decoration-none fw-bold">{{ s.player.last_name }} {{ s.player.first_name }}</a>
                                                 </div>
                                             </td>
                                             <td>
@@ -561,7 +639,7 @@
                             </div>
                         </div>
 
-                        <!-- ВКЛАДКА: ПРЕДУПРЕЖДЕНИЯ -->
+                        <!-- ПРЕДУПРЕЖДЕНИЯ -->
                         <div class="tab-pane fade" id="stats-cards">
                             <div class="table-responsive">
                                 <table class="table table-hover stats-table align-middle mb-0 sortable-table">
@@ -586,7 +664,7 @@
                                                     {% else %}
                                                         <div class="player-photo border"><i class="bi bi-person text-muted"></i></div>
                                                     {% endif %}
-                                                    <a href="/teams/{{ s.team_id }}" class="text-dark text-decoration-none fw-bold">{{ s.player.last_name }} {{ s.player.first_name }}</a>
+                                                    <a href="/player/{{ s.player.id }}" class="text-dark text-decoration-none fw-bold">{{ s.player.last_name }} {{ s.player.first_name }}</a>
                                                 </div>
                                             </td>
                                             <td>
@@ -616,7 +694,6 @@
                                 </table>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -637,7 +714,6 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="tab-content">
-
                         <!-- ТЕКУЩИЕ -->
                         <div class="tab-pane fade show active" id="disq-active">
                             <div class="table-responsive">
@@ -664,8 +740,8 @@
                                                         </div>
                                                     {% endif %}
                                                     <div>
-                                                        <div class="fw-bold text-dark" style="font-size: 14px;">{{ d.player.last_name }} {{ d.player.first_name }}</div>
-                                                        <a href="/tournaments/{{ tournament.id }}/teams/{{ d.team_id }}/application" class="text-muted small text-decoration-none">{{ d.team.name }}</a>
+                                                        <a href="/player/{{ d.player.id }}" class="fw-bold text-dark text-decoration-none" style="font-size: 14px;">{{ d.player.last_name }} {{ d.player.first_name }}</a>
+                                                        <a href="/tournaments/{{ tournament.id }}/teams/{{ d.team_id }}/application" class="text-muted small text-decoration-none d-block">{{ d.team.name }}</a>
                                                     </div>
                                                 </div>
                                             </td>
@@ -709,8 +785,8 @@
                                                         </div>
                                                     {% endif %}
                                                     <div>
-                                                        <div class="fw-bold" style="font-size: 14px;">{{ d.player.last_name }} {{ d.player.first_name }}</div>
-                                                        <span class="small">{{ d.team.name }}</span>
+                                                        <a href="/player/{{ d.player.id }}" class="fw-bold text-muted text-decoration-none" style="font-size: 14px;">{{ d.player.last_name }} {{ d.player.first_name }}</a>
+                                                        <span class="small d-block">{{ d.team.name }}</span>
                                                     </div>
                                                 </div>
                                             </td>
@@ -727,7 +803,6 @@
                                 </table>
                             </div>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -738,9 +813,6 @@
     <!-- ПРАВАЯ ЧАСТЬ (Меню навигации) -->
     <div class="col-xl-3 mb-4">
         <div class="list-group shadow-sm sidebar-menu mb-4 border-0 rounded-0" id="sidebar-menu">
-            <a href="#" class="list-group-item list-group-item-action" onclick="switchMainView('standings', this); return false;">
-                <i class="bi bi-chevron-right"></i> О турнире
-            </a>
             <button class="list-group-item list-group-item-action active" onclick="switchMainView('standings', this)">
                 <i class="bi bi-chevron-right"></i> Таблицы и сетки
             </button>
@@ -781,7 +853,11 @@
       <div class="modal-body p-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div class="text-end fw-bold fs-5 w-40" id="modalHomeName"></div>
-            <div class="fs-3 fw-bold bg-dark text-white rounded px-3 py-1 shadow-sm" id="modalScore"></div>
+            <div class="text-center">
+                <div class="fs-3 fw-bold bg-dark text-white rounded px-3 py-1 shadow-sm" id="modalScore"></div>
+                <div class="text-danger fw-bold mt-1 d-none" id="modalPenalties" style="font-size: 12px;"></div>
+                <div class="badge bg-danger mt-1 d-none" id="modalTechLoss" style="font-size: 10px;">Тех. поражение</div>
+            </div>
             <div class="text-start fw-bold fs-5 w-40" id="modalAwayName"></div>
         </div>
         <div class="row g-0 border-top pt-3" id="modalEventsRow"></div>
@@ -801,19 +877,11 @@
         document.querySelectorAll('#sidebar-menu button').forEach(b => b.classList.remove('active'));
         if (btn && btn.tagName === 'BUTTON') btn.classList.add('active');
 
-        document.getElementById('view-standings').style.display = 'none';
-        document.getElementById('view-calendar').style.display = 'none';
-        document.getElementById('view-teams').style.display = 'none';
-        document.getElementById('view-news').style.display = 'none';
-        document.getElementById('view-stats').style.display = 'none';
-        document.getElementById('view-disq').style.display = 'none';
+        ['standings', 'calendar', 'teams', 'news', 'stats', 'disq'].forEach(v => {
+            document.getElementById('view-' + v).style.display = 'none';
+        });
 
-        if (view === 'standings') document.getElementById('view-standings').style.display = 'block';
-        else if (view === 'calendar') document.getElementById('view-calendar').style.display = 'block';
-        else if (view === 'teams') document.getElementById('view-teams').style.display = 'block';
-        else if (view === 'news') document.getElementById('view-news').style.display = 'block';
-        else if (view === 'stats') document.getElementById('view-stats').style.display = 'block';
-        else if (view === 'disq') document.getElementById('view-disq').style.display = 'block';
+        document.getElementById('view-' + view).style.display = 'block';
     }
 
     function toggleCalendarView(view) {
@@ -835,7 +903,6 @@
         }
     }
 
-    // --- ПОПАП ---
     function attachPopupEvents() {
         document.querySelectorAll('.match-popup-trigger').forEach(el => {
             el.addEventListener('click', function(e) {
@@ -857,9 +924,24 @@
         document.getElementById('modalScore').textContent = `${data.home_score} : ${data.away_score}`;
         document.getElementById('modalProtocolLink').href = `/matches/${data.id}`;
 
+        // Пенальти
+        const penDiv = document.getElementById('modalPenalties');
+        if (data.home_penalty !== null && data.home_penalty !== undefined) {
+            penDiv.textContent = `Пенальти: ${data.home_penalty} : ${data.away_penalty}`;
+            penDiv.classList.remove('d-none');
+        } else {
+            penDiv.classList.add('d-none');
+        }
+
+        // ТП
+        const tpDiv = document.getElementById('modalTechLoss');
+        if (data.tech_loss) {
+            tpDiv.classList.remove('d-none');
+        } else {
+            tpDiv.classList.add('d-none');
+        }
+
         const eventsRow = document.getElementById('modalEventsRow');
-        let homeGoals = 0;
-        let awayGoals = 0;
 
         if (data.events && data.events.length > 0) {
             eventsRow.innerHTML = `
@@ -883,11 +965,6 @@
                 else if (e.type === 'YELLOW') icon = '<div class="bg-warning rounded d-inline-block align-middle" style="width: 12px; height: 16px;"></div>';
                 else if (e.type === 'RED') icon = '<div class="bg-danger rounded d-inline-block align-middle" style="width: 12px; height: 16px;"></div>';
 
-                if (e.type === 'GOAL' || e.type === 'PENALTY' || e.type === 'OWN_GOAL') {
-                    if (e.team_id === data.home_team_id) homeGoals++;
-                    else awayGoals++;
-                }
-
                 if (e.team_id === data.home_team_id) {
                     hContainer.innerHTML += `
                         <div class="mb-2 d-flex align-items-center justify-content-end w-100" style="font-size: 13px;">
@@ -904,25 +981,12 @@
                         </div>`;
                 }
             });
-
-            if (data.home_score > homeGoals) {
-                hContainer.innerHTML += `<div class="text-muted small mt-2 italic text-end" style="font-size: 11px;">*Голы не указаны</div>`;
-            }
-            if (data.away_score > awayGoals) {
-                aContainer.innerHTML += `<div class="text-muted small mt-2 italic text-start" style="font-size: 11px;">*Голы не указаны</div>`;
-            }
-
         } else {
-            let message = "События не найдены";
-            if (data.home_score > 0 || data.away_score > 0) {
-                message = "Протокол матча не заполнен (голы и карточки неизвестны)";
-            }
-
             eventsRow.innerHTML = `
                 <div class="col-12 text-center py-4">
                     <div class="bg-light rounded p-3 border text-muted">
                         <i class="bi bi-info-circle fs-5 d-block mb-2"></i>
-                        ${message}
+                        События не найдены или протокол не заполнен
                     </div>
                 </div>
             `;
@@ -931,30 +995,24 @@
         matchModal.show();
     }
 
-    // ==========================================
-    // СОРТИРОВКА ТАБЛИЦ
-    // ==========================================
     document.addEventListener("DOMContentLoaded", function() {
         const matchModalEl = document.getElementById('matchModal');
         if (matchModalEl && typeof bootstrap !== 'undefined') {
             matchModal = new bootstrap.Modal(matchModalEl);
         }
-
         attachPopupEvents();
 
+        // Сортировка таблиц
         document.querySelectorAll('.sortable-table').forEach(table => {
             const headers = table.querySelectorAll('.sortable-th');
-
             headers.forEach(header => {
                 header.addEventListener('click', () => {
                     const tbody = table.querySelector('tbody');
                     const rows = Array.from(tbody.querySelectorAll('tr'));
-
                     if (rows.length === 1 && rows[0].querySelector('td[colspan]')) return;
 
                     const sortType = header.getAttribute('data-sort') || 'string';
                     let isAsc = header.getAttribute('data-asc') === 'true';
-
                     headers.forEach(h => {
                         h.classList.remove('sort-asc', 'sort-desc');
                         h.removeAttribute('data-asc');
@@ -965,11 +1023,9 @@
                     header.classList.add(isAsc ? 'sort-asc' : 'sort-desc');
 
                     const colIndex = Array.from(header.parentNode.children).indexOf(header);
-
                     rows.sort((a, b) => {
                         let valA = a.children[colIndex].textContent.trim();
                         let valB = b.children[colIndex].textContent.trim();
-
                         if (sortType === 'number') {
                             valA = parseFloat(valA) || 0;
                             valB = parseFloat(valB) || 0;
@@ -978,7 +1034,6 @@
                             return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
                         }
                     });
-
                     tbody.innerHTML = '';
                     rows.forEach(row => tbody.appendChild(row));
                 });

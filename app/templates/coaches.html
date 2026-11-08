@@ -1,10 +1,74 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block content %}
+<style>
+    .table-custom th { background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; padding: 15px 10px; border-bottom: 2px solid #e2e8f0; }
+    .table-custom td { vertical-align: middle; padding: 15px 10px; font-size: 14px; font-weight: 600; color: #1e293b; border-bottom: 1px solid #f1f5f9; }
+    .filter-bar { background: #fff; padding: 20px; border-bottom: 1px solid #e2e8f0; }
+    .btn-search { background-color: #3092b8; color: white; font-weight: bold; }
+</style>
 
-</body>
-</html>
+<div class="container py-5">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <h2 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px;">Главные тренеры</h2>
+        <select class="form-select fw-bold" style="width: 200px; background-color: #3092b8; color: white; border: none;">
+            <option selected>Сезон 2026</option>
+        </select>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius: 8px; overflow: hidden;">
+        <div class="filter-bar d-flex align-items-center gap-3 flex-wrap">
+            <form method="GET" action="/participants/coaches" class="d-flex gap-2 align-items-center flex-wrap flex-grow-1">
+                <input type="text" name="search" class="form-control" style="max-width: 300px;" placeholder="Поиск по ФИО" value="{{ current_search }}">
+                <button type="submit" class="btn btn-search px-4">НАЙТИ</button>
+                {% if current_search %}
+                    <a href="/participants/coaches" class="btn btn-outline-danger"><i class="bi bi-x-lg"></i></a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-custom mb-0 text-center">
+                <thead>
+                    <tr>
+                        <th style="width: 50px;">#</th>
+                        <th class="text-start">ГЛАВНЫЙ ТРЕНЕР</th>
+                        <th>КОМАНДА</th>
+                        <th>И</th>
+                        <th>В</th>
+                        <th>Н</th>
+                        <th>П</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in coaches_data %}
+                    <tr>
+                        <td class="fw-bold text-muted">{{ loop.index }}</td>
+                        <td class="text-start fw-bold">{{ item.coach.last_name }} {{ item.coach.first_name }}</td>
+                        <td>
+                            {% if item.coach.team %}
+                                <a href="/teams/{{ item.coach.team.id }}" class="text-decoration-none text-dark">
+                                    {{ item.coach.team.name }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.games }}</td>
+                        <td>{{ item.wins }}</td>
+                        <td>{{ item.draws }}</td>
+                        <td>{{ item.losses }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-person-badge fs-1 d-block mb-3 text-secondary"></i>
+                            <span class="fs-5">Список главных тренеров пуст</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

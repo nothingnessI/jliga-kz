@@ -8,38 +8,37 @@
         <span class="text-muted">{{ match.tournament.name }}</span>
     </div>
     <div>
-        <!-- Кнопка печати -->
         <a href="/matches/{{ match.id }}/print" target="_blank" class="btn btn-outline-dark me-2 fw-bold">
-            <i class="bi bi-printer me-1"></i> Печать протокола
+            <i class="bi bi-printer me-1"></i> Печать
         </a>
-        <a href="/admin/matches" class="btn btn-outline-secondary">← Назад к матчам</a>
+        <a href="/admin/matches" class="btn btn-outline-secondary">← Назад</a>
     </div>
 </div>
 
-<!-- Табло матча -->
+<!-- Табло -->
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-4 text-center bg-dark text-white rounded">
         <div class="row align-items-center">
-            <div class="col-4 text-end">
-                <h4 class="fw-bold mb-0">{{ match.home_team.name }}</h4>
-            </div>
+            <div class="col-4 text-end"><h4 class="fw-bold mb-0">{{ match.home_team.name }}</h4></div>
             <div class="col-4">
-                <h1 class="display-3 fw-bold mb-0">
-                    {{ match.home_score or 0 }} : {{ match.away_score or 0 }}
-                </h1>
-                <span class="badge bg-{{ 'success' if match.status.value == 'FINISHED' else 'danger' if match.status.value == 'LIVE' else 'secondary' }} fs-6 mt-2">
-                    {{ match.status.value }}
-                </span>
+                <h1 class="display-3 fw-bold mb-0">{{ match.home_score or 0 }} : {{ match.away_score or 0 }}</h1>
+                {% if match.home_penalty is not none and match.away_penalty is not none %}
+                <div class="fs-5 text-warning fw-bold mb-2">Пенальти: {{ match.home_penalty }} : {{ match.away_penalty }}</div>
+                {% endif %}
+                {% if match.tech_loss %}
+                <div class="badge bg-danger fs-6 mb-2">Техническое поражение</div>
+                {% endif %}
+                <div>
+                    <span class="badge bg-{{ 'success' if match.status.value == 'FINISHED' else 'danger' if match.status.value == 'LIVE' else 'secondary' }} fs-6 mt-2">{{ match.status.value }}</span>
+                </div>
             </div>
-            <div class="col-4 text-start">
-                <h4 class="fw-bold mb-0">{{ match.away_team.name }}</h4>
-            </div>
+            <div class="col-4 text-start"><h4 class="fw-bold mb-0">{{ match.away_team.name }}</h4></div>
         </div>
     </div>
 </div>
 
 <div class="row">
-    <!-- Левая часть: Список событий -->
+    <!-- События -->
     <div class="col-md-7">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-header bg-white fw-bold py-3 d-flex justify-content-between align-items-center">
@@ -54,7 +53,7 @@
                                 <th class="px-4" style="width: 80px;">Мин</th>
                                 <th>Событие</th>
                                 <th>Игрок</th>
-                                <th class="text-end px-4" style="width: 80px;">Удалить</th>
+                                <th class="text-end px-4" style="width: 120px;">Действия</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -65,30 +64,29 @@
                                     {% if e.event_type.value == 'GOAL' %} <span class="fs-5">⚽</span> Гол
                                     {% elif e.event_type.value == 'OWN_GOAL' %} <span class="fs-5">⚽</span> Автогол
                                     {% elif e.event_type.value == 'PENALTY_GOAL' %} <span class="fs-5">⚽</span> Пенальти
-                                    {% elif e.event_type.value == 'YELLOW_CARD' %} <span class="fs-5">🟨</span> Желтая карточка
-                                    {% elif e.event_type.value == 'RED_CARD' %} <span class="fs-5">🟥</span> Красная карточка
+                                    {% elif e.event_type.value == 'ASSIST' %} <span class="fs-5">🅰️</span> Пас
+                                    {% elif e.event_type.value == 'YELLOW_CARD' %} <span class="fs-5">🟨</span> Желтая
+                                    {% elif e.event_type.value == 'RED_CARD' %} <span class="fs-5">🟥</span> Красная
                                     {% else %} {{ e.event_type.value }}{% endif %}
                                 </td>
                                 <td class="fw-bold">
-                                    {{ e.player.last_name if e.player else '—' }}
-                                    <br>
-                                    <span class="badge bg-light text-dark border mt-1">{{ e.team.name if e.team else '' }}</span>
+                                    {{ e.player.last_name if e.player else '—' }} {{ e.player.first_name[0] if e.player else '' }}.
+                                    <br><span class="badge bg-light text-dark border mt-1">{{ e.team.name if e.team else '' }}</span>
                                 </td>
                                 <td class="text-end px-4">
-                                    <form action="/admin/matches/{{ match.id }}/events/{{ e.id }}/delete" method="post" onsubmit="return confirm('Удалить это событие?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
-                                            <i class="bi bi-x-lg"></i>
-                                        </button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-1"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#editEventModal"
+                                            onclick="fillEditModal({{ e.id }}, '{{ e.team_id }}', '{{ e.player_id }}', '{{ e.event_type.value }}', '{{ e.minute }}', '{{ e.comment or '' }}')">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <form action="/admin/matches/{{ match.id }}/events/{{ e.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Удалить событие?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                                     </form>
                                 </td>
                             </tr>
                             {% else %}
-                            <tr>
-                                <td colspan="4" class="text-center py-5 text-muted">
-                                    <i class="bi bi-activity fs-1 d-block mb-3 text-secondary"></i>
-                                    Событий пока нет. <br>Добавьте первый гол или карточку!
-                                </td>
-                            </tr>
+                            <tr><td colspan="4" class="text-center py-5 text-muted">Событий пока нет.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -97,100 +95,192 @@
         </div>
     </div>
 
-    <!-- Правая часть: Форма добавления -->
+    <!-- Правая колонка: Формы -->
     <div class="col-md-5">
-        <div class="card border-0 shadow-sm bg-light">
+
+        <!-- Добавление события -->
+        <div class="card border-0 shadow-sm bg-light mb-4">
             <div class="card-body p-4">
-                <h6 class="fw-bold mb-4 text-uppercase">Добавить событие</h6>
+                <h6 class="fw-bold mb-3 text-uppercase text-primary">Добавить событие</h6>
                 <form action="/admin/matches/{{ match.id }}/events/add" method="post">
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">ТИП СОБЫТИЯ *</label>
-                        <select name="event_type" class="form-select" required id="event-type-select">
-                            <option value="">Выберите...</option>
-                            {% for et in event_types %}
-                                <option value="{{ et.value }}">
-                                    {% if et.value == 'GOAL' %}Гол
-                                    {% elif et.value == 'OWN_GOAL' %}Автогол
-                                    {% elif et.value == 'PENALTY_GOAL' %}Пенальти
-                                    {% elif et.value == 'YELLOW_CARD' %}Желтая карточка
-                                    {% elif et.value == 'RED_CARD' %}Красная карточка
-                                    {% else %}{{ et.value }}{% endif %}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="row mb-3">
+                    <div class="row g-2 mb-3">
                         <div class="col-6">
-                            <label class="form-label text-muted small fw-bold">МИНУТА *</label>
-                            <input type="number" name="minute" class="form-control" min="1" max="120" placeholder="Например: 45" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label text-muted small fw-bold">КОМАНДА *</label>
-                            <select name="team_id" class="form-select" required id="team-select">
-                                <option value="">Команда...</option>
-                                <option value="{{ match.home_team_id }}">{{ match.home_team.name }}</option>
-                                <option value="{{ match.away_team_id }}">{{ match.away_team.name }}</option>
+                            <label class="form-label small fw-bold">ТИП</label>
+                            <select name="event_type" class="form-select" required>
+                                <option value="GOAL">Гол</option>
+                                <option value="PENALTY_GOAL">Пенальти</option>
+                                <option value="ASSIST">Голевой пас</option>
+                                <option value="YELLOW_CARD">Желтая карточка</option>
+                                <option value="RED_CARD">Красная карточка</option>
                             </select>
                         </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">МИНУТА</label>
+                            <input type="number" name="minute" class="form-control" min="1" max="120" required>
+                        </div>
                     </div>
-
-                    <div class="mb-4">
-                        <label class="form-label text-muted small fw-bold">ИГРОК *</label>
-                        <select name="player_id" class="form-select" required id="player-select">
-                            <option value="">Сначала выберите команду...</option>
-                            <!-- Игроки хозяев (скрыты по умолчанию) -->
-                            {% for tp in home_players %}
-                                <option value="{{ tp.player.id }}" data-team="{{ match.home_team_id }}" class="d-none">
-                                    №{{ tp.jersey_number }} - {{ tp.player.last_name }} {{ tp.player.first_name }}
-                                </option>
-                            {% endfor %}
-                            <!-- Игроки гостей (скрыты по умолчанию) -->
-                            {% for tp in away_players %}
-                                <option value="{{ tp.player.id }}" data-team="{{ match.away_team_id }}" class="d-none">
-                                    №{{ tp.jersey_number }} - {{ tp.player.last_name }} {{ tp.player.first_name }}
-                                </option>
-                            {% endfor %}
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">КОМАНДА</label>
+                        <select name="team_id" class="form-select" required id="team-select">
+                            <option value="">Выберите...</option>
+                            <option value="{{ match.home_team_id }}">{{ match.home_team.name }}</option>
+                            <option value="{{ match.away_team_id }}">{{ match.away_team.name }}</option>
                         </select>
                     </div>
-
-                    <button type="submit" class="btn btn-success w-100 fw-bold py-2">
-                        <i class="bi bi-plus-lg me-1"></i> Зафиксировать
-                    </button>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">ИГРОК</label>
+                        <select name="player_id" class="form-select" required id="player-select">
+                            <option value="">Сначала выберите команду...</option>
+                            {% for tp in home_players %}<option value="{{ tp.player.id }}" data-team="{{ match.home_team_id }}" class="d-none">{{ tp.player.last_name }}</option>{% endfor %}
+                            {% for tp in away_players %}<option value="{{ tp.player.id }}" data-team="{{ match.away_team_id }}" class="d-none">{{ tp.player.last_name }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 fw-bold">Добавить</button>
                 </form>
             </div>
+        </div>
+
+        <!-- Завершение матча -->
+        <div class="card border-0 shadow-sm bg-white">
+            <div class="card-body p-4">
+                <h6 class="fw-bold mb-3 text-uppercase text-danger">Завершить матч</h6>
+                <form action="/admin/matches/{{ match.id }}/finish" method="post">
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Пенальти (Хозяева)</label>
+                            <input type="number" name="home_penalty" class="form-control" value="{{ match.home_penalty or '' }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Пенальти (Гости)</label>
+                            <input type="number" name="away_penalty" class="form-control" value="{{ match.away_penalty or '' }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-danger">Техническое поражение</label>
+                        <select name="tech_loss_team_id" class="form-select border-danger">
+                            <option value="0">Нет</option>
+                            <option value="{{ match.home_team_id }}">Тех. поражение: {{ match.home_team.name }}</option>
+                            <option value="{{ match.away_team_id }}">Тех. поражение: {{ match.away_team.name }}</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100 fw-bold">Завершить матч и пересчитать таблицу</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<!-- МОДАЛЬНОЕ ОКНО ДЛЯ РЕДАКТИРОВАНИЯ -->
+<div class="modal fade" id="editEventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="editEventForm" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold">Редактировать событие</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Тип события</label>
+                        <select name="event_type" class="form-select" id="edit-event-type" required>
+                            <option value="GOAL">Гол</option>
+                            <option value="PENALTY_GOAL">Пенальти</option>
+                            <option value="ASSIST">Голевой пас</option>
+                            <option value="YELLOW_CARD">Желтая</option>
+                            <option value="RED_CARD">Красная</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Минута</label>
+                        <input type="number" name="minute" class="form-control" id="edit-minute" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Команда</label>
+                        <select name="team_id" class="form-select" id="edit-team" required>
+                            <option value="{{ match.home_team_id }}">{{ match.home_team.name }}</option>
+                            <option value="{{ match.away_team_id }}">{{ match.away_team.name }}</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Игрок</label>
+                        <select name="player_id" class="form-select" id="edit-player" required>
+                            <!-- Сюда JS подставит нужных игроков -->
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Комментарий</label>
+                        <input type="text" name="comment" class="form-control" id="edit-comment">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary">Сохранить изменения</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- Скрипт для фильтрации игроков при выборе команды -->
 <script>
-document.addEventListener("DOMContentLoaded", function() {
-    const teamSelect = document.getElementById("team-select");
-    const playerSelect = document.getElementById("player-select");
-    // Находим все опции игроков, у которых есть атрибут data-team
-    const allOptions = Array.from(playerSelect.querySelectorAll("option[data-team]"));
+// Фильтрация для формы добавления
+const teamSelect = document.getElementById("team-select");
+const playerSelect = document.getElementById("player-select");
+const allOptions = Array.from(playerSelect.querySelectorAll("option[data-team]"));
+teamSelect.addEventListener("change", function() {
+    const selectedTeam = this.value;
+    playerSelect.innerHTML = '<option value="">Выберите игрока...</option>';
+    if (selectedTeam) {
+        allOptions.forEach(opt => {
+            if (opt.getAttribute("data-team") === selectedTeam) {
+                const clone = opt.cloneNode(true);
+                clone.classList.remove("d-none");
+                playerSelect.appendChild(clone);
+            }
+        });
+    }
+});
 
-    teamSelect.addEventListener("change", function() {
-        const selectedTeam = this.value;
+// Заполнение модалки для редактирования
+const playersData = [
+    {% for tp in home_players %}{ id: "{{ tp.player.id }}", name: "{{ tp.player.last_name }}", team: "{{ match.home_team_id }}" },{% endfor %}
+    {% for tp in away_players %}{ id: "{{ tp.player.id }}", name: "{{ tp.player.last_name }}", team: "{{ match.away_team_id }}" },{% endfor %}
+];
 
-        // Очищаем список игроков
-        playerSelect.innerHTML = '<option value="">Выберите игрока...</option>';
+function fillEditModal(eventId, teamId, playerId, eventType, minute, comment) {
+    document.getElementById("editEventForm").action = `/admin/matches/{{ match.id }}/events/${eventId}/edit`;
+    document.getElementById("edit-event-type").value = eventType;
+    document.getElementById("edit-minute").value = minute;
+    document.getElementById("edit-comment").value = comment;
 
-        if (selectedTeam) {
-            // Добавляем только игроков выбранной команды
-            allOptions.forEach(opt => {
-                if (opt.getAttribute("data-team") === selectedTeam) {
-                    const clone = opt.cloneNode(true);
-                    clone.classList.remove("d-none");
-                    playerSelect.appendChild(clone);
-                }
-            });
-        } else {
-            playerSelect.innerHTML = '<option value="">Сначала выберите команду...</option>';
+    const teamSelect = document.getElementById("edit-team");
+    const playerSelect = document.getElementById("edit-player");
+
+    teamSelect.value = teamId;
+
+    playerSelect.innerHTML = '';
+    playersData.forEach(p => {
+        if (p.team === teamId.toString()) {
+            const opt = document.createElement("option");
+            opt.value = p.id;
+            opt.text = p.name;
+            if (p.id === playerId.toString()) opt.selected = true;
+            playerSelect.appendChild(opt);
         }
     });
-});
+
+    teamSelect.onchange = function() {
+        const newTeam = this.value;
+        playerSelect.innerHTML = '';
+        playersData.forEach(p => {
+            if (p.team === newTeam.toString()) {
+                const opt = document.createElement("option");
+                opt.value = p.id;
+                opt.text = p.name;
+                playerSelect.appendChild(opt);
+            }
+        });
+    };
+}
 </script>
 {% endblock %}

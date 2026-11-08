@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Стили для карточек зала славы */
+    .hof-card {
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        border: none;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    .hof-header {
+        background: linear-gradient(135deg, #0f2537 0%, #1e405a 100%);
+        color: white;
+        padding: 20px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Декоративный кубок на фоне */
+    .hof-bg-icon {
+        position: absolute;
+        right: -20px;
+        bottom: -20px;
+        opacity: 0.05;
+        font-size: 150px;
+        line-height: 1;
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    .hof-content { position: relative; z-index: 1; }
+    .hof-title { font-size: 14px; text-transform: uppercase; font-weight: 700; margin-bottom: 15px; letter-spacing: 0.5px; }
+    
+    .hof-leader {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    .hof-photo-wrapper {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid rgba(255,255,255,0.2);
+        flex-shrink: 0;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .hof-photo-wrapper img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; }
+    .hof-photo-wrapper img.cover { object-fit: cover; }
+    
+    .hof-leader-info { flex-grow: 1; }
+    .hof-leader-name { font-size: 18px; font-weight: 800; margin: 0 0 5px 0; line-height: 1.1; }
+    .hof-leader-team { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;}
+    .hof-leader-stat { font-size: 36px; font-weight: 800; line-height: 1; margin: 0; }
+
+    /* Таблица */
+    .hof-table { margin: 0; font-size: 14px; }
+    .hof-table td { vertical-align: middle; padding: 12px 15px; border-bottom: 1px solid #f1f5f9; }
+    .hof-table tr:last-child td { border-bottom: none; }
+    .hof-table .pos { font-weight: 800; color: #64748b; width: 30px; text-align: center; }
+    .hof-table .name { font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+    .hof-table .team { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 600; display: block;}
+    .hof-table .stat { font-weight: 800; color: #0f2537; text-align: right; }
+    
+    .hof-avatar { width: 28px; height: 28px; object-fit: contain; border-radius: 50%; margin-right: 10px; background: #f8fafc;}
+    .hof-avatar.cover { object-fit: cover; }
+
+    .hof-footer { text-align: center; padding: 12px; border-top: 1px solid #f1f5f9; background: #f8fafc; margin-top: auto;}
+    .hof-footer a { text-decoration: none; font-weight: 700; color: #3092b8; font-size: 13px; text-transform: uppercase; }
+    .hof-footer a:hover { color: #0f2537; }
+
+    /* Раздел */
+    .hof-section-title {
+        font-size: 28px; font-weight: 800; text-transform: uppercase; color: #0f2537; margin: 40px 0 20px;
+        border-left: 5px solid #d8232a; padding-left: 15px; letter-spacing: 1px;
+    }
+</style>
+
+<div class="container py-5">
+    <h1 class="fw-bold text-uppercase text-center mb-5" style="color: #0f2537; letter-spacing: 2px;">Зал славы</h1>
+
+    <!-- ==================== КОМАНДЫ ==================== -->
+    <h3 class="hof-section-title">Команды</h3>
+    <div class="row g-4">
+        
+        <!-- 1. Игры -->
+        <div class="col-md-6 col-xl-3">
+            <div class="hof-card">
+                <div class="hof-header">
+                    <i class="bi bi-trophy-fill hof-bg-icon"></i>
+                    <div class="hof-content">
+                        <div class="hof-title">Игры</div>
+                        {% if teams_games %}
+                        {% set top = teams_games[0] %}
+                        <div class="hof-leader">
+                            <div class="hof-photo-wrapper">
+                                <img src="{{ top.team.logo_url or '/static/default_team.png' }}">
+                            </div>
+                            <div class="hof-leader-info">
+                                <h4 class="hof-leader-name text-truncate">{{ top.team.name }}</h4>
+                                <p class="hof-leader-stat">{{ top.games }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <table class="table hof-table">
+                    <tbody>
+                        {% for item in teams_games[1:5] %}
+                        <tr>
+                            <td class="pos">{{ loop.index + 1 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ item.team.logo_url or '/static/default_team.png' }}" class="hof-avatar">
+                                    <div class="name text-truncate">{{ item.team.name }}</div>
+                                </div>
+                            </td>
+                            <td class="stat">{{ item.games }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="hof-footer"><a href="/participants/teams">Все команды</a></div>
+            </div>
+        </div>
+
+        <!-- 2. Победы -->
+        <div class="col-md-6 col-xl-3">
+            <div class="hof-card">
+                <div class="hof-header">
+                    <i class="bi bi-trophy-fill hof-bg-icon"></i>
+                    <div class="hof-content">
+                        <div class="hof-title">Победы</div>
+                        {% if teams_wins %}
+                        {% set top = teams_wins[0] %}
+                        <div class="hof-leader">
+                            <div class="hof-photo-wrapper">
+                                <img src="{{ top.team.logo_url or '/static/default_team.png' }}">
+                            </div>
+                            <div class="hof-leader-info">
+                                <h4 class="hof-leader-name text-truncate">{{ top.team.name }}</h4>
+                                <p class="hof-leader-stat">{{ top.wins }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <table class="table hof-table">
+                    <tbody>
+                        {% for item in teams_wins[1:5] %}
+                        <tr>
+                            <td class="pos">{{ loop.index + 1 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ item.team.logo_url or '/static/default_team.png' }}" class="hof-avatar">
+                                    <div class="name text-truncate">{{ item.team.name }}</div>
+                                </div>
+                            </td>
+                            <td class="stat">{{ item.wins }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="hof-footer"><a href="/participants/teams">Все команды</a></div>
+            </div>
+        </div>
+
+        <!-- 3. Матчи на ноль -->
+        <div class="col-md-6 col-xl-3">
+            <div class="hof-card">
+                <div class="hof-header">
+                    <i class="bi bi-shield-fill hof-bg-icon"></i>
+                    <div class="hof-content">
+                        <div class="hof-title">Матчи на ноль</div>
+                        {% if teams_cs %}
+                        {% set top = teams_cs[0] %}
+                        <div class="hof-leader">
+                            <div class="hof-photo-wrapper">
+                                <img src="{{ top.team.logo_url or '/static/default_team.png' }}">
+                            </div>
+                            <div class="hof-leader-info">
+                                <h4 class="hof-leader-name text-truncate">{{ top.team.name }}</h4>
+                                <p class="hof-leader-stat">{{ top.clean_sheets }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <table class="table hof-table">
+                    <tbody>
+                        {% for item in teams_cs[1:5] %}
+                        <tr>
+                            <td class="pos">{{ loop.index + 1 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ item.team.logo_url or '/static/default_team.png' }}" class="hof-avatar">
+                                    <div class="name text-truncate">{{ item.team.name }}</div>
+                                </div>
+                            </td>
+                            <td class="stat">{{ item.clean_sheets }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="hof-footer"><a href="/participants/teams">Все команды</a></div>
+            </div>
+        </div>
+
+        <!-- 4. Забитые мячи -->
+        <div class="col-md-6 col-xl-3">
+            <div class="hof-card">
+                <div class="hof-header">
+                    <i class="bi bi-dribbble hof-bg-icon"></i>
+                    <div class="hof-content">
+                        <div class="hof-title">Забитые мячи</div>
+                        {% if teams_goals %}
+                        {% set top = teams_goals[0] %}
+                        <div class="hof-leader">
+                            <div class="hof-photo-wrapper">
+                                <img src="{{ top.team.logo_url or '/static/default_team.png' }}">
+                            </div>
+                            <div class="hof-leader-info">
+                                <h4 class="hof-leader-name text-truncate">{{ top.team.name }}</h4>
+                                <p class="hof-leader-stat">{{ top.goals }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <table class="table hof-table">
+                    <tbody>
+                        {% for item in teams_goals[1:5] %}
+                        <tr>
+                            <td class="pos">{{ loop.index + 1 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ item.team.logo_url or '/static/default_team.png' }}" class="hof-avatar">
+                                    <div class="name text-truncate">{{ item.team.name }}</div>
+                                </div>
+                            </td>
+                            <td class="stat">{{ item.goals }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="hof-footer"><a href="/participants/teams">Все команды</a></div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==================== ИГРОКИ ==================== -->
+    <h3 class="hof-section-title mt-5">Игроки</h3>
+    <div class="row g-4">
+
+        <!-- 1. Игры -->
+        <div class="col-md-6 col-xl-3">
+            <div class="hof-card">
+                <div class="hof-header">
+                    <i class="bi bi-person-fill hof-bg-icon"></i>
+                    <div class="hof-content">
+                        <div class="hof-title">Игры</div>
+                        {% if players_games %}
+                        {% set top = players_games[0] %}
+                        <div class="hof-leader">
+                            <div class="hof-photo-wrapper">
+                                <img class="cover" src="{{ top.player.photo_url or '/static/default_player.png' }}">
+                            </div>
+                            <div class="hof-leader-info">
+                                <h4 class="hof-leader-name text-truncate">{{ top.player.last_name }} {{ top.player.first_name }}</h4>
+                                <div class="hof-leader-team text-truncate">{{ top.team.name if top.team else '' }}</div>
+                                <p class="hof-leader-stat">{{ top.games }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <table class="table hof-table">
+                    <tbody>
+                        {% for item in players_games[1:5] %}
+                        <tr>
+                            <td class="pos">{{ loop.index + 1 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img class="hof-avatar cover" src="{{ item.player.photo_url or '/static/default_player.png' }}">
+                                    <div>
+                                        <div class="name text-truncate">{{ item.player.last_name }}</div>
+                                        <span class="team text-truncate">{{ item.team.name if item.team else '' }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="stat">{{ item.games }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="hof-footer"><a href="/participants/players">Все игроки</a></div>
+            </div>
+        </div>
+
+        <!-- 2. Гол + Пас -->
+        <div class="col-md-6 col-xl-3">
+            <div class="hof-card">
+                <div class="hof-header">
+                    <i class="bi bi-star-fill hof-bg-icon"></i>
+                    <div class="hof-content">
+                        <div class="hof-title">Гол + Пас</div>
+                        {% if players_ga %}
+                        {% set top = players_ga[0] %}
+                        <div class="hof-leader">
+                            <div class="hof-photo-wrapper">
+                                <img class="cover" src="{{ top.player.photo_url or '/static/default_player.png' }}">
+                            </div>
+                            <div class="hof-leader-info">
+                                <h4 class="hof-leader-name text-truncate">{{ top.player.last_name }} {{ top.player.first_name }}</h4>
+                                <div class="hof-leader-team text-truncate">{{ top.team.name if top.team else '' }}</div>
+                                <p class="hof-leader-stat">{{ top.goals + top.assists }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <table class="table hof-table">
+                    <tbody>
+                        {% for item in players_ga[1:5] %}
+                        <tr>
+                            <td class="pos">{{ loop.index + 1 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img class="hof-avatar cover" src="{{ item.player.photo_url or '/static/default_player.png' }}">
+                                    <div>
+                                        <div class="name text-truncate">{{ item.player.last_name }}</div>
+                                        <span class="team text-truncate">{{ item.team.name if item.team else '' }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="stat">{{ item.goals + item.assists }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="hof-footer"><a href="/participants/players">Все игроки</a></div>
+            </div>
+        </div>
+
+        <!-- 3. Бомбардиры -->
+        <div class="col-md-6 col-xl-3">
+            <div class="hof-card">
+                <div class="hof-header">
+                    <i class="bi bi-dribbble hof-bg-icon"></i>
+                    <div class="hof-content">
+                        <div class="hof-title">Бомбардиры</div>
+                        {% if players_goals %}
+                        {% set top = players_goals[0] %}
+                        <div class="hof-leader">
+                            <div class="hof-photo-wrapper">
+                                <img class="cover" src="{{ top.player.photo_url or '/static/default_player.png' }}">
+                            </div>
+                            <div class="hof-leader-info">
+                                <h4 class="hof-leader-name text-truncate">{{ top.player.last_name }} {{ top.player.first_name }}</h4>
+                                <div class="hof-leader-team text-truncate">{{ top.team.name if top.team else '' }}</div>
+                                <p class="hof-leader-stat">{{ top.goals }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <table class="table hof-table">
+                    <tbody>
+                        {% for item in players_goals[1:5] %}
+                        <tr>
+                            <td class="pos">{{ loop.index + 1 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img class="hof-avatar cover" src="{{ item.player.photo_url or '/static/default_player.png' }}">
+                                    <div>
+                                        <div class="name text-truncate">{{ item.player.last_name }}</div>
+                                        <span class="team text-truncate">{{ item.team.name if item.team else '' }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="stat">{{ item.goals }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="hof-footer"><a href="/participants/players">Все игроки</a></div>
+            </div>
+        </div>
+
+        <!-- 4. Ассистенты -->
+        <div class="col-md-6 col-xl-3">
+            <div class="hof-card">
+                <div class="hof-header">
+                    <i class="bi bi-bullseye hof-bg-icon"></i>
+                    <div class="hof-content">
+                        <div class="hof-title">Ассистенты</div>
+                        {% if players_assists %}
+                        {% set top = players_assists[0] %}
+                        <div class="hof-leader">
+                            <div class="hof-photo-wrapper">
+                                <img class="cover" src="{{ top.player.photo_url or '/static/default_player.png' }}">
+                            </div>
+                            <div class="hof-leader-info">
+                                <h4 class="hof-leader-name text-truncate">{{ top.player.last_name }} {{ top.player.first_name }}</h4>
+                                <div class="hof-leader-team text-truncate">{{ top.team.name if top.team else '' }}</div>
+                                <p class="hof-leader-stat">{{ top.assists }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <table class="table hof-table">
+                    <tbody>
+                        {% for item in players_assists[1:5] %}
+                        <tr>
+                            <td class="pos">{{ loop.index + 1 }}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img class="hof-avatar cover" src="{{ item.player.photo_url or '/static/default_player.png' }}">
+                                    <div>
+                                        <div class="name text-truncate">{{ item.player.last_name }}</div>
+                                        <span class="team text-truncate">{{ item.team.name if item.team else '' }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="stat">{{ item.assists }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="hof-footer"><a href="/participants/players">Все игроки</a></div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}
