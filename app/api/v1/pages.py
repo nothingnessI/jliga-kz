@@ -41,7 +41,7 @@ from app.schemas.match_event import MatchEventCreate
 from app.schemas.news import NewsCreate, NewsUpdate
 from app.models.player import Player
 from app.models.disqualification import Disqualification
-from services.stats_recalc import StatsRecalculator
+from app.services.stats_recalc import StatsRecalculator
 
 router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -2022,29 +2022,93 @@ async def admin_news_delete(news_id: int, request: Request, db: AsyncSession = D
     return RedirectResponse(url="/admin/news", status_code=303)
 
 
+from datetime import datetime
+
+
 @router.get("/matches/{match_id}/print")
 async def match_protocol_print(match_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     stmt = select(Match).where(Match.id == match_id).options(
-        selectinload(Match.home_team), selectinload(Match.away_team), selectinload(Match.tournament),
+        selectinload(Match.home_team),
+        selectinload(Match.away_team),
+        selectinload(Match.tournament),
         selectinload(Match.events).selectinload(MatchEvent.player),
         selectinload(Match.events).selectinload(MatchEvent.team)
     )
     match = (await db.execute(stmt)).scalar_one_or_none()
-
     if not match:
         raise HTTPException(status_code=404, detail="Матч не найден")
 
-    if match.events:
-        match.events.sort(key=lambda e: e.minute)
+    # Форматируем дату на русском (чтобы не зависеть от локали Windows)
+    months_ru = {
+        1: "января", 2: "февраля", 3: "марта", 4: "апреля", 5: "мая", 6: "июня",
+        7: "июля", 8: "августа", 9: "сентября", 10: "октября", 11: "ноября", 12: "декабря"
+    }
+    if match.match_date:
+        dt = match.match_date
+        date_ru = f"{dt.day} {months_ru[dt.month]} {dt.year} г. {dt.strftime('%H:%M')}"
+    else:
+        date_ru = "Дата не назначена"
 
-    home_events = [e for e in match.events if e.team_id == match.home_team_id]
-    away_events = [e for e in match.events if e.team_id == match.away_team_id]
+    # Составы
+    stmt_home = select(TeamPlayer).where(
+        TeamPlayer.team_id == match.home_team_id,
+        TeamPlayer.tournament_id == match.tournament_id,
+        TeamPlayer.is_active == True
+    ).options(selectinload(TeamPlayer.player)).order_by(TeamPlayer.jersey_number)
+
+    stmt_away = select(TeamPlayer).where(
+        TeamPlayer.team_id == match.away_team_id,
+        TeamPlayer.tournament_id == match.tournament_id,
+        TeamPlayer.is_active == True
+    ).options(selectinload(TeamPlayer.player)).order_by(TeamPlayer.jersey_number)
+
+    home_roster = (await db.execute(stmt_home)).scalars().all()
+    away_roster = (await db.execute(stmt_away)).scalars().all()
+
+    # Сбор событий (голы, пасы) и карточек
+    events_data = {}
+    cards_data = []
+
+    if match.events:
+        for e in match.events:
+            # Если есть игрок
+            if e.player_id:
+                if e.player_id not in events_data:
+                    events_data[e.player_id] = {'goals': [], 'assists': []}
+
+                if e.event_type.value in ['GOAL', 'PENALTY_GOAL']:
+                    events_data[e.player_id]['goals'].append(e.minute)
+                elif e.event_type.value == 'ASSIST':
+                    events_data[e.player_id]['assists'].append(e.minute)
+
+            # Карточки для блока Наказания
+            if e.event_type.value in ['YELLOW_CARD', 'RED_CARD']:
+                cards_data.append({
+                    "minute": e.minute,
+                    "type": "Пр" if e.event_type.value == 'YELLOW_CARD' else "Уд",
+                    "player_name": f"{e.player.last_name} {e.player.first_name}" if e.player else "Неизвестно",
+                    "team_name": e.team.name if e.team else ""
+                })
+
+    # Сортируем минуты
+    for pid in events_data:
+        events_data[pid]['goals'].sort()
+        events_data[pid]['assists'].sort()
+
+    cards_data.sort(key=lambda x: x['minute'])
 
     return templates.TemplateResponse(
-        request=request, name="protocol_print.html",
-        context={"match": match, "home_events": home_events, "away_events": away_events}
+        request=request,
+        name="protocol_print.html",
+        context={
+            "match": match,
+            "date_ru": date_ru,
+            "home_roster": home_roster,
+            "away_roster": away_roster,
+            "events_data": events_data,
+            "cards_data": cards_data
+        }
     )
-
 
 @router.get("/admin/media")
 async def admin_media_list(request: Request, db: AsyncSession = Depends(get_db)):
