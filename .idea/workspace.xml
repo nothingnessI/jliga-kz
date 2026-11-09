@@ -5,23 +5,35 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7e289f6c-8968-49f0-ac18-b3bedd7dea2b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/.dockerignore" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/jliga_backup.dump" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/pytest.ini" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_admin.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_pages.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_services.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_super_tournament.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/alembic/versions/a1b2c3d4e5f6_fix_logo_nullable_and_standings_unique.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/admin_disqualification_form.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/test_admin_flows.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/test_api.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/test_mega.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/test_smoke.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.dockerignore" beforeDir="false" afterPath="$PROJECT_DIR$/.dockerignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Dockerfile" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/READme.md" beforeDir="false" afterPath="$PROJECT_DIR$/READme.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/alembic/versions/1e8b92082495_add_news_teams_m2m.py" beforeDir="false" afterPath="$PROJECT_DIR$/alembic/versions/1e8b92082495_add_news_teams_m2m.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/alembic/versions/eadb918fc2f5_add_coaches_table.py" beforeDir="false" afterPath="$PROJECT_DIR$/alembic/versions/eadb918fc2f5_add_coaches_table.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/v1/endpoints/matches.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/v1/endpoints/matches.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/v1/endpoints/tournaments.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/v1/endpoints/tournaments.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/api/v1/pages.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/v1/pages.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/crud/match.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/crud/match.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/crud/team_player.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/crud/team_player.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/crud/tournament_standing.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/crud/tournament_standing.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/tournament.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/tournament.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/disqualifications.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/disqualifications.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/match.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/match.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/standings.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/standings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/admin_match_events.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_match_events.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/templates/match_detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/match_detail.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/templates/protocol_print.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/protocol_print.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/team_application.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/team_application.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docker-compose.yml" beforeDir="false" afterPath="$PROJECT_DIR$/docker-compose.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pytest.ini" beforeDir="false" afterPath="$PROJECT_DIR$/pytest.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_admin.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_pages.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_pages.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_services.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_services.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_super_tournament.py" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -62,61 +74,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.0144274735938856" />
-      <entry key="MS500" value="1.7389061104666246" />
-      <entry key="S2" value="2.558563135157476" />
-      <entry key="S5" value="2.8100564140201105" />
-      <entry key="S10" value="2.9029641317725234" />
-      <entry key="S30" value="3.3805642987872497" />
-      <entry key="S60" value="5.473490356945773" />
-      <entry key="M2" value="9.107561589551354" />
-      <entry key="M5" value="14.226897724112042" />
-      <entry key="M10" value="20.62094735066473" />
-      <entry key="M15" value="27.0562697391686" />
-      <entry key="M30" value="48.07868568414299" />
-      <entry key="H1" value="86.56612933462858" />
-      <entry key="H2" value="139.09721492238626" />
-      <entry key="H4" value="231.59583662768756" />
-      <entry key="D1" value="1066.584164122659" />
-      <entry key="W1" value="2925.3457965416787" />
+      <entry key="MS100" value="1.0000000000020464" />
+      <entry key="MS500" value="1.004594106446449" />
+      <entry key="S2" value="1.2603456127010622" />
+      <entry key="S5" value="1.5837408758114007" />
+      <entry key="S10" value="1.7640293685403377" />
+      <entry key="S30" value="1.9147768662560063" />
+      <entry key="S60" value="1.9952263988974734" />
+      <entry key="M2" value="2.3520950800429423" />
+      <entry key="M5" value="3.5315576932142982" />
+      <entry key="M10" value="4.897522277789367" />
+      <entry key="M15" value="6.59372006977295" />
+      <entry key="M30" value="12.36845048858704" />
+      <entry key="H1" value="20.34203192072216" />
+      <entry key="H2" value="34.55032430641401" />
+      <entry key="H4" value="88.31214887184392" />
+      <entry key="D1" value="898.7322419366134" />
+      <entry key="W1" value="2953.734641460683" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
       <entry key="S2" value="0.0" />
       <entry key="S5" value="0.0" />
-      <entry key="S10" value="3.588719585657937E-223" />
-      <entry key="S30" value="7.265261980423456E-75" />
-      <entry key="S60" value="1.0212626683376835E-37" />
-      <entry key="M2" value="4.791641010274746E-19" />
-      <entry key="M5" value="8.756940843786804E-8" />
-      <entry key="M10" value="5.106895445989813E-4" />
-      <entry key="M15" value="0.00932988756060254" />
-      <entry key="M30" value="0.182778678390149" />
-      <entry key="H1" value="0.90778363989576" />
-      <entry key="H2" value="2.590268073847025" />
-      <entry key="H4" value="6.369104035408187" />
-      <entry key="D1" value="52.84656376819554" />
-      <entry key="W1" value="247.71932072827298" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="6.438202841895743E-183" />
+      <entry key="M2" value="8.023841250857167E-92" />
+      <entry key="M5" value="3.6454649844265897E-37" />
+      <entry key="M10" value="6.037771805736496E-19" />
+      <entry key="M15" value="7.144290386118201E-13" />
+      <entry key="M30" value="8.608248513143717E-7" />
+      <entry key="H1" value="0.0011847741704944389" />
+      <entry key="H2" value="0.07461283818546038" />
+      <entry key="H4" value="1.0069830128767003" />
+      <entry key="D1" value="38.39729211083332" />
+      <entry key="W1" value="236.9657266937405" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="0.9798402620945136" />
-      <entry key="MS500" value="1.72642150310525" />
-      <entry key="S2" value="2.553868428978829" />
-      <entry key="S5" value="2.8079848072729394" />
-      <entry key="S10" value="2.901892373792235" />
-      <entry key="S30" value="3.380080192062091" />
-      <entry key="S60" value="5.472946708430256" />
-      <entry key="M2" value="9.107025299150044" />
-      <entry key="M5" value="14.226469343278097" />
-      <entry key="M10" value="20.62094882391869" />
-      <entry key="M15" value="27.065000607380885" />
-      <entry key="M30" value="48.26056207726315" />
-      <entry key="H1" value="87.47264126346245" />
-      <entry key="H2" value="141.68600811963879" />
-      <entry key="H4" value="237.96337587999682" />
-      <entry key="D1" value="1119.4278985969877" />
-      <entry key="W1" value="3173.063337600769" />
+      <entry key="MS100" value="0.029157280986033315" />
+      <entry key="MS500" value="0.49659321057969713" />
+      <entry key="S2" value="1.080814008553357" />
+      <entry key="S5" value="1.499440174818598" />
+      <entry key="S10" value="1.7187255477460734" />
+      <entry key="S30" value="1.8988266521439965" />
+      <entry key="S60" value="1.9871303697230085" />
+      <entry key="M2" value="2.3480007819126847" />
+      <entry key="M5" value="3.5298907946620863" />
+      <entry key="M10" value="4.896672862211747" />
+      <entry key="M15" value="6.593139104430591" />
+      <entry key="M30" value="12.368135416299067" />
+      <entry key="H1" value="20.343040403274713" />
+      <entry key="H2" value="34.62480291548792" />
+      <entry key="H4" value="89.31884014278363" />
+      <entry key="D1" value="937.1274847798999" />
+      <entry key="W1" value="3190.698666871423" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -238,12 +250,23 @@
       <workItem from="1794113673166" duration="26347000" />
       <workItem from="1794157590963" duration="8398000" />
       <workItem from="1794168213161" duration="1690000" />
-      <workItem from="1794200395454" duration="4459000" />
+      <workItem from="1794200395454" duration="21184000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/jliga_kz$tournaments.coverage" NAME="tournaments Coverage Results" MODIFIED="1792242300277" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/app/api/v1/endpoints" />

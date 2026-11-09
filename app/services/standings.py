@@ -64,11 +64,14 @@ class StandingsService:
 
             # Если ТЕХНИЧЕСКОЕ ПОРАЖЕНИЕ, ставим фиксированный счет 3:0
             if m.tech_loss:
-                h_goals = 3 if m.home_score > m.away_score else 0
-                a_goals = 3 if m.away_score > m.home_score else 0
+                hs = m.home_score or 0
+                aws = m.away_score or 0
+                h_goals = 3 if hs > aws else 0
+                a_goals = 3 if aws > hs else 0
             else:
                 h_goals = m.home_score or 0
                 a_goals = m.away_score or 0
+
 
             home.goals_for += h_goals
             home.goals_against += a_goals

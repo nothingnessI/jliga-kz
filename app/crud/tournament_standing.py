@@ -1,5 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.crud.base import CRUDBase
 from app.models.tournament_standing import TournamentStanding
@@ -15,6 +16,7 @@ class CRUDTournamentStanding(
         stmt = (
             select(TournamentStanding)
             .where(TournamentStanding.tournament_id == tournament_id)
+            .options(selectinload(TournamentStanding.team))
             .order_by(
                 TournamentStanding.points.desc(),
                 (TournamentStanding.goals_for - TournamentStanding.goals_against).desc(),
@@ -27,9 +29,13 @@ class CRUDTournamentStanding(
     async def get_by_tournament_and_team(
         self, db: AsyncSession, *, tournament_id: int, team_id: int
     ) -> TournamentStanding | None:
-        stmt = select(TournamentStanding).where(
-            TournamentStanding.tournament_id == tournament_id,
-            TournamentStanding.team_id == team_id,
+        stmt = (
+            select(TournamentStanding)
+            .where(
+                TournamentStanding.tournament_id == tournament_id,
+                TournamentStanding.team_id == team_id,
+            )
+            .options(selectinload(TournamentStanding.team))
         )
         result = await db.execute(stmt)
         return result.scalar_one_or_none()

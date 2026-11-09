@@ -98,19 +98,19 @@
 
                 <!-- Вкладки -->
                 <div class="card-header bg-white p-0 border-bottom">
-                    <ul class="nav nav-tabs nav-fill border-0">
-                        <li class="nav-item">
-                            <a href="?tab=preview" class="nav-link {% if active_tab == 'preview' or not active_tab %}active fw-bold{% endif %} text-uppercase py-3 border-0">
+                    <ul class="nav nav-tabs border-0 d-flex flex-row w-100 m-0">
+                        <li class="nav-item" style="flex: 1;">
+                            <a href="?tab=preview" class="nav-link {% if active_tab == 'preview' or not active_tab %}active fw-bold{% endif %} text-uppercase py-3 border-0 text-center w-100">
                                 <i class="bi bi-info-circle me-1"></i> Превью
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a href="?tab=protocol" class="nav-link {% if active_tab == 'protocol' %}active fw-bold{% endif %} text-uppercase py-3 border-0">
+                        <li class="nav-item" style="flex: 1;">
+                            <a href="?tab=protocol" class="nav-link {% if active_tab == 'protocol' %}active fw-bold{% endif %} text-uppercase py-3 border-0 text-center w-100">
                                 <i class="bi bi-list-ul me-1"></i> Протокол
                             </a>
                         </li>
-                        <li class="nav-item">
-                            <a href="?tab=events" class="nav-link {% if active_tab == 'events' %}active fw-bold{% endif %} text-uppercase py-3 border-0">
+                        <li class="nav-item" style="flex: 1;">
+                            <a href="?tab=events" class="nav-link {% if active_tab == 'events' %}active fw-bold{% endif %} text-uppercase py-3 border-0 text-center w-100">
                                 <i class="bi bi-activity me-1"></i> События
                             </a>
                         </li>
@@ -201,9 +201,11 @@
                                             <div class="text-end">
                                                 {% for e in match.events %}
                                                     {% if e.player_id == p.player.id %}
-                                                        {% if e.event_type.value == 'GOAL' %} <span title="Гол">⚽</span>
-                                                        {% elif e.event_type.value == 'YELLOW_CARD' %} <span title="ЖК">🟨</span>
-                                                        {% elif e.event_type.value == 'RED_CARD' %} <span title="КК">🟥</span>
+                                                        {% if e.event_type.value|lower == 'goal' %} <span title="Гол">⚽</span>
+                                                        {% elif e.event_type.value|lower == 'own_goal' %} <span title="Автогол" class="text-danger fw-bold">⚽(АГ)</span>
+                                                        {% elif e.event_type.value|lower == 'penalty_goal' %} <span title="Пенальти">⚽(П)</span>
+                                                        {% elif e.event_type.value|lower == 'yellow_card' %} <span title="ЖК">🟨</span>
+                                                        {% elif e.event_type.value|lower == 'red_card' %} <span title="КК">🟥</span>
                                                         {% endif %}
                                                     {% endif %}
                                                 {% endfor %}
@@ -217,17 +219,18 @@
                             </div>
                         </div>
 
-                        <!-- Центральная колонка -->
+                        <!-- Центральная колонка (События) -->
                         <div class="col-md-2 d-none d-md-block">
-                            <div class="h-100 d-flex flex-column align-items-center" style="border-left: 2px dashed #dee2e6; border-right: 2px dashed #dee2e6; padding-top: 50px;">
-                                <div class="text-muted fw-bold small text-uppercase mb-3 position-absolute bg-white px-2">События</div>
-                                <div class="w-100 mt-4">
+                            <div class="h-100 d-flex flex-column align-items-center" style="border-left: 2px dashed #dee2e6; border-right: 2px dashed #dee2e6; padding-top: 20px;">
+                                <div class="text-muted fw-bold small text-uppercase mb-3 bg-white px-2" style="z-index: 1;">События</div>
+                                <div class="w-100">
                                     {% for e in match.events %}
-                                        <div class="text-center mb-4 w-100" style="position: relative;">
+                                        <div class="text-center mb-4 w-100">
                                             <span class="badge bg-dark rounded-pill mb-1" style="font-size: 11px;">{{ e.minute }}'</span>
                                             <div class="fs-5 mb-1">
                                                 {% if e.event_type.value|lower == 'goal' %}<i class="bi bi-dribbble text-dark" title="Гол"></i>
                                                 {% elif e.event_type.value|lower == 'penalty_goal' %}<i class="bi bi-dribbble text-primary" title="Пенальти"></i>
+                                                {% elif e.event_type.value|lower == 'own_goal' %}<i class="bi bi-dribbble text-danger" title="Автогол"></i>
                                                 {% elif e.event_type.value|lower == 'yellow_card' %}<span class="d-inline-block bg-warning rounded" style="width: 12px; height: 16px;" title="Жёлтая"></span>
                                                 {% elif e.event_type.value|lower == 'red_card' %}<span class="d-inline-block bg-danger rounded" style="width: 12px; height: 16px;" title="Красная"></span>
                                                 {% endif %}
@@ -276,9 +279,11 @@
                                             <div class="text-end">
                                                 {% for e in match.events %}
                                                     {% if e.player_id == p.player.id %}
-                                                        {% if e.event_type.value == 'GOAL' %} <span title="Гол">⚽</span>
-                                                        {% elif e.event_type.value == 'YELLOW_CARD' %} <span title="ЖК">🟨</span>
-                                                        {% elif e.event_type.value == 'RED_CARD' %} <span title="КК">🟥</span>
+                                                        {% if e.event_type.value|lower == 'goal' %} <span title="Гол">⚽</span>
+                                                        {% elif e.event_type.value|lower == 'own_goal' %} <span title="Автогол" class="text-danger fw-bold">⚽(АГ)</span>
+                                                        {% elif e.event_type.value|lower == 'penalty_goal' %} <span title="Пенальти">⚽(П)</span>
+                                                        {% elif e.event_type.value|lower == 'yellow_card' %} <span title="ЖК">🟨</span>
+                                                        {% elif e.event_type.value|lower == 'red_card' %} <span title="КК">🟥</span>
                                                         {% endif %}
                                                     {% endif %}
                                                 {% endfor %}
@@ -296,78 +301,173 @@
 
                     <!-- ============ ВКЛАДКА: СОБЫТИЯ ============ -->
                     {% if active_tab == 'events' %}
-                    <div class="text-center mb-4">
-                        <h4 class="fw-bold text-uppercase" style="color: #0f2537;">События матча</h4>
-                    </div>
 
-                    <div class="row mb-3">
-                        <div class="col-6 text-end pe-4">
-                            <div class="d-inline-flex align-items-center gap-2">
-                                <span class="fw-bold">{{ match.home_team.name }}</span>
-                                <img src="{{ match.home_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" width="24" height="24" style="object-fit: contain;">
-                            </div>
+                    <!-- Шапка вкладки -->
+                    <div class="d-flex justify-content-between align-items-center mb-4 px-2">
+                        <div class="d-flex align-items-center gap-3">
+                            <img src="{{ match.home_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" width="40" height="40" style="object-fit: contain;">
+                            <h5 class="fw-bold m-0 text-uppercase">{{ match.home_team.name }}</h5>
                         </div>
-                        <div class="col-6 ps-4">
-                            <div class="d-inline-flex align-items-center gap-2">
-                                <img src="{{ match.away_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" width="24" height="24" style="object-fit: contain;">
-                                <span class="fw-bold">{{ match.away_team.name }}</span>
-                            </div>
+
+                        <h4 class="fw-bold text-uppercase m-0" style="color: #0f2537;">События матча</h4>
+
+                        <div class="d-flex align-items-center gap-3">
+                            <h5 class="fw-bold m-0 text-uppercase">{{ match.away_team.name }}</h5>
+                            <img src="{{ match.away_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" width="40" height="40" style="object-fit: contain;">
                         </div>
                     </div>
 
-                    <div class="position-relative" style="border-top: 2px solid #dee2e6; padding-top: 10px;">
-                        <div class="d-flex justify-content-between text-muted small fw-bold mb-4">
-                            <span>1-й тайм</span>
-                            <span>2-й тайм</span>
+                    <!-- Верхний таймлайн-бар -->
+                    <div class="timeline-top-bar d-none d-md-block mb-5">
+                        <div class="bar-track">
+                            <span class="bar-time left-time">35'</span>
+                            <span class="bar-time right-time">35'</span>
                         </div>
+                        <!-- Точки на баре (события) -->
+                        {% for e in match.events %}
+                            {% set left_pos = (e.minute / 90) * 100 %}
+                            <div class="bar-event-dot" style="left: {{ left_pos }}%;">
+                                <div class="bar-event-line"></div>
+                                <div class="bar-event-icon">
+                                    {% if e.event_type.value|lower == 'goal' %}
+                                        <i class="bi bi-dribbble text-dark"></i>
+                                    {% elif e.event_type.value|lower == 'penalty_goal' %}
+                                        <i class="bi bi-dribbble text-primary"></i>
+                                    {% elif e.event_type.value|lower == 'own_goal' %}
+                                        <i class="bi bi-dribbble text-danger"></i>
+                                    {% elif e.event_type.value|lower == 'yellow_card' %}
+                                        <span class="card-rect bg-warning" style="width: 10px; height: 14px;"></span>
+                                    {% elif e.event_type.value|lower == 'red_card' %}
+                                        <span class="card-rect bg-danger" style="width: 10px; height: 14px;"></span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
 
+                    <!-- Основной вертикальный список событий -->
+                    <div class="match-timeline-container">
                         {% if match.events %}
-                            <ul class="list-unstyled">
+                            {% set ns = namespace(home_score=0, away_score=0, second_half=False) %}
+
+                            <!-- ПЕРВЫЙ ТАЙМ -->
+                            <div class="half-separator">
+                                <span>ПЕРВЫЙ ТАЙМ</span>
+                            </div>
+
+                            <div class="timeline-list">
                                 {% for e in match.events %}
-                                    <li class="mb-3 d-flex align-items-center">
-                                        {% if e.team_id == match.home_team_id %}
-                                            <!-- Хозяева -->
-                                            <div class="col-5 text-end pe-3">
-                                                <a href="/player/{{ e.player.id }}" class="text-decoration-none text-dark fw-bold">{{ e.player.last_name if e.player else 'Игрок' }}</a>
-                                                <small class="text-muted d-block">{{ e.player.first_name if e.player else '' }}</small>
-                                            </div>
-                                            <div class="col-2 d-flex justify-content-center">
-                                                <span class="badge bg-dark rounded-pill" style="min-width: 45px; padding: 6px 10px;">{{ e.minute }}'</span>
-                                            </div>
-                                            <div class="col-5 ps-3">
-                                                <span class="fs-5">
-                                                    {% if e.event_type.value|lower == 'goal' %}<i class="bi bi-dribbble text-dark" title="Гол"></i>
-                                                    {% elif e.event_type.value|lower == 'penalty_goal' %}<i class="bi bi-dribbble text-primary" title="Пенальти"></i>
-                                                    {% elif e.event_type.value|lower == 'yellow_card' %}<span class="d-inline-block bg-warning rounded" style="width: 15px; height: 20px;" title="Жёлтая"></span>
-                                                    {% elif e.event_type.value|lower == 'red_card' %}<span class="d-inline-block bg-danger rounded" style="width: 15px; height: 20px;" title="Красная"></span>
-                                                    {% endif %}
-                                                </span>
-                                            </div>
+
+                                    <!-- Разделитель второго тайма -->
+                                    {% if e.minute > 45 and not ns.second_half %}
+                                        </div> <!-- Закрываем первый список -->
+
+                                        <div class="half-separator mt-5">
+                                            <span>ВТОРОЙ ТАЙМ</span>
+                                        </div>
+
+                                        <div class="timeline-list">
+                                        {% set ns.second_half = True %}
+                                    {% endif %}
+
+                                    <!-- Расчет счета ДО отрисовки -->
+                                    {% if e.event_type.value|lower in ['goal', 'penalty_goal', 'own_goal'] %}
+                                        {% if e.event_type.value|lower == 'own_goal' %}
+                                            {% if e.team_id == match.home_team_id %}
+                                                {% set ns.away_score = ns.away_score + 1 %}
+                                            {% else %}
+                                                {% set ns.home_score = ns.home_score + 1 %}
+                                            {% endif %}
                                         {% else %}
-                                            <!-- Гости -->
-                                            <div class="col-5 text-end pe-3"></div>
-                                            <div class="col-2 d-flex justify-content-center">
-                                                <span class="badge bg-dark rounded-pill" style="min-width: 45px; padding: 6px 10px;">{{ e.minute }}'</span>
-                                            </div>
-                                            <div class="col-5 ps-3">
-                                                <div class="d-flex align-items-center">
-                                                    <span class="fs-5 me-2">
-                                                        {% if e.event_type.value|lower == 'goal' %}<i class="bi bi-dribbble text-dark" title="Гол"></i>
-                                                        {% elif e.event_type.value|lower == 'penalty_goal' %}<i class="bi bi-dribbble text-primary" title="Пенальти"></i>
-                                                        {% elif e.event_type.value|lower == 'yellow_card' %}<span class="d-inline-block bg-warning rounded" style="width: 15px; height: 20px;" title="Жёлтая"></span>
-                                                        {% elif e.event_type.value|lower == 'red_card' %}<span class="d-inline-block bg-danger rounded" style="width: 15px; height: 20px;" title="Красная"></span>
-                                                        {% endif %}
-                                                    </span>
-                                                    <div>
-                                                        <a href="/player/{{ e.player.id }}" class="text-decoration-none text-dark fw-bold">{{ e.player.last_name if e.player else 'Игрок' }}</a>
-                                                        <small class="text-muted d-block">{{ e.player.first_name if e.player else '' }}</small>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                            {% if e.team_id == match.home_team_id %}
+                                                {% set ns.home_score = ns.home_score + 1 %}
+                                            {% else %}
+                                                {% set ns.away_score = ns.away_score + 1 %}
+                                            {% endif %}
                                         {% endif %}
-                                    </li>
+                                    {% endif %}
+
+                                    <div class="event-row">
+                                        <!-- ЛЕВАЯ СТОРОНА (Домашняя команда) -->
+                                        <div class="event-side home-side">
+                                            {% if e.team_id == match.home_team_id %}
+                                                <!-- Счет (если гол) -->
+                                                {% if e.event_type.value|lower in ['goal', 'penalty_goal', 'own_goal'] %}
+                                                    <div class="score-badge">{{ ns.home_score }} : {{ ns.away_score }}</div>
+                                                {% else %}
+                                                    <div class="score-placeholder"></div>
+                                                {% endif %}
+
+                                                <!-- Имя игрока -->
+                                                <div class="player-info text-end">
+                                                    <span class="p-last">{{ e.player.last_name if e.player else 'Игрок' }}</span>
+                                                    <span class="p-first">{{ e.player.first_name if e.player else '' }}</span>
+                                                </div>
+
+                                                <!-- Иконка события -->
+                                                <div class="event-icon">
+                                                    {% if e.event_type.value|lower == 'goal' %}
+                                                        <i class="bi bi-dribbble fs-4 text-dark"></i>
+                                                    {% elif e.event_type.value|lower == 'penalty_goal' %}
+                                                        <i class="bi bi-dribbble fs-4 text-primary"></i>
+                                                    {% elif e.event_type.value|lower == 'own_goal' %}
+                                                        <i class="bi bi-dribbble fs-4 text-danger"></i>
+                                                    {% elif e.event_type.value|lower == 'yellow_card' %}
+                                                        <span class="card-rect bg-warning"></span>
+                                                    {% elif e.event_type.value|lower == 'red_card' %}
+                                                        <span class="card-rect bg-danger"></span>
+                                                    {% endif %}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+
+                                        <!-- ЦЕНТР (Минута) -->
+                                        <div class="event-minute">
+                                            <span>{{ e.minute }}'</span>
+                                        </div>
+
+                                        <!-- ПРАВАЯ СТОРОНА (Гостевая команда) -->
+                                        <div class="event-side away-side">
+                                            {% if e.team_id == match.away_team_id %}
+                                                <!-- Иконка события -->
+                                                <div class="event-icon">
+                                                    {% if e.event_type.value|lower == 'goal' %}
+                                                        <i class="bi bi-dribbble fs-4 text-dark"></i>
+                                                    {% elif e.event_type.value|lower == 'penalty_goal' %}
+                                                        <i class="bi bi-dribbble fs-4 text-primary"></i>
+                                                    {% elif e.event_type.value|lower == 'own_goal' %}
+                                                        <i class="bi bi-dribbble fs-4 text-danger"></i>
+                                                    {% elif e.event_type.value|lower == 'yellow_card' %}
+                                                        <span class="card-rect bg-warning"></span>
+                                                    {% elif e.event_type.value|lower == 'red_card' %}
+                                                        <span class="card-rect bg-danger"></span>
+                                                    {% endif %}
+                                                </div>
+
+                                                <!-- Имя игрока -->
+                                                <div class="player-info text-start">
+                                                    <span class="p-last">{{ e.player.last_name if e.player else 'Игрок' }}</span>
+                                                    <span class="p-first">{{ e.player.first_name if e.player else '' }}</span>
+                                                </div>
+
+                                                <!-- Счет (если гол) -->
+                                                {% if e.event_type.value|lower in ['goal', 'penalty_goal', 'own_goal'] %}
+                                                    <div class="score-badge">{{ ns.home_score }} : {{ ns.away_score }}</div>
+                                                {% else %}
+                                                    <div class="score-placeholder"></div>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 {% endfor %}
-                            </ul>
+                            </div>
+
+                            {% if not ns.second_half %}
+                                <div class="half-separator mt-5">
+                                    <span>ВТОРОЙ ТАЙМ</span>
+                                </div>
+                            {% endif %}
+
                         {% else %}
                             <div class="text-center py-5 text-muted">
                                 <i class="bi bi-activity fs-1 d-block mb-3"></i>
@@ -409,10 +509,201 @@
 </div>
 
 <style>
+    /* Стили для табов (навигация) */
     .nav-tabs .nav-link { color: #6c757d; border: none; font-weight: 600; transition: all 0.2s; }
     .nav-tabs .nav-link:hover { color: #0d6efd; background-color: rgba(13, 110, 253, 0.05); }
     .nav-tabs .nav-link.active { color: #0d6efd !important; border-bottom: 3px solid #0d6efd !important; background-color: transparent; }
     .hover-bg-light:hover { background-color: #f8f9fa; }
-    .col-md-2 .position-absolute { top: 10px; z-index: 1; }
+
+    /* ================= СТИЛИ ДЛЯ ВКЛАДКИ СОБЫТИЯ ================= */
+
+    /* Верхний бар */
+    .timeline-top-bar {
+        position: relative;
+        margin: 0 40px;
+        height: 60px;
+    }
+    .bar-track {
+        position: absolute;
+        top: 30px;
+        left: 0;
+        right: 0;
+        height: 16px;
+        background-color: #0f2537;
+        border-radius: 2px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0 10px;
+    }
+    .bar-time {
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .bar-track::after {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: rgba(255,255,255,0.3);
+    }
+    .bar-event-dot {
+        position: absolute;
+        top: 0;
+        width: 1px;
+        height: 60px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    .bar-event-line {
+        width: 2px;
+        height: 16px;
+        background-color: #d8232a;
+        margin-top: 10px;
+    }
+    .bar-event-icon {
+        margin-top: -5px;
+        background: white;
+        padding: 2px;
+        border-radius: 50%;
+        z-index: 2;
+    }
+
+    /* Основной таймлайн */
+    .match-timeline-container {
+        position: relative;
+        max-width: 900px;
+        margin: 0 auto;
+        padding-bottom: 20px;
+    }
+
+    /* Разделитель тайма */
+    .half-separator {
+        display: flex;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+    .half-separator::after {
+        content: '';
+        flex: 1;
+        height: 1px;
+        background-color: #e2e8f0;
+        margin-left: 15px;
+    }
+    .half-separator span {
+        color: #718096;
+        font-size: 0.85rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Список событий */
+    .timeline-list {
+        position: relative;
+    }
+    .timeline-list::before {
+        content: '';
+        position: absolute;
+        left: 50%;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #cbd5e0;
+        transform: translateX(-50%);
+        z-index: 0;
+    }
+
+    /* Строка события */
+    .event-row {
+        display: flex;
+        align-items: center;
+        position: relative;
+        z-index: 1;
+        margin-bottom: 30px;
+    }
+
+    /* Боковые колонки */
+    .event-side {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    .home-side {
+        justify-content: flex-end;
+        padding-right: 20px;
+    }
+    .away-side {
+        justify-content: flex-start;
+        padding-left: 20px;
+    }
+
+    /* Центральная колонка с минутой */
+    .event-minute {
+        width: 80px;
+        display: flex;
+        justify-content: center;
+        flex-shrink: 0;
+        position: relative;
+    }
+    .event-minute span {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2b6cb0;
+        background: #fff;
+        padding: 0 10px;
+    }
+
+    /* Иконка */
+    .event-icon {
+        width: 30px;
+        display: flex;
+        justify-content: center;
+    }
+    .card-rect {
+        display: inline-block;
+        width: 14px;
+        height: 20px;
+        border-radius: 2px;
+    }
+
+    /* Имя игрока */
+    .player-info {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.2;
+    }
+    .p-last {
+        font-size: 1.05rem;
+        font-weight: 600;
+        color: #2d3748;
+    }
+    .p-first {
+        font-size: 0.85rem;
+        color: #718096;
+    }
+
+    /* Плашка со счетом */
+    .score-badge {
+        background: #4a8bb5;
+        color: white;
+        padding: 4px 15px;
+        font-weight: 700;
+        font-size: 1.05rem;
+        border-radius: 2px;
+        clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%);
+        display: inline-block;
+        text-align: center;
+        min-width: 60px;
+    }
+
+    .score-placeholder {
+        width: 60px;
+    }
 </style>
 {% endblock %}

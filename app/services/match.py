@@ -14,6 +14,7 @@ class MatchService:
         if match.status == MatchStatus.FINISHED:
             raise ValueError("Нельзя добавить событие в завершенный матч")
 
+        event_data.pop("match_id", None)
         event = MatchEvent(**event_data, match_id=match_id)
         db.add(event)
 

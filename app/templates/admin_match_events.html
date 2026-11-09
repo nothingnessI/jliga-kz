@@ -1,7 +1,6 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
-<!-- Шапка страницы -->
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="fw-bold m-0">Протокол матча</h4>
@@ -15,7 +14,6 @@
     </div>
 </div>
 
-<!-- Табло -->
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body py-4 text-center bg-dark text-white rounded">
         <div class="row align-items-center">
@@ -29,7 +27,7 @@
                 <div class="badge bg-danger fs-6 mb-2">Техническое поражение</div>
                 {% endif %}
                 <div>
-                    <span class="badge bg-{{ 'success' if match.status.value == 'FINISHED' else 'danger' if match.status.value == 'LIVE' else 'secondary' }} fs-6 mt-2">{{ match.status.value }}</span>
+                    <span class="badge bg-{{ 'success' if match.status.value|lower == 'finished' else 'danger' if match.status.value|lower == 'live' else 'secondary' }} fs-6 mt-2">{{ match.status.value|upper }}</span>
                 </div>
             </div>
             <div class="col-4 text-start"><h4 class="fw-bold mb-0">{{ match.away_team.name }}</h4></div>
@@ -61,13 +59,13 @@
                             <tr>
                                 <td class="px-4 fw-bold fs-5 text-muted">{{ e.minute }}'</td>
                                 <td>
-                                    {% if e.event_type.value == 'GOAL' %} <span class="fs-5">⚽</span> Гол
-                                    {% elif e.event_type.value == 'OWN_GOAL' %} <span class="fs-5">⚽</span> Автогол
-                                    {% elif e.event_type.value == 'PENALTY_GOAL' %} <span class="fs-5">⚽</span> Пенальти
-                                    {% elif e.event_type.value == 'ASSIST' %} <span class="fs-5">🅰️</span> Пас
-                                    {% elif e.event_type.value == 'YELLOW_CARD' %} <span class="fs-5">🟨</span> Желтая
-                                    {% elif e.event_type.value == 'RED_CARD' %} <span class="fs-5">🟥</span> Красная
-                                    {% else %} {{ e.event_type.value }}{% endif %}
+                                    {% if e.event_type.value|lower == 'goal' %} <span class="fs-5">⚽</span> Гол
+                                    {% elif e.event_type.value|lower == 'own_goal' %} <span class="fs-5 text-danger">⚽</span> <span class="text-danger fw-bold">Автогол</span>
+                                    {% elif e.event_type.value|lower == 'penalty_goal' %} <span class="fs-5">⚽</span> Пенальти
+                                    {% elif e.event_type.value|upper == 'ASSIST' %} <span class="fs-5">🅰️</span> Пас
+                                    {% elif e.event_type.value|lower == 'yellow_card' %} <span class="fs-5">🟨</span> Желтая
+                                    {% elif e.event_type.value|lower == 'red_card' %} <span class="fs-5">🟥</span> Красная
+                                    {% else %} {{ e.event_type.value|upper }}{% endif %}
                                 </td>
                                 <td class="fw-bold">
                                     {{ e.player.last_name if e.player else '—' }} {{ e.player.first_name[0] if e.player else '' }}.
@@ -97,8 +95,6 @@
 
     <!-- Правая колонка: Формы -->
     <div class="col-md-5">
-
-        <!-- Добавление события -->
         <div class="card border-0 shadow-sm bg-light mb-4">
             <div class="card-body p-4">
                 <h6 class="fw-bold mb-3 text-uppercase text-primary">Добавить событие</h6>
@@ -109,6 +105,7 @@
                             <select name="event_type" class="form-select" required>
                                 <option value="GOAL">Гол</option>
                                 <option value="PENALTY_GOAL">Пенальти</option>
+                                <option value="OWN_GOAL">Автогол (в свои)</option> <!-- ДОБАВЛЕНО -->
                                 <option value="ASSIST">Голевой пас</option>
                                 <option value="YELLOW_CARD">Желтая карточка</option>
                                 <option value="RED_CARD">Красная карточка</option>
@@ -140,7 +137,6 @@
             </div>
         </div>
 
-        <!-- Завершение матча -->
         <div class="card border-0 shadow-sm bg-white">
             <div class="card-body p-4">
                 <h6 class="fw-bold mb-3 text-uppercase text-danger">Завершить матч</h6>
@@ -167,7 +163,6 @@
                 </form>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -186,6 +181,7 @@
                         <select name="event_type" class="form-select" id="edit-event-type" required>
                             <option value="GOAL">Гол</option>
                             <option value="PENALTY_GOAL">Пенальти</option>
+                            <option value="OWN_GOAL">Автогол (в свои)</option> <!-- ДОБАВЛЕНО -->
                             <option value="ASSIST">Голевой пас</option>
                             <option value="YELLOW_CARD">Желтая</option>
                             <option value="RED_CARD">Красная</option>
@@ -204,9 +200,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Игрок</label>
-                        <select name="player_id" class="form-select" id="edit-player" required>
-                            <!-- Сюда JS подставит нужных игроков -->
-                        </select>
+                        <select name="player_id" class="form-select" id="edit-player" required></select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Комментарий</label>
@@ -223,7 +217,6 @@
 </div>
 
 <script>
-// Фильтрация для формы добавления
 const teamSelect = document.getElementById("team-select");
 const playerSelect = document.getElementById("player-select");
 const allOptions = Array.from(playerSelect.querySelectorAll("option[data-team]"));
@@ -241,7 +234,6 @@ teamSelect.addEventListener("change", function() {
     }
 });
 
-// Заполнение модалки для редактирования
 const playersData = [
     {% for tp in home_players %}{ id: "{{ tp.player.id }}", name: "{{ tp.player.last_name }}", team: "{{ match.home_team_id }}" },{% endfor %}
     {% for tp in away_players %}{ id: "{{ tp.player.id }}", name: "{{ tp.player.last_name }}", team: "{{ match.away_team_id }}" },{% endfor %}
@@ -257,7 +249,6 @@ function fillEditModal(eventId, teamId, playerId, eventType, minute, comment) {
     const playerSelect = document.getElementById("edit-player");
 
     teamSelect.value = teamId;
-
     playerSelect.innerHTML = '';
     playersData.forEach(p => {
         if (p.team === teamId.toString()) {

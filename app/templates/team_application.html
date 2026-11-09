@@ -13,11 +13,13 @@
     .app-tabs .nav-link { border: none; color: #64748b; font-weight: 600; text-transform: uppercase; padding: 15px 30px; }
     .app-tabs .nav-link.active { color: #0f172a; border-bottom: 3px solid #0f172a; background: transparent; }
 
-    .roster-table th { font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 600; border-top: none; }
+    .roster-table th { font-size: 12px; text-transform: uppercase; color: #64748b; font-weight: 600; border-top: none; vertical-align: middle; }
     .roster-table td { vertical-align: middle; font-size: 14px; }
     .player-photo { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; background: #e2e8f0; display: flex; justify-content: center; align-items: center; }
 
-    .stat-badge { display: inline-block; width: 25px; text-align: center; }
+    /* Стили для сортируемых колонок */
+    .sortable-col { cursor: pointer; transition: background 0.2s; user-select: none; }
+    .sortable-col:hover { background: #e2e8f0; border-radius: 4px; }
 </style>
 
 <div class="container py-4" style="max-width: 1400px;">
@@ -66,18 +68,20 @@
                         <!-- Активные игроки -->
                         <div class="tab-pane fade show active" id="active" role="tabpanel">
                             <div class="table-responsive">
-                                <table class="table table-hover roster-table mb-0 text-center">
+                                <table class="table table-hover roster-table mb-0 text-center" id="rosterTable">
                                     <thead class="table-light">
                                         <tr>
                                             <th style="width: 50px;">#</th>
                                             <th class="text-start">Амплуа</th>
                                             <th class="text-start" colspan="2">Игрок</th>
                                             <th class="text-start">Дата рождения</th>
-                                            <th><i class="bi bi-dribbble" title="Игры"></i></th>
-                                            <th><i class="bi bi-circle-fill text-dark" style="font-size: 10px;" title="Голы"></i></th>
-                                            <th><i class="bi bi-hand-thumbs-up-fill text-primary" style="font-size: 10px;" title="Ассисты"></i></th>
-                                            <th><div class="d-inline-block bg-warning rounded" style="width: 10px; height: 14px;" title="ЖК"></div></th>
-                                            <th><div class="d-inline-block bg-danger rounded" style="width: 10px; height: 14px;" title="КК"></div></th>
+
+                                            <!-- Обновленные иконки с интерактивной сортировкой -->
+                                            <th class="sortable-col" onclick="sortTable(5)" title="Сортировать по играм"><i class="bi bi-check2-square fs-5"></i></th>
+                                            <th class="sortable-col" onclick="sortTable(6)" title="Сортировать по голам"><i class="bi bi-circle-fill text-dark" style="font-size: 12px;"></i></th>
+                                            <th class="sortable-col" onclick="sortTable(7)" title="Сортировать по передачам"><i class="bi bi-hand-thumbs-up-fill text-primary fs-6"></i></th>
+                                            <th class="sortable-col" onclick="sortTable(8)" title="Сортировать по ЖК"><div class="d-inline-block bg-warning rounded" style="width: 10px; height: 15px;"></div></th>
+                                            <th class="sortable-col" onclick="sortTable(9)" title="Сортировать по КК"><div class="d-inline-block bg-danger rounded" style="width: 10px; height: 15px;"></div></th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -99,12 +103,13 @@
                                             <td class="text-start text-muted small">
                                                 {{ p.player.date_of_birth.strftime('%d.%m.%Y') if p.player.date_of_birth else '-' }}
                                             </td>
-                                            <!-- Заглушки для статистики, если ее нет в БД -->
-                                            <td>{{ p.player.stats_games|default(0) }}</td>
-                                            <td>{{ p.player.stats_goals|default(0) }}</td>
-                                            <td>0</td>
-                                            <td class="text-warning fw-bold">0</td>
-                                            <td class="text-danger fw-bold">0</td>
+
+                                            <!-- Статистика -->
+                                            <td class="fw-bold">{{ p.stats_games or 0 }}</td>
+                                            <td class="fw-bold">{{ p.stats_goals or 0 }}</td>
+                                            <td class="text-primary fw-bold">{{ p.stats_assists or 0 }}</td>
+                                            <td class="text-warning fw-bold">{{ p.stats_yellow_cards or 0 }}</td>
+                                            <td class="text-danger fw-bold">{{ p.stats_red_cards or 0 }}</td>
                                         </tr>
                                         {% else %}
                                         <tr><td colspan="10" class="text-center py-5 text-muted">Нет заявленных игроков</td></tr>
@@ -185,4 +190,53 @@
         </div>
     </div>
 </div>
+
+<!-- СКРИПТ ДЛЯ ИНТЕРАКТИВНОЙ СОРТИРОВКИ -->
+<script>
+    let sortDirections = {};
+
+    function sortTable(columnIndex) {
+        const table = document.getElementById("rosterTable");
+        const tbody = table.querySelector("tbody");
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+
+        // Если в таблице нет игроков, ничего не делаем
+        if (rows.length === 0 || rows[0].children.length === 1) return;
+
+        // Определяем направление сортировки (по умолчанию по убыванию)
+        sortDirections[columnIndex] = sortDirections[columnIndex] === 'desc' ? 'asc' : 'desc';
+        const isDescending = sortDirections[columnIndex] === 'desc';
+
+        // Сортируем строки
+        rows.sort((rowA, rowB) => {
+            // Берем текст из нужной ячейки и убираем пробелы
+            const cellA = rowA.children[columnIndex].innerText.trim();
+            const cellB = rowB.children[columnIndex].innerText.trim();
+
+            // Преобразуем в числа для правильной сортировки (чтобы 10 было больше 2)
+            const valA = parseInt(cellA) || 0;
+            const valB = parseInt(cellB) || 0;
+
+            if (valA < valB) return isDescending ? 1 : -1;
+            if (valA > valB) return isDescending ? -1 : 1;
+            return 0;
+        });
+
+        // Очищаем таблицу и вставляем отсортированные строки
+        tbody.innerHTML = "";
+        rows.forEach(row => tbody.appendChild(row));
+
+        // Визуальный эффект: добавляем стрелочку к заголовку
+        const headers = table.querySelectorAll("thead th");
+        headers.forEach((th, idx) => {
+            // Убираем стрелки у всех остальных
+            th.innerHTML = th.innerHTML.replace(/ [↑↓]/g, '');
+            th.style.color = "";
+            if (idx === columnIndex) {
+                th.innerHTML += isDescending ? ' ↓' : ' ↑';
+                th.style.color = "#0d6efd"; // Красим активную колонку в синий
+            }
+        });
+    }
+</script>
 {% endblock %}

@@ -24,6 +24,7 @@ class CRUDMatch(CRUDBase[Match, MatchCreate, MatchUpdate]):
         stmt = (
             select(Match)
             .where(Match.tournament_id == tournament_id)
+            .options(selectinload(Match.home_team), selectinload(Match.away_team))
             .order_by(Match.match_date)
         )
         result = await db.execute(stmt)
@@ -35,6 +36,7 @@ class CRUDMatch(CRUDBase[Match, MatchCreate, MatchUpdate]):
         stmt = (
             select(Match)
             .where(Match.status == MatchStatus.SCHEDULED)
+            .options(selectinload(Match.home_team), selectinload(Match.away_team))
             .order_by(Match.match_date)
             .limit(limit)
         )

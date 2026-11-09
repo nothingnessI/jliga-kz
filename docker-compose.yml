@@ -28,6 +28,8 @@ services:
     volumes:
       # ВАЖНО: Сохраняем загруженные картинки на реальном диске, чтобы они не пропадали
       - ./app/static/uploads:/app/app/static/uploads
+      - ./tests:/app/tests
+      - ./pytest.ini:/app/pytest.ini
 
 volumes:
   postgres_data:

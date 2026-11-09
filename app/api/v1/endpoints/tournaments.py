@@ -104,7 +104,7 @@ async def generate_calendar(
             tournament_id=tournament_id,
             home_team_id=home_id,
             away_team_id=away_id,
-            status="SCHEDULED"
+            status="scheduled"
         )
         match = await crud_match.create(db, obj_in=match_in)
         created_matches.append(match)

@@ -31,7 +31,7 @@ async def create_match(
         raise HTTPException(status_code=400, detail="Команда не может играть сама с собой")
     return await crud_match.create(db, obj_in=match_in)
 
-router.post("/{match_id}/events", response_model=MatchEventRead)
+@router.post("/{match_id}/events", response_model=MatchEventRead)
 async def add_match_event(
     match_id: int,
     event_in: MatchEventCreate,

@@ -20,7 +20,7 @@ class Tournament(Base, TimestampMixin):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False, index=True)
-    description: Mapped[str] = mapped_column(String(500), nullable=True, index=True)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True, index=True)
     start_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     end_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     division: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
@@ -32,7 +32,7 @@ class Tournament(Base, TimestampMixin):
         nullable=False,
     )
     max_teams: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
-    logo_url: Mapped[str | None] = mapped_column(String(500), nullable=False, index=True)
+    logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True, index=True)
     tournament_format: Mapped[TournamentFormat | None] = mapped_column(
         Enum(TournamentFormat)
     )
