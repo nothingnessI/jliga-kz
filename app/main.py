@@ -19,10 +19,13 @@ app = FastAPI(
 # Настройка CORS (чтобы фронтенд мог делать запросы)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # В продакшене заменить на ["https://jliga.kz"]
+    allow_origins=[
+        "https://jliga.kz",
+        "https://www.jliga.kz",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Подключаем папку со статикой (картинки, css, js)

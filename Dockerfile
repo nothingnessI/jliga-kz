@@ -4,7 +4,7 @@ FROM python:3.12-slim
 # Устанавливаем рабочую директорию
 WORKDIR /app
 
-# Устанавливаем системные зависимости для работы с Postgres и компиляции пакетов
+# Устанавливаем системные зависимости (включая те, что нужны Playwright)
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
@@ -13,6 +13,8 @@ RUN apt-get update && apt-get install -y \
 # Копируем зависимости и устанавливаем их
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+
+# ВАЖНО: Устанавливаем браузер Chromium для Playwright (для генерации карточек)
 RUN playwright install --with-deps chromium
 
 # Копируем весь проект

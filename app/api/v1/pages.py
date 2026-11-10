@@ -1075,7 +1075,7 @@ async def web_login(
         request: Request,
         username: str = Form(...),
         password: str = Form(...),
-        db: AsyncSession = Depends(get_db)
+        db: AsyncSession = Depends(get_db),
 ):
     user = await crud_user.get_by_email(db, email=username)
 
@@ -1084,7 +1084,20 @@ async def web_login(
 
     access_token = create_access_token(subject=user.email)
     response = RedirectResponse(url="/admin", status_code=303)
-    response.set_cookie(key="access_token", value=access_token, httponly=True, max_age=60 * 60 * 24 * 7)
+
+    # Определяем, HTTPS ли соединение (на localhost будет False, на проде — True)
+    is_secure = request.url.scheme == "https"
+
+    # Устанавливаем cookie с защитой от CSRF (samesite) и XSS (httponly)
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        samesite="lax",
+        secure=is_secure,
+        max_age=60 * 60 * 24 * 7,
+    )
+
     return response
 
 
