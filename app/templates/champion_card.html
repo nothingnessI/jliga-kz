@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', 'Roboto', Arial, sans-serif; }
+        body { background: #000; }
+
+        .card {
+            width: 1400px;
+            height: 1000px;
+            position: relative;
+            overflow: hidden;
+            /* AI-фон подставляется через inline-style */
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* Затемнение поверх фона, чтобы текст читался */
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg,
+                rgba(10, 20, 40, 0.85) 0%,
+                rgba(10, 20, 40, 0.65) 50%,
+                rgba(10, 20, 40, 0.85) 100%);
+        }
+
+        .content {
+            position: relative;
+            z-index: 2;
+            padding: 60px 70px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            color: #fff;
+        }
+
+        /* Заголовок турнира */
+        .tournament {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .tournament-name {
+            font-size: 38px;
+            font-weight: 800;
+            color: #ffd700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 2px 15px rgba(255, 215, 0, 0.5);
+            margin-bottom: 8px;
+        }
+        .season {
+            font-size: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            letter-spacing: 2px;
+        }
+
+        /* Блок чемпиона */
+        .champion {
+            text-align: center;
+            margin-bottom: 35px;
+            padding: 25px;
+            background: rgba(255, 215, 0, 0.08);
+            border: 2px solid rgba(255, 215, 0, 0.5);
+            border-radius: 16px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+        .champion-logo {
+            width: 130px;
+            height: 130px;
+            object-fit: contain;
+            background: #fff;
+            border-radius: 50%;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 40px rgba(255, 215, 0, 0.6);
+        }
+        .champion-name {
+            font-size: 46px;
+            font-weight: 800;
+            color: #ffd700;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
+        }
+        .champion-sub {
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.9);
+            margin-top: 8px;
+            letter-spacing: 4px;
+            font-weight: 600;
+        }
+
+        /* Таблица */
+        .table-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            padding-left: 15px;
+            border-left: 5px solid #ffd700;
+            letter-spacing: 2px;
+        }
+        .standings {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            overflow: hidden;
+            flex: 1;
+        }
+        .standings th {
+            background: rgba(255, 215, 0, 0.25);
+            padding: 14px 12px;
+            font-size: 14px;
+            text-transform: uppercase;
+            color: #ffd700;
+            text-align: center;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .standings td {
+            padding: 12px;
+            text-align: center;
+            font-size: 17px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .standings tr:last-child td { border-bottom: none; }
+        .standings .team-name {
+            text-align: left;
+            font-weight: 700;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .standings .team-logo {
+            width: 30px;
+            height: 30px;
+            object-fit: contain;
+            background: #fff;
+            border-radius: 50%;
+            padding: 3px;
+            flex-shrink: 0;
+        }
+        .standings .rank { font-weight: 800; font-size: 18px; }
+        .standings .points { color: #ffd700; font-weight: 800; font-size: 18px; }
+
+        .rank-1 { background: rgba(255, 215, 0, 0.15) !important; }
+        .rank-1 .rank { color: #ffd700; }
+        .rank-2 { background: rgba(192, 192, 192, 0.08); }
+        .rank-3 { background: rgba(205, 127, 50, 0.08); }
+
+        /* Бомбардир */
+        .scorer {
+            margin-top: 20px;
+            text-align: center;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            font-size: 18px;
+            color: rgba(255, 255, 255, 0.95);
+        }
+        .scorer b { color: #ffd700; }
+
+        /* Футер */
+        .footer {
+            text-align: center;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card" style="background-image: url('{{ background_url }}');">
+        <div class="overlay"></div>
+        <div class="content">
+
+            <div class="tournament">
+                <div class="tournament-name">{{ tournament.name }}</div>
+                <div class="season">Сезон {{ tournament.season }}</div>
+            </div>
+
+            <div class="champion">
+                {% if champion.logo_url %}
+                    <img src="{{ champion.logo_url }}" class="champion-logo" alt="">
+                {% endif %}
+                <div class="champion-name">🏆 {{ champion.name }}</div>
+                <div class="champion-sub">ЧЕМПИОН ТУРНИРА</div>
+            </div>
+
+            <div class="table-title">Итоговая таблица</div>
+            <table class="standings">
+                <thead>
+                    <tr>
+                        <th style="width: 60px;">#</th>
+                        <th>Команда</th>
+                        <th style="width: 60px;">И</th>
+                        <th style="width: 60px;">В</th>
+                        <th style="width: 60px;">Н</th>
+                        <th style="width: 60px;">П</th>
+                        <th style="width: 100px;">Голы</th>
+                        <th style="width: 70px;">О</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in standings %}
+                    <tr class="{% if loop.index == 1 %}rank-1{% elif loop.index == 2 %}rank-2{% elif loop.index == 3 %}rank-3{% endif %}">
+                        <td class="rank">{{ loop.index }}</td>
+                        <td class="team-name">
+                            {% if s.team.logo_url %}
+                                <img src="{{ s.team.logo_url }}" class="team-logo" alt="">
+                            {% endif %}
+                            {{ s.team.name }}
+                        </td>
+                        <td>{{ s.games_played }}</td>
+                        <td>{{ s.wins }}</td>
+                        <td>{{ s.draws }}</td>
+                        <td>{{ s.losses }}</td>
+                        <td>{{ s.goals_for }}:{{ s.goals_against }}</td>
+                        <td class="points">{{ s.points }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if top_scorer %}
+            <div class="scorer">
+                ⚽ Лучший бомбардир: <b>{{ top_scorer.name }}</b> — {{ top_scorer.goals }} гол{{ 'ов' if top_scorer.goals != 1 else '' }}
+            </div>
+            {% endif %}
+
+            <div class="footer">J-LIGA.KZ · {{ tournament.name }} · {{ tournament.season }}</div>
+        </div>
+    </div>
+</body>
+</html>

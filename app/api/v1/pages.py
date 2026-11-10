@@ -10,6 +10,7 @@ from jose import jwt, JWTError
 from app.db.session import get_db
 from app.core.security import create_access_token, verify_password, ALGORITHM
 from app.core.config import settings
+from app.services.champion_card import generate_champion_card
 
 
 from app.models.news import News
@@ -1401,7 +1402,8 @@ async def admin_tournament_edit(
     await crud_tournament.update(db, db_obj=tournament, obj_in=tournament_in)
 
     # =========================================================================
-    # ЛОГИКА АВТОМАТИЧЕСКОГО СОЗДАНИЯ НОВОСТИ О ЧЕМПИОНЕ
+    # АВТОМАТИЧЕСКОЕ СОЗДАНИЕ НОВОСТИ О ЧЕМПИОНЕ + AI-КАРТОЧКИ
+    # Срабатывает только если статус стал FINISHED и новости ещё нет
     # =========================================================================
     if status == TournamentStatus.FINISHED:
         # 1. Проверяем, нет ли уже новости о чемпионе
@@ -1409,24 +1411,48 @@ async def admin_tournament_edit(
             select(News).where(News.tournament_id == tournament_id, News.title.ilike("%Чемпион%"))
         )
         if not existing_news:
-            # 2. Берем первую команду из таблицы
+            # 2. Берем победителя (очки → разница мячей → забитые)
             stmt = select(TournamentStanding).where(
                 TournamentStanding.tournament_id == tournament_id
             ).options(selectinload(TournamentStanding.team)).order_by(
-                TournamentStanding.points.desc(), TournamentStanding.goals_for.desc()
+                TournamentStanding.points.desc(),
+                (TournamentStanding.goals_for - TournamentStanding.goals_against).desc(),
+                TournamentStanding.goals_for.desc()
             ).limit(1)
             winner_standing = (await db.execute(stmt)).scalar_one_or_none()
 
             if winner_standing and winner_standing.team:
                 winner_team = winner_standing.team
 
-                # 3. Создаем заголовок и контент
+                # ─── 3. Генерируем AI-карточку чемпиона (не критично если упадёт) ───
+                card_url = None
+                try:
+                    from app.services.champion_card import generate_champion_card
+                    card_url = await generate_champion_card(db, tournament_id, prompt_index=0)
+                    print(f"  🎨 AI-карточка сгенерирована: {card_url}")
+                except Exception as e:
+                    # Не роняем весь запрос — просто создаём новость без карточки
+                    print(f"  ⚠️ AI-карточка не сгенерирована: {e}")
+
+                # ─── 4. Формируем заголовок, слаг и контент ───
                 news_title = f"{winner_team.name} - Чемпион {tournament.name}"
-                # Очищаем слаг от кириллицы, оставляем только английские буквы и дефисы
+
                 import re
                 slug = re.sub(r'[^a-z0-9]+', '-', news_title.lower()).strip('-')
                 if not slug:
                     slug = f"champion-{tournament_id}-{int(datetime.now().timestamp())}"
+
+                # Если AI-карточка есть — используем её как обложку новости
+                hero_image = card_url or winner_team.logo_url or '/static/default_team.png'
+
+                # Дополнительный блок с большой карточкой в теле новости
+                card_block = ''
+                if card_url:
+                    card_block = f'''
+                    <div class="text-center mt-4">
+                        <img src="{card_url}" style="max-width: 100%; border-radius: 12px;" class="shadow">
+                    </div>
+                    '''
 
                 news_content = f"""
                 <div class="text-center mb-4">
@@ -1437,13 +1463,15 @@ async def admin_tournament_edit(
                 <div class="alert alert-success text-center">
                     <h4 class="mb-0">Очки: {winner_standing.points} | Победы: {winner_standing.wins} | Забито: {winner_standing.goals_for}</h4>
                 </div>
+                {card_block}
                 """
 
-                # 4. Создаем новость
+                # ─── 5. Создаём новость с карточкой как image_url ───
                 new_news = News(
                     title=news_title,
                     slug=slug,
                     content=news_content,
+                    image_url=hero_image,  # ← AI-карточка как обложка
                     published_at=datetime.now(timezone.utc),
                     is_published=True,
                     tournament_id=tournament_id
@@ -1451,10 +1479,11 @@ async def admin_tournament_edit(
                 new_news.teams.append(winner_team)
                 db.add(new_news)
                 await db.commit()
-                print(f"  ✅ Автоматически создана новость о чемпионе: {news_title}")
+                print(f"  ✅ Создана новость о чемпионе: {news_title}")
     # =========================================================================
 
     return RedirectResponse(url="/admin/tournaments", status_code=303)
+
 
 @router.post("/admin/tournaments/{tournament_id}/delete")
 async def admin_tournament_delete(tournament_id: int, request: Request, db: AsyncSession = Depends(get_db)):
@@ -2863,3 +2892,25 @@ async def participants_hall_page(request: Request, db: AsyncSession = Depends(ge
         "players_goals": top_players_goals,
         "players_assists": top_players_assists,
     })
+
+
+@router.post("/admin/tournaments/{tournament_id}/generate-card")
+async def admin_generate_champion_card(
+    tournament_id: int,
+    request: Request,
+    prompt_index: int = Form(0),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse):
+        return user
+
+    try:
+        image_url = await generate_champion_card(db, tournament_id, prompt_index)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка генерации: {e}")
+
+    return RedirectResponse(
+        url=f"/admin/tournaments/{tournament_id}/edit?card_url={image_url}",
+        status_code=303,
+    )

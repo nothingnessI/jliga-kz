@@ -30,6 +30,8 @@ from app.models.team_player import TeamPlayer
 from app.models.tournament import Tournament
 from app.models.tournament_standing import TournamentStanding
 from app.models.tournament_team import TournamentTeam
+from pathlib import Path
+
 
 ADMIN_EMAIL = "admin@example.com"
 ADMIN_PASSWORD = "adminpass123"
@@ -788,3 +790,31 @@ async def test_regression_no_duplicate_events_route():
     src = inspect.getsource(pages)
     marker = '"/admin/matches/{match_id}/events/add"'
     assert src.count(marker) <= 1, "Дубликат роута events/add в pages.py"
+
+
+@pytest.mark.asyncio
+async def test_champion_card_generated(admin_client, db, seed_basic):
+    from app.services.champion_card import generate_champion_card
+    from app.models.tournament_standing import TournamentStanding
+
+    t = seed_basic["tournament"]
+
+    # Заполняем таблицу
+    for i, team in enumerate(seed_basic["teams"]):
+        db.add(TournamentStanding(
+            tournament_id=t.id, team_id=team.id,
+            games_played=3, wins=3 - i, draws=0, losses=i,
+            goals_for=10 - i, goals_against=i,
+            points=(3 - i) * 3,
+        ))
+    await db.commit()
+
+    url = await generate_champion_card(db, t.id, prompt_index=0)
+    assert url.startswith("/static/uploads/champions/")
+    assert url.endswith(".png")
+
+    # Файл создан и весит достаточно
+    from app.services.champion_card import UPLOAD_DIR
+    file_path = UPLOAD_DIR / Path(url).name
+    assert file_path.exists()
+    assert file_path.stat().st_size > 20_000  # карточка 1400x1000 весит > 20КБ
