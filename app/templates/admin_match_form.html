@@ -10,6 +10,8 @@
     <div class="card-body p-4">
         <form action="/admin/matches/{% if match %}{{ match.id }}/edit{% else %}create{% endif %}" method="post">
             <div class="row g-3">
+
+                <!-- ТУРНИР И ДАТА -->
                 <div class="col-md-6">
                     <label class="form-label text-muted small fw-bold text-uppercase">Турнир *</label>
                     <select name="tournament_id" class="form-select" required>
@@ -25,6 +27,7 @@
                     <input type="datetime-local" name="match_date" class="form-control" value="{{ match.match_date.strftime('%Y-%m-%dT%H:%M') if match and match.match_date else '' }}">
                 </div>
 
+                <!-- КОМАНДЫ -->
                 <div class="col-md-5">
                     <label class="form-label text-muted small fw-bold text-uppercase">Домашняя команда *</label>
                     <select name="home_team_id" class="form-select" required>
@@ -49,10 +52,10 @@
                     </select>
                 </div>
 
+                <!-- СТАДИОН, ТУР, СТАТУС -->
                 <div class="col-md-4">
                     <label class="form-label text-muted small fw-bold text-uppercase">Стадион</label>
                     <input type="text" name="stadium" class="form-control" list="stadium-list" value="{{ match.stadium if match and match.stadium else '' }}">
-                    <!-- Автодополнение для стадионов -->
                     <datalist id="stadium-list">
                         {% for s in stadiums %}
                             <option value="{{ s.name }}">
@@ -62,7 +65,7 @@
 
                 <div class="col-md-4">
                     <label class="form-label text-muted small fw-bold text-uppercase">Тур (раунд)</label>
-                    <input type="number" name="round" class="form-control" value="{{ match.round if match and match.round else '' }}">
+                    <input type="number" name="round" class="form-control" placeholder="Для чемпионатов" value="{{ match.round if match and match.round else '' }}">
                 </div>
 
                 <div class="col-md-4">
@@ -74,7 +77,27 @@
                     </select>
                 </div>
 
-                <!-- Блок счета показываем только при редактировании -->
+                <!-- ЕДИНЫЙ БЛОК ПЛЕЙ-ОФФ -->
+                <div class="col-12 mt-4 pt-3 border-top">
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-diagram-3 me-2"></i> Стадия плей-офф (Сетка)</h6>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Выберите стадию</label>
+                            <select name="playoff_stage" class="form-select">
+                                <option value="">Не выбрано (Групповой этап / Чемпионат)</option>
+                                <option value="PLAYOFF|1|1/8 Финала" {% if match and match.stage and match.stage.value == 'PLAYOFF' and match.round == 1 %}selected{% endif %}>1/8 Финала</option>
+                                <option value="PLAYOFF|2|1/4 Финала" {% if match and match.stage and match.stage.value == 'PLAYOFF' and match.round == 2 %}selected{% endif %}>1/4 Финала (Четвертьфинал)</option>
+                                <option value="PLAYOFF|3|1/2 Финала" {% if match and match.stage and match.stage.value == 'PLAYOFF' and match.round == 3 %}selected{% endif %}>1/2 Финала (Полуфинал)</option>
+                                <option value="FINAL|4|Финал" {% if match and match.stage and match.stage.value == 'FINAL' %}selected{% endif %}>Финал</option>
+                                <option value="PLAYOFF|5|Матч за 3-е место" {% if match and match.stage and match.stage.value == 'PLAYOFF' and match.round == 5 %}selected{% endif %}>Матч за 3-е место</option>
+                            </select>
+                            <small class="text-muted">Выбор этого пункта автоматически распределит матч в нужную колонку сетки.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- СЧЕТ -->
                 {% if match %}
                 <div class="col-md-6 mt-4">
                     <label class="form-label text-muted small fw-bold text-uppercase">Голы хозяев</label>

@@ -1,6 +1,10 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
+<!-- Подключаем Tom Select для умного поиска игроков -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h4 class="fw-bold m-0">Заявка команды: {{ team.name }}</h4>
@@ -90,8 +94,9 @@
                     <input type="hidden" name="tournament_id" value="{{ selected_tournament_id }}">
 
                     <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">ИГРОК</label>
-                        <select name="player_id" class="form-select" required>
+                        <label class="form-label text-muted small fw-bold">ИГРОК (начните печатать фамилию)</label>
+                        <!-- Добавили id="player-select" для скрипта -->
+                        <select name="player_id" id="player-select" class="form-select" required>
                             <option value="">Выберите...</option>
                             {% for p in all_players %}
                                 <option value="{{ p.id }}">{{ p.last_name }} {{ p.first_name }}</option>
@@ -152,15 +157,26 @@
 </div>
 
 <script>
+// Логика для модального окна редактирования
 function fillRosterModal(id, number, isCaptain, isActive) {
-    // Устанавливаем URL для формы
     document.getElementById("editRosterForm").action = `/admin/roster/${id}/edit`;
-
-    // Заполняем поля
     document.getElementById("modal-jersey-number").value = number;
     document.getElementById("modal-is-captain").checked = isCaptain;
     document.getElementById("modal-is-active").checked = isActive;
 }
+
+// Инициализация умного поиска Tom Select
+document.addEventListener("DOMContentLoaded", function() {
+    new TomSelect("#player-select", {
+        create: false, // Запрещаем создавать новых игроков
+        sortField: {
+            field: "text",
+            direction: "asc"
+        },
+        placeholder: "Введите фамилию или имя...",
+        maxOptions: 50 // Показываем только первые 50 совпадений, чтобы браузер не зависал
+    });
+});
 </script>
 {% endif %}
 {% endblock %}
