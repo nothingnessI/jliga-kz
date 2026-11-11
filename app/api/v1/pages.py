@@ -2960,3 +2960,70 @@ async def admin_generate_champion_card(
         url=f"/admin/tournaments/{tournament_id}/edit?card_url={image_url}",
         status_code=303,
     )
+
+
+@router.post("/admin/teams/merge")
+async def admin_teams_merge(
+        request: Request,
+        source_id: int = Form(...),
+        target_id: int = Form(...),
+        db: AsyncSession = Depends(get_db)
+):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    if source_id == target_id:
+        raise HTTPException(status_code=400, detail="Нельзя объединить команду саму с собой")
+
+    # 1. Переносим матчи (домашние и гостевые)
+    await db.execute(update(Match).where(Match.home_team_id == source_id).values(home_team_id=target_id))
+    await db.execute(update(Match).where(Match.away_team_id == source_id).values(away_team_id=target_id))
+
+    # 2. Переносим события (голы, карточки)
+    await db.execute(update(MatchEvent).where(MatchEvent.team_id == source_id).values(team_id=target_id))
+
+    # 3. Переносим дисквалификации
+    await db.execute(update(Disqualification).where(Disqualification.team_id == source_id).values(team_id=target_id))
+
+    # 4. Переносим заявки игроков (с защитой от дублей)
+    source_tps = (await db.execute(select(TeamPlayer).where(TeamPlayer.team_id == source_id))).scalars().all()
+    for tp in source_tps:
+        existing = await db.scalar(select(TeamPlayer.id).where(
+            TeamPlayer.player_id == tp.player_id,
+            TeamPlayer.team_id == target_id,
+            TeamPlayer.tournament_id == tp.tournament_id
+        ))
+        if existing:
+            await db.delete(tp)  # Если игрок уже есть в целевой команде, удаляем дубль
+        else:
+            tp.team_id = target_id
+
+    # 5. Переносим участие в турнирах
+    source_tts = (await db.execute(select(TournamentTeam).where(TournamentTeam.team_id == source_id))).scalars().all()
+    affected_tournaments = set()
+
+    for tt in source_tts:
+        affected_tournaments.add(tt.tournament_id)
+        existing = await db.scalar(select(TournamentTeam.id).where(
+            TournamentTeam.tournament_id == tt.tournament_id,
+            TournamentTeam.team_id == target_id
+        ))
+        if existing:
+            await db.delete(tt)
+        else:
+            tt.team_id = target_id
+
+    # 6. Удаляем старую таблицу (она пересчитается автоматически)
+    await db.execute(delete(TournamentStanding).where(TournamentStanding.team_id == source_id))
+
+    # 7. УДАЛЯЕМ САМУ КОМАНДУ ИЗ БД
+    await db.execute(delete(Team).where(Team.id == source_id))
+
+    await db.commit()
+
+    # 8. Пересчитываем таблицы во всех затронутых турнирах
+    from app.services.stats_recalc import StatsRecalculator
+    for t_id in affected_tournaments:
+        await StatsRecalculator.recalculate_all(db, t_id)
+
+    return RedirectResponse(url="/admin/teams", status_code=303)

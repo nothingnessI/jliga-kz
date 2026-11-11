@@ -221,3 +221,6 @@ __marimo__/
 
 .env.prod
 .env.local
+*.dump
+*.sql
+*.backup
