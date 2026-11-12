@@ -1,0 +1,54 @@
+{
+    "home_team": "STALCONS.KZ",
+    "away_team": "INTERNAZIONAL",
+    "score": "",
+    "date": "19 апреля",
+    "time": "19:20",
+    "stadium": "AKAS ARENA",
+    "tournament": "SEGUNDA. APERTURA",
+    "round": "1 тур",
+    "events": [
+        {
+            "minute": 8,
+            "type": "OWN_GOAL",
+            "team": "HOME",
+            "player_name": "Ibragimov Barzani",
+            "player_id": 2012295
+        },
+        {
+            "minute": 17,
+            "type": "GOAL",
+            "team": "HOME",
+            "player_name": "Shermukhanbet Danial",
+            "player_id": 10354648
+        },
+        {
+            "minute": 28,
+            "type": "GOAL",
+            "team": "AWAY",
+            "player_name": "Ualikhan Aydin",
+            "player_id": 4953626
+        },
+        {
+            "minute": 31,
+            "type": "GOAL",
+            "team": "HOME",
+            "player_name": "Sabirzhanov Bilal",
+            "player_id": 2921852
+        },
+        {
+            "minute": 52,
+            "type": "YELLOW_CARD",
+            "team": "AWAY",
+            "player_name": "Chatuev Talabani",
+            "player_id": 2012291
+        },
+        {
+            "minute": 63,
+            "type": "YELLOW_CARD",
+            "team": "HOME",
+            "player_name": "Nwachukwu Simeon",
+            "player_id": 10354640
+        }
+    ]
+}
