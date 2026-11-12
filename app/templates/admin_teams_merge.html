@@ -1,0 +1,208 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<!-- Подключаем библиотеку Tom Select для поиска с подсказками -->
+<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold m-0">
+        <i class="bi bi-arrow-left-right me-2"></i>Объединение команд
+    </h4>
+    <a href="/admin/teams" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Назад к командам
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Левая колонка: Форма и предпросмотр -->
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+
+                <div class="alert alert-warning border-warning shadow-sm mb-4">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    <strong>Внимание!</strong> Операция необратима.
+                    Команда-источник будет <u>удалена</u>, а все её данные
+                    (матчи, голы, карточки, трофеи, заявки, тренеры, новости)
+                    перейдут к целевой команде. Турнирные таблицы пересчитаются автоматически.
+                </div>
+
+                <!-- Форма выбора команд (GET) -->
+                <form method="get" action="/admin/teams/merge" class="mb-5">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold text-danger">Команда-источник (дубль)</label>
+                            <select name="source_id" id="source_team" required>
+                                <option value="">— Начните вводить название —</option>
+                                {% for t in teams %}
+                                    <option value="{{ t.id }}" {% if selected_source == t.id %}selected{% endif %}>
+                                        {{ t.name }}{% if t.city %} · {{ t.city }}{% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-2 text-center pb-2 d-none d-md-block">
+                            <i class="bi bi-arrow-right fs-3 text-muted"></i>
+                        </div>
+
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold text-success">Целевая команда (останется)</label>
+                            <select name="target_id" id="target_team" required>
+                                <option value="">— Начните вводить название —</option>
+                                {% for t in teams %}
+                                    <option value="{{ t.id }}" {% if selected_target == t.id %}selected{% endif %}>
+                                        {{ t.name }}{% if t.city %} · {{ t.city }}{% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary px-4 fw-bold">
+                            <i class="bi bi-search me-1"></i>Предпросмотр
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Блок предпросмотра (появляется после выбора) -->
+                {% if preview %}
+                <hr class="my-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Будет перенесено</h5>
+
+                <div class="card bg-light border-0 mb-4">
+                    <div class="card-body">
+                        <div class="row text-center g-3 mb-4">
+                            <div class="col-md-3 col-6">
+                                <div class="fs-3 fw-bold text-primary">{{ preview.matches }}</div>
+                                <div class="small text-muted text-uppercase fw-bold">Матчей</div>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <div class="fs-3 fw-bold text-success">{{ preview.tournaments }}</div>
+                                <div class="small text-muted text-uppercase fw-bold">Турниров</div>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <div class="fs-3 fw-bold text-warning">{{ preview.events }}</div>
+                                <div class="small text-muted text-uppercase fw-bold">Событий (голы/карточки)</div>
+                            </div>
+                            <div class="col-md-3 col-6">
+                                <div class="fs-3 fw-bold text-info">{{ preview.players }}</div>
+                                <div class="small text-muted text-uppercase fw-bold">Заявок игроков</div>
+                            </div>
+                        </div>
+
+                        {% if preview.news %}
+                        <div class="text-center text-muted small mb-3">
+                            <i class="bi bi-newspaper me-1"></i>Новостей с привязкой к команде: <strong>{{ preview.news }}</strong>
+                        </div>
+                        {% endif %}
+
+                        <hr>
+                        <div class="d-flex justify-content-center align-items-center gap-3">
+                            <span class="badge bg-danger fs-6 py-2 px-3">{{ preview.source.name }}</span>
+                            <i class="bi bi-arrow-right fs-4 text-muted"></i>
+                            <span class="badge bg-success fs-6 py-2 px-3">{{ preview.target.name }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Скрытая форма для отправки POST-запроса -->
+                <form id="mergeForm" method="post" action="/admin/teams/merge">
+                    <input type="hidden" name="source_id" value="{{ preview.source.id }}">
+                    <input type="hidden" name="target_id" value="{{ preview.target.id }}">
+
+                    <!-- Кнопка, открывающая модальное окно -->
+                    <div class="text-center mt-4">
+                        <button type="button" class="btn btn-danger btn-lg px-5" data-bs-toggle="modal" data-bs-target="#confirmMergeModal">
+                            <i class="bi bi-arrow-left-right me-2"></i>Запустить объединение
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Модальное окно подтверждения -->
+                <div class="modal fade" id="confirmMergeModal" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-lg">
+                        <div class="modal-content border-0 shadow-lg">
+                            <div class="modal-header bg-danger text-white border-0">
+                                <h5 class="modal-title fw-bold">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Подтверждение слияния
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
+                            </div>
+                            <div class="modal-body p-5 text-center">
+                                <p class="fs-5 mb-4 text-dark">Вы уверены, что хотите объединить эти команды?</p>
+
+                                <div class="d-flex justify-content-center align-items-center gap-4 mb-4">
+                                    <span class="badge bg-danger fs-5 py-3 px-4 border border-danger shadow-sm">{{ preview.source.name }}</span>
+                                    <i class="bi bi-arrow-right fs-3 text-muted"></i>
+                                    <span class="badge bg-success fs-5 py-3 px-4 border border-success shadow-sm">{{ preview.target.name }}</span>
+                                </div>
+
+                                <div class="alert alert-warning text-start mb-0">
+                                    <strong>Обратите внимание!</strong> Команда «{{ preview.source.name }}» будет <u>удалена из базы навсегда</u>. Все её матчи, голы, заявки игроков и новости перейдут к команде «{{ preview.target.name }}». Отменить это действие будет невозможно.
+                                </div>
+                            </div>
+                            <div class="modal-footer border-0 justify-content-center pb-4 pt-0">
+                                <button type="button" class="btn btn-outline-secondary px-4 fw-bold" data-bs-dismiss="modal">Отмена</button>
+                                <button type="submit" form="mergeForm" class="btn btn-danger px-4 fw-bold">Да, объединить команды</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая колонка: Справка -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-body">
+                <h6 class="fw-bold mb-3 text-uppercase text-muted">Что переносится</h6>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Матчи (домашние и гостевые)</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Голы, передачи, карточки</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Победы и очки (пересчёт таблиц)</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Участие в турнирах</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Заявки игроков (статистика суммируется)</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Дисквалификации</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Тренеров</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Капитанов</li>
+                    <li><i class="bi bi-check-circle-fill text-success me-2"></i>Привязку новостей</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="alert alert-info border-info shadow-sm">
+            <h6 class="fw-bold mb-2"><i class="bi bi-lightbulb me-2"></i>Совет</h6>
+            <p class="mb-0 small">
+                Перед объединением убедитесь, что у <strong>целевой</strong> команды (зеленая) заполнены логотип, город и тренер. Её данные останутся без изменений, а данные дубля просто добавятся к ней.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Инициализация Tom Select (поиск с подсказками) -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const config = {
+            create: false,
+            sortField: { field: "text", direction: "asc" },
+            placeholder: "Начните вводить название...",
+            render: {
+                option: function(data, escape) {
+                    return '<div class="py-1">' + escape(data.text) + '</div>';
+                },
+                item: function(data, escape) {
+                    return '<div class="py-1">' + escape(data.text) + '</div>';
+                }
+            }
+        };
+
+        new TomSelect("#source_team", config);
+        new TomSelect("#target_team", config);
+    });
+</script>
+{% endblock %}

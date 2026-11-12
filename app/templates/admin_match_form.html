@@ -9,37 +9,42 @@
 <div class="card border-0 shadow-sm">
     <div class="card-body p-4">
         <form action="/admin/matches/{% if match %}{{ match.id }}/edit{% else %}create{% endif %}" method="post">
-            <div class="row g-3">
 
-                <!-- ТУРНИР И ДАТА -->
+            <div class="row g-4">
+                <!-- ================= ОСНОВНАЯ ИНФОРМАЦИЯ ================= -->
                 <div class="col-md-6">
                     <label class="form-label text-muted small fw-bold text-uppercase">Турнир *</label>
                     <select name="tournament_id" class="form-select" required>
                         <option value="">Выберите турнир...</option>
                         {% for t in tournaments %}
-                            <option value="{{ t.id }}" {% if match and match.tournament_id == t.id %}selected{% endif %}>{{ t.name }} ({{ t.season }})</option>
+                            <option value="{{ t.id }}" {% if match and match.tournament_id == t.id %}selected{% endif %}>
+                                {{ t.name }} ({{ t.season }})
+                            </option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div class="col-md-6">
                     <label class="form-label text-muted small fw-bold text-uppercase">Дата и время</label>
-                    <input type="datetime-local" name="match_date" class="form-control" value="{{ match.match_date.strftime('%Y-%m-%dT%H:%M') if match and match.match_date else '' }}">
+                    <input type="datetime-local" name="match_date" class="form-control"
+                           value="{{ match.match_date.strftime('%Y-%m-%dT%H:%M') if match and match.match_date else '' }}">
                 </div>
 
-                <!-- КОМАНДЫ -->
+                <!-- ================= КОМАНДЫ ================= -->
                 <div class="col-md-5">
                     <label class="form-label text-muted small fw-bold text-uppercase">Домашняя команда *</label>
                     <select name="home_team_id" class="form-select" required>
                         <option value="">Выберите команду...</option>
                         {% for team in teams %}
-                            <option value="{{ team.id }}" {% if match and match.home_team_id == team.id %}selected{% endif %}>{{ team.name }}</option>
+                            <option value="{{ team.id }}" {% if match and match.home_team_id == team.id %}selected{% endif %}>
+                                {{ team.name }}
+                            </option>
                         {% endfor %}
                     </select>
                 </div>
 
                 <div class="col-md-2 text-center d-flex align-items-end justify-content-center pb-2">
-                    <span class="fw-bold text-muted">VS</span>
+                    <span class="fw-bold text-muted fs-5">VS</span>
                 </div>
 
                 <div class="col-md-5">
@@ -47,75 +52,145 @@
                     <select name="away_team_id" class="form-select" required>
                         <option value="">Выберите команду...</option>
                         {% for team in teams %}
-                            <option value="{{ team.id }}" {% if match and match.away_team_id == team.id %}selected{% endif %}>{{ team.name }}</option>
+                            <option value="{{ team.id }}" {% if match and match.away_team_id == team.id %}selected{% endif %}>
+                                {{ team.name }}
+                            </option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <!-- СТАДИОН, ТУР, СТАТУС -->
+                <!-- ================= МЕСТО И СТАТУС ================= -->
                 <div class="col-md-4">
                     <label class="form-label text-muted small fw-bold text-uppercase">Стадион</label>
-                    <input type="text" name="stadium" class="form-control" list="stadium-list" value="{{ match.stadium if match and match.stadium else '' }}">
-                    <datalist id="stadium-list">
+                    <select name="stadium" class="form-select">
+                        <option value="">— Не выбран —</option>
                         {% for s in stadiums %}
-                            <option value="{{ s.name }}">
+                            <option value="{{ s.name }}" {% if match and match.stadium == s.name %}selected{% endif %}>
+                                {{ s.name }} {% if s.city %}({{ s.city }}){% endif %}
+                            </option>
                         {% endfor %}
-                    </datalist>
+                        {# Если у матча записан стадион, которого нет в списке, оставляем его #}
+                        {% if match and match.stadium and match.stadium not in stadiums|map(attribute='name')|list %}
+                            <option value="{{ match.stadium }}" selected>{{ match.stadium }} (старый)</option>
+                        {% endif %}
+                    </select>
                 </div>
 
                 <div class="col-md-4">
                     <label class="form-label text-muted small fw-bold text-uppercase">Тур (раунд)</label>
-                    <input type="number" name="round" class="form-control" placeholder="Для чемпионатов" value="{{ match.round if match and match.round else '' }}">
+                    <input type="number" name="round" class="form-control" placeholder="Например: 5"
+                           value="{{ match.round if match and match.round else '' }}">
                 </div>
 
+                <!-- СТАТУС НА РУССКОМ -->
                 <div class="col-md-4">
-                    <label class="form-label text-muted small fw-bold text-uppercase">Статус *</label>
-                    <select name="status" class="form-select" required>
-                        {% for s in statuses %}
-                        <option value="{{ s.value }}" {% if match and match.status == s %}selected{% endif %}>{{ s.value }}</option>
-                        {% endfor %}
+                    <label class="form-label text-muted small fw-bold text-uppercase">Статус матча *</label>
+                    <select name="status" class="form-select" required id="match-status-select">
+                        <option value="scheduled" {% if not match or (match and match.status.value == 'scheduled') %}selected{% endif %}>Запланирован (Скоро)</option>
+                        <option value="live" {% if match and match.status.value == 'live' %}selected{% endif %}>В прямом эфире (LIVE)</option>
+                        <option value="finished" {% if match and match.status.value == 'finished' %}selected{% endif %}>Завершён</option>
+                        <option value="cancelled" {% if match and match.status.value == 'cancelled' %}selected{% endif %}>Отменён</option>
                     </select>
+                    <div class="form-text text-primary"><i class="bi bi-info-circle"></i> Если ввести счет, статус сменится на «Завершён» сам.</div>
                 </div>
 
-                <!-- ЕДИНЫЙ БЛОК ПЛЕЙ-ОФФ -->
-                <div class="col-12 mt-4 pt-3 border-top">
-                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-diagram-3 me-2"></i> Стадия плей-офф (Сетка)</h6>
-
+                <!-- ================= ПЛЕЙ-ОФФ И ГРУППЫ ================= -->
+                <div class="col-12 mt-4 pt-4 border-top">
+                    <h6 class="fw-bold text-primary mb-3"><i class="bi bi-diagram-3 me-2"></i> Стадия и Сетка</h6>
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label text-muted small fw-bold text-uppercase">Выберите стадию</label>
-                            <select name="playoff_stage" class="form-select">
-                                <option value="">Не выбрано (Групповой этап / Чемпионат)</option>
-                                <option value="PLAYOFF|1|1/8 Финала" {% if match and match.stage and match.stage.value == 'PLAYOFF' and match.round == 1 %}selected{% endif %}>1/8 Финала</option>
-                                <option value="PLAYOFF|2|1/4 Финала" {% if match and match.stage and match.stage.value == 'PLAYOFF' and match.round == 2 %}selected{% endif %}>1/4 Финала (Четвертьфинал)</option>
-                                <option value="PLAYOFF|3|1/2 Финала" {% if match and match.stage and match.stage.value == 'PLAYOFF' and match.round == 3 %}selected{% endif %}>1/2 Финала (Полуфинал)</option>
-                                <option value="FINAL|4|Финал" {% if match and match.stage and match.stage.value == 'FINAL' %}selected{% endif %}>Финал</option>
-                                <option value="PLAYOFF|5|Матч за 3-е место" {% if match and match.stage and match.stage.value == 'PLAYOFF' and match.round == 5 %}selected{% endif %}>Матч за 3-е место</option>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Тип стадии</label>
+                            <select name="stage" class="form-select">
+                                <option value="">— Групповой этап / Чемпионат —</option>
+                                <option value="PLAYOFF" {% if match and match.stage and match.stage.value == 'PLAYOFF' %}selected{% endif %}>Плей-офф</option>
+                                <option value="FINAL" {% if match and match.stage and match.stage.value == 'FINAL' %}selected{% endif %}>Финал</option>
                             </select>
-                            <small class="text-muted">Выбор этого пункта автоматически распределит матч в нужную колонку сетки.</small>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Название стадии (для сетки)</label>
+                            <input type="text" name="stage_name" class="form-control" placeholder="Например: 1/4 Финала"
+                                   value="{{ match.stage_name if match and match.stage_name else '' }}">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Группа (если есть)</label>
+                            <input type="text" name="group_name" class="form-control" placeholder="Например: A"
+                                   value="{{ match.group_name if match and match.group_name else '' }}">
                         </div>
                     </div>
                 </div>
 
-                <!-- СЧЕТ -->
+                <!-- ================= РЕЗУЛЬТАТЫ И ПЕНАЛЬТИ ================= -->
                 {% if match %}
-                <div class="col-md-6 mt-4">
-                    <label class="form-label text-muted small fw-bold text-uppercase">Голы хозяев</label>
-                    <input type="number" name="home_score" class="form-control" value="{{ match.home_score if match.home_score is not none else '' }}">
-                </div>
+                <div class="col-12 mt-4 pt-4 border-top">
+                    <h6 class="fw-bold text-success mb-3"><i class="bi bi-stopwatch me-2"></i> Результаты матча</h6>
 
-                <div class="col-md-6 mt-4">
-                    <label class="form-label text-muted small fw-bold text-uppercase">Голы гостей</label>
-                    <input type="number" name="away_score" class="form-control" value="{{ match.away_score if match.away_score is not none else '' }}">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Голы хозяев</label>
+                            <input type="number" name="home_score" id="home-score" class="form-control" value="{{ match.home_score if match.home_score is not none else '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Голы гостей</label>
+                            <input type="number" name="away_score" id="away-score" class="form-control" value="{{ match.away_score if match.away_score is not none else '' }}">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Пенальти (Хозяева)</label>
+                            <input type="number" name="home_penalty" class="form-control" placeholder="Если были" value="{{ match.home_penalty if match.home_penalty is not none else '' }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Пенальти (Гости)</label>
+                            <input type="number" name="away_penalty" class="form-control" placeholder="Если были" value="{{ match.away_penalty if match.away_penalty is not none else '' }}">
+                        </div>
+
+                        <div class="col-12 mt-2">
+                            <div class="form-check form-switch fs-5">
+                                <input class="form-check-input" type="checkbox" name="tech_loss" id="tech_loss" {% if match.tech_loss %}checked{% endif %}>
+                                <label class="form-check-label fs-6 mt-1" for="tech_loss">Техническое поражение (ТП)</label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 {% endif %}
             </div>
 
-            <div class="mt-4 pt-3 border-top">
-                <button type="submit" class="btn btn-success fw-bold px-4">Сохранить матч</button>
-                <a href="/admin/matches" class="btn btn-light ms-2">Отмена</a>
+            <!-- КНОПКИ СОХРАНЕНИЯ -->
+            <div class="mt-5 pt-3 border-top d-flex gap-2">
+                <button type="submit" class="btn btn-success fw-bold px-4">
+                    <i class="bi bi-check-lg me-1"></i> Сохранить матч
+                </button>
+                <a href="/admin/matches" class="btn btn-light px-4">Отмена</a>
             </div>
         </form>
     </div>
 </div>
+
+<!-- СКРИПТ АВТОМАТИЧЕСКОГО ПЕРЕКЛЮЧЕНИЯ СТАТУСА -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const homeScoreInput = document.getElementById('home-score');
+        const awayScoreInput = document.getElementById('away-score');
+        const statusSelect = document.getElementById('match-status-select');
+
+        function checkScores() {
+            if (homeScoreInput && awayScoreInput && statusSelect) {
+                const homeVal = homeScoreInput.value.trim();
+                const awayVal = awayScoreInput.value.trim();
+
+                // Если оба поля заполнены числами, ставим статус "Завершён"
+                if (homeVal !== '' && awayVal !== '') {
+                    statusSelect.value = 'finished';
+                }
+                // Если счет стерли, возвращаем "Запланирован"
+                else if (homeVal === '' && awayVal === '') {
+                    statusSelect.value = 'scheduled';
+                }
+            }
+        }
+
+        // Слушаем ввод в поля счета
+        if (homeScoreInput) homeScoreInput.addEventListener('input', checkScores);
+        if (awayScoreInput) awayScoreInput.addEventListener('input', checkScores);
+    });
+</script>
 {% endblock %}

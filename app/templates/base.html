@@ -13,12 +13,13 @@
 
         /* --- ВЕРХНЯЯ ШАПКА --- */
         .header-top { background-color: #0f2537; padding: 10px 0; color: white; }
-        .header-top .logo-text { font-size: 32px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-left: 15px;}
+        .main-logo { height: 150px; object-fit: contain; transition: 0.3s; }
+        .logo-text { font-size: 32px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-left: 15px; white-space: nowrap;}
         .hover-opacity { transition: opacity 0.2s; }
         .hover-opacity:hover { opacity: 0.7; }
 
         /* --- ГЛАВНОЕ МЕНЮ --- */
-        .nav-main { background-color: #1a3c56; padding: 0; }
+        .nav-main { background-color: #1a3c56; padding: 0; position: relative; z-index: 1000; }
         .nav-main .nav-link {
             color: white !important;
             text-transform: uppercase;
@@ -29,22 +30,25 @@
         }
         .nav-main .nav-link:hover { background-color: #0f2537; }
 
-        /* Активная красная вкладка со скошенным краем */
-        .nav-main .nav-item.active .nav-link {
-            background-color: #d8232a;
-            clip-path: polygon(0 0, 100% 0, 95% 100%, 0% 100%);
-            position: relative;
-            z-index: 2;
+        /* Активная красная вкладка (только для ПК) */
+        @media (min-width: 992px) {
+            .nav-main .nav-item.active .nav-link {
+                background-color: #d8232a;
+                clip-path: polygon(0 0, 100% 0, 95% 100%, 0% 100%);
+                position: relative;
+                z-index: 2;
+            }
         }
 
-        /* --- ВЫПАДАЮЩЕЕ МЕНЮ УЧАСТНИКИ --- */
+        /* --- ВЫПАДАЮЩИЕ МЕНЮ --- */
         .custom-dropdown {
             background-color: #1a85ad;
             border: none;
-            border-radius: 0;
+            border-radius: 0 0 8px 8px;
             min-width: 220px;
-            margin-top: 0;
             padding: 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-top: 0;
         }
         .custom-dropdown .dropdown-item {
             color: white;
@@ -53,29 +57,116 @@
             font-size: 15px;
             padding: 12px 20px;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            transition: background-color 0.2s, color 0.2s;
         }
         .custom-dropdown .dropdown-item:hover {
             background-color: #0f2537;
             color: #d8232a;
         }
+
+        /* ========================================= */
+        /* --- MEGA MENU (ЦЕНТРИРОВАННОЕ) --- */
+        /* ========================================= */
+        .mega-menu {
+            position: absolute;
+            top: 100%;
+            left: 50%; /* Ставим на 50% от ширины контейнера */
+            transform: translateX(-50%); /* Двигаем назад ровно на половину ширины меню */
+            width: 900px;
+            max-width: 95vw;
+            background-color: #1a85ad;
+            border: none;
+            border-radius: 0 0 8px 8px;
+            padding: 0;
+            margin-top: 0;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 1050;
+        }
+
+        .mega-menu-inner { padding: 30px 40px; display: flex; flex-wrap: wrap; gap: 40px; }
+
+        .mega-title-box {
+            background-color: #7a8b9a;
+            color: white;
+            display: inline-block;
+            padding: 8px 25px 8px 15px;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 14px;
+            clip-path: polygon(0 0, 100% 0, 85% 100%, 0% 100%);
+            margin-bottom: 15px;
+            min-width: 200px;
+        }
+
+        .mega-list { list-style: none; padding: 0; margin: 0; }
+        .mega-list li { border-bottom: 1px solid rgba(255,255,255,0.15); }
+        .mega-list li:last-child { border-bottom: none; }
+        .mega-list a {
+            color: white; text-decoration: none; font-size: 15px; font-weight: 500;
+            display: block; padding: 10px 0; transition: color 0.2s; white-space: nowrap;
+        }
+        .mega-list a:hover { color: #ffc107; }
+
+        .mega-bottom-bar {
+            background-color: #7a8b9a; padding: 15px 0;
+            display: flex; justify-content: center; gap: 40px; width: 100%;
+            border-radius: 0 0 8px 8px;
+        }
+        .mega-bottom-bar a {
+            color: white; text-decoration: none; font-weight: 700; font-size: 14px;
+            text-transform: uppercase; letter-spacing: 0.5px; transition: color 0.2s;
+        }
+        .mega-bottom-bar a:hover { color: #d8232a; }
+
+        /* Показываем меню при наведении ТОЛЬКО НА ПК */
         @media (min-width: 992px) {
-            .nav-main .nav-item.dropdown:hover .custom-dropdown {
-                display: block !important;
+            .nav-main .nav-item.dropdown:hover .custom-dropdown,
+            .nav-main .nav-item.dropdown:hover .mega-menu { display: block !important; }
+        }
+
+        /* ========================================= */
+        /* --- МОБИЛЬНАЯ ВЕРСИЯ (ЭКРАНЫ < 992px) --- */
+        /* ========================================= */
+        @media (max-width: 991px) {
+            .main-logo { height: 50px; }
+            .logo-text { font-size: 20px; margin-left: 10px; }
+            .header-top { padding: 5px 0; }
+            .social-icons-top { display: none !important; }
+
+            .navbar-toggler { border: none; box-shadow: none; }
+            .navbar-toggler:focus { box-shadow: none; }
+
+            .nav-main .nav-link {
+                border-right: none;
+                border-bottom: 1px solid rgba(255,255,255,0.1);
+                padding: 12px 15px;
+                text-align: left;
+            }
+            .nav-main .nav-fill { display: block; }
+
+            /* На мобилке мега-меню становится просто списком вниз */
+            .mega-menu {
+                position: static !important;
+                transform: none !important;
+                width: 100% !important;
+                box-shadow: none;
+                border-radius: 0;
+                background-color: #156f91;
+            }
+            .mega-menu-inner { padding: 15px; flex-direction: column; gap: 20px; }
+            .mega-bottom-bar { flex-wrap: wrap; gap: 15px; border-radius: 0; }
+
+            .custom-dropdown {
+                position: static !important;
+                width: 100% !important;
+                background-color: #156f91;
+                box-shadow: none;
+                border-radius: 0;
             }
         }
 
-        /* --- КАРТОЧКИ И ТАБЛИЦЫ --- */
+        /* --- ОСТАЛЬНЫЕ СТИЛИ --- */
         .match-card { background: white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; padding: 15px; }
-        .match-team { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; font-weight: 700; font-size: 16px; }
-        .match-score { background: #f8f9fa; padding: 5px 10px; border-radius: 4px; font-weight: 700; }
-        .match-date { font-size: 12px; color: #6c757d; text-align: center; margin-bottom: 10px; }
-
-        .table-custom th { background-color: #1a3c56; color: white; border: none; font-weight: 400; text-transform: uppercase; font-size: 14px;}
-        .table-custom td { vertical-align: middle; border-color: #dee2e6; }
-        .table-custom tr:nth-child(even) { background-color: #f8f9fa; }
-        .sidebar-title { background-color: #1a3c56; color: white; padding: 10px 15px; font-weight: 700; text-transform: uppercase; margin: 0; font-size: 14px;}
-
         .hover-lift { transition: transform 0.2s, box-shadow 0.2s; }
         .hover-lift:hover { transform: translateY(-5px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
 
@@ -90,68 +181,98 @@
 
     <!-- Шапка -->
     <div class="header-top">
-        <div class="container-fluid px-4 px-xl-5 d-flex justify-content-between align-items-center">
+        <div class="container-fluid px-3 px-xl-5 d-flex justify-content-between align-items-center">
             <a href="/" class="d-flex align-items-center text-decoration-none text-white hover-opacity">
-                <img src="/static/main_logo.png" alt="J-LIGA" style="height: 150px; object-fit: contain;">
+                <img src="/static/main_logo.png" alt="J-LIGA" class="main-logo">
                 <span class="logo-text">J-LIGA</span>
             </a>
-            <div class="d-flex align-items-center gap-3">
-                <!-- Иконки соцсетей -->
+            <div class="d-flex align-items-center gap-3 social-icons-top">
                 <a href="https://www.instagram.com/j_liga_" target="_blank" class="text-white hover-opacity"><i class="bi bi-instagram fs-4"></i></a>
                 <a href="https://www.youtube.com/channel/UCbOwln8USfQxGEbWfuZYYFA" target="_blank" class="text-white hover-opacity"><i class="bi bi-youtube fs-4"></i></a>
                 <a href="https://wa.clck.bar/77087232313" target="_blank" class="text-white hover-opacity"><i class="bi bi-whatsapp fs-4"></i></a>
-                <a href="https://www.tiktok.com/@jliga_almaty" target="_blank" class="text-white hover-opacity"><i class="bi bi-tiktok fs-4"></i></a>
             </div>
         </div>
     </div>
 
     <!-- Главное меню -->
-    <div class="nav-main">
+    <nav class="navbar navbar-expand-lg nav-main p-0">
         <div class="container-fluid px-0 px-xl-5">
-            <ul class="nav nav-fill">
-                <!-- МЕНЮ О ЛИГЕ -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        О ЛИГЕ
-                    </a>
-                    <ul class="dropdown-menu custom-dropdown shadow" aria-labelledby="navbarDropdown">
-                        <li><a class="dropdown-item" href="/stadiums">Стадионы</a></li>
-                        <li><a class="dropdown-item" href="/management">Руководители</a></li>
-                        <li><a class="dropdown-item" href="/partners">Партнеры</a></li>
-                    </ul>
-                </li>
 
-                <!-- МЕНЮ ТУРНИРЫ (Теперь просто ссылка) -->
-                <li class="nav-item active">
-                    <a class="nav-link" href="/tournaments">
-                        ТУРНИРЫ
-                    </a>
-                </li>
+            <button class="navbar-toggler text-white ms-auto me-3 my-2" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu" aria-controls="mobileMenu" aria-expanded="false" aria-label="Toggle navigation">
+                <i class="bi bi-list fs-1"></i>
+            </button>
 
-                <!-- МЕНЮ УЧАСТНИКИ -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="/participants/teams" id="participantsDropdown" role="button" aria-expanded="false">
-                        УЧАСТНИКИ
-                    </a>
-                    <ul class="dropdown-menu custom-dropdown shadow" aria-labelledby="participantsDropdown">
-                        <li><a class="dropdown-item" href="/participants/teams">КОМАНДЫ</a></li>
-                        <li><a class="dropdown-item" href="/participants/players">ИГРОКИ</a></li>
-                        <li><a class="dropdown-item" href="/participants/coaches">ТРЕНЕРЫ</a></li>
-                        <li><a class="dropdown-item" href="/participants/hall-of-fame">ЗАЛ СЛАВЫ</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/news">НОВОСТИ</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/media">МЕДИА</a>
-                </li>
-            </ul>
+            <div class="collapse navbar-collapse" id="mobileMenu">
+                <ul class="navbar-nav nav-fill w-100">
+
+                    <!-- О ЛИГЕ -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            О ЛИГЕ
+                        </a>
+                        <ul class="dropdown-menu custom-dropdown">
+                            <li><a class="dropdown-item" href="/stadiums">Стадионы</a></li>
+                            <li><a class="dropdown-item" href="/management">Руководители</a></li>
+                            <li><a class="dropdown-item" href="/partners">Партнеры</a></li>
+                        </ul>
+                    </li>
+
+                    <!-- ТУРНИРЫ -->
+                    <!-- Убрали data-bs-toggle, чтобы работал переход по клику -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="/tournaments" role="button" aria-expanded="false">
+                            ТУРНИРЫ
+                        </a>
+
+                        {% if menu_data %}
+                        <div class="mega-menu">
+                            <div class="mega-menu-inner">
+                                {% for category_name, tournaments_list in menu_data.items() %}
+                                <div>
+                                    <div class="mega-title-box">{{ category_name }}</div>
+                                    <ul class="mega-list">
+                                        {% for t in tournaments_list %}
+                                        <li><a href="/tournaments/{{ t.id }}">{{ t.name }}</a></li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mega-bottom-bar">
+                                <a href="/tournaments">Все турниры</a>
+                                <a href="/matches">Все матчи</a>
+                                <a href="/disciplinary">Дисквалификации</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </li>
+
+                    <!-- УЧАСТНИКИ -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            УЧАСТНИКИ
+                        </a>
+                        <ul class="dropdown-menu custom-dropdown">
+                            <li><a class="dropdown-item" href="/participants/teams">КОМАНДЫ</a></li>
+                            <li><a class="dropdown-item" href="/participants/players">ИГРОКИ</a></li>
+                            <li><a class="dropdown-item" href="/participants/coaches">ТРЕНЕРЫ</a></li>
+                            <li><a class="dropdown-item" href="/participants/hall-of-fame">ЗАЛ СЛАВЫ</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="/news">НОВОСТИ</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/media">МЕДИА</a>
+                    </li>
+                </ul>
+            </div>
         </div>
-    </div>
+    </nav>
 
     <!-- Контент -->
-    <div class="container-fluid px-4 px-xl-5 mt-4 min-vh-100" style="max-width: 1700px; margin: 0 auto;">
+    <div class="container-fluid px-3 px-xl-5 mt-4 min-vh-100" style="max-width: 1700px; margin: 0 auto;">
         {% block content %}{% endblock %}
     </div>
 
@@ -159,12 +280,13 @@
     <div class="bg-white py-5 mt-5 border-top">
         <div class="container" style="max-width: 1200px; margin: 0 auto;">
             <div class="d-flex justify-content-center align-items-center flex-wrap gap-5">
-                <img src="/static/Partners/kazakhstan_liga.jpg" height="80" alt="Казахстанская лига" style="object-fit: contain;">
-                <img src="/static/Partners/kff.jpg" height="80" alt="КФФ" style="object-fit: contain;">
-                <img src="/static/Partners/jliga.png" height="80" alt="J-LIGA" style="object-fit: contain;">
-                <img src="/static/Partners/almaty_football.jpg" height="80" alt="Алматы Футбол" style="object-fit: contain;">
-                <a href="https://wa.clck.bar/77087232313" target="_blank">
-                    <img src="/static/Partners/void.jpg" height="80" alt="Место для рекламы" style="object-fit: contain;">
+                {% for p in partners %}
+                    <a href="{{ p.url or '#' }}" target="_blank" class="hover-opacity" title="{{ p.name }}">
+                        <img src="{{ p.logo_url }}" height="80" alt="{{ p.name }}" style="object-fit: contain; max-width: 150px;">
+                    </a>
+                {% endfor %}
+                <a href="https://wa.clck.bar/77087232313" target="_blank" class="hover-opacity">
+                    <img src="/static/Partners/void.jpg" height="80" alt="Реклама" style="object-fit: contain;">
                 </a>
             </div>
         </div>
@@ -172,17 +294,13 @@
 
     <!-- Подвал -->
     <footer class="site-footer">
-        <div class="container-fluid px-4 px-xl-5" style="max-width: 1700px; margin: 0 auto;">
+        <div class="container-fluid px-3 px-xl-5" style="max-width: 1700px; margin: 0 auto;">
             <div class="d-flex justify-content-between align-items-center footer-line flex-wrap gap-3">
                 <div class="small">© 2019 - 2026 J-LIGA</div>
                 {% if current_user %}
-                    <div>
-                        <a href="/admin" class="btn btn-outline-light btn-sm fw-bold">Вход для админа</a>
-                    </div>
+                    <div><a href="/admin" class="btn btn-outline-light btn-sm fw-bold">Вход для админа</a></div>
                 {% else %}
-                    <div>
-                        <a href="/login" class="text-white text-decoration-none small hover-opacity fw-bold">Вход для админа</a>
-                    </div>
+                    <div><a href="/login" class="text-white text-decoration-none small hover-opacity fw-bold">Вход для админа</a></div>
                 {% endif %}
             </div>
             <div class="d-flex gap-3">

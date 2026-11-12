@@ -6,57 +6,25 @@
 </div>
 
 <div class="row mt-4">
-    <!-- 1. Казахстанская лига -->
-    <div class="col-6 col-md-4 col-lg-3 mb-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="d-flex align-items-center justify-content-center p-4" style="height: 180px;">
-                <img src="/static/Partners/kazakhstan_liga.jpg" class="img-fluid" alt="Қазақстан футбол лигасы" style="max-height: 100%; object-fit: contain;">
-            </div>
-            <div class="card-body pt-0">
-                <p class="card-text fw-bold text-uppercase mb-0" style="font-size: 14px;">Қазақстан футбол лигасы</p>
-            </div>
-        </div>
-    </div>
 
-    <!-- 2. КФФ -->
+    <!-- Цикл по партнерам из базы данных -->
+    {% for p in partners %}
     <div class="col-6 col-md-4 col-lg-3 mb-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="d-flex align-items-center justify-content-center p-4" style="height: 180px;">
-                <img src="/static/Partners/kff.jpg" class="img-fluid" alt="КФФ" style="max-height: 100%; object-fit: contain;">
+        <a href="{{ p.url or '#' }}" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-dark d-block h-100">
+            <div class="card border-0 shadow-sm h-100 hover-lift">
+                <div class="d-flex align-items-center justify-content-center p-4" style="height: 180px;">
+                    <img src="{{ p.logo_url }}" class="img-fluid" alt="{{ p.name }}" style="max-height: 100%; object-fit: contain;">
+                </div>
+                <div class="card-body pt-0">
+                    <p class="card-text fw-bold text-uppercase mb-0" style="font-size: 14px;">{{ p.name }}</p>
+                </div>
             </div>
-            <div class="card-body pt-0">
-                <p class="card-text fw-bold text-uppercase mb-0" style="font-size: 14px;">Қазақстан Футбол Федерациясы</p>
-            </div>
-        </div>
+        </a>
     </div>
+    {% endfor %}
 
-    <!-- 3. J-LIGA -->
+    <!-- Место для рекламы (КЛИКАБЕЛЬНО) - всегда в конце -->
     <div class="col-6 col-md-4 col-lg-3 mb-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="d-flex align-items-center justify-content-center p-4" style="height: 180px;">
-                <img src="/static/Partners/jliga.png" class="img-fluid" alt="J-LIGA" style="max-height: 100%; object-fit: contain;">
-            </div>
-            <div class="card-body pt-0">
-                <p class="card-text fw-bold text-uppercase mb-0" style="font-size: 14px;">J-LIGA</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- 4. Алматы Футбол -->
-    <div class="col-6 col-md-4 col-lg-3 mb-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="d-flex align-items-center justify-content-center p-4" style="height: 180px;">
-                <img src="/static/Partners/almaty_football.jpg" class="img-fluid" alt="Алматы Футбол" style="max-height: 100%; object-fit: contain;">
-            </div>
-            <div class="card-body pt-0">
-                <p class="card-text fw-bold text-uppercase mb-0" style="font-size: 14px;">Алматы Футбол Федерациясы</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- 5. Место для рекламы (КЛИКАБЕЛЬНО) -->
-    <div class="col-6 col-md-4 col-lg-3 mb-4">
-        <!-- Обернули карточку в ссылку на WhatsApp -->
         <a href="https://wa.clck.bar/77087232313" target="_blank" rel="noopener noreferrer" class="text-decoration-none text-dark d-block h-100">
             <div class="card border-0 shadow-sm h-100 hover-lift">
                 <div class="d-flex align-items-center justify-content-center p-4" style="height: 180px;">
@@ -68,5 +36,6 @@
             </div>
         </a>
     </div>
+
 </div>
 {% endblock %}

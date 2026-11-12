@@ -14,6 +14,9 @@ app = FastAPI(
     title="J-Liga",
     description="Официальный сайт футбольной лиги",
     version="1.0.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
 )
 
 # Настройка CORS (чтобы фронтенд мог делать запросы)

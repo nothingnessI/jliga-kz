@@ -7,22 +7,66 @@
 </div>
 
 <div class="row">
+    <!-- ===================================================================== -->
     <!-- ЛЕВАЯ КОЛОНКА: НАСТРОЙКИ ТУРНИРА -->
+    <!-- ===================================================================== -->
     <div class="col-lg-8">
         <div class="card border-0 shadow-sm mb-4">
             <div class="card-body p-4">
                 <form action="/admin/tournaments/{% if tournament %}{{ tournament.id }}/edit{% else %}create{% endif %}" method="post" enctype="multipart/form-data">
                     <div class="row g-3">
-                        <div class="col-md-8">
+
+                        <!-- 1. НАЗВАНИЯ И МЕНЮ -->
+                        <div class="col-md-6">
                             <label class="form-label text-muted small fw-bold text-uppercase">Название турнира *</label>
                             <input type="text" name="name" class="form-control" value="{{ tournament.name if tournament else '' }}" placeholder="J-LIGA PRIMERA 2026" required>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-6">
+                            <label class="form-label text-primary small fw-bold text-uppercase">Короткое название (для меню)</label>
+                            <input type="text" name="short_name" class="form-control" value="{{ tournament.short_name if tournament and tournament.short_name else '' }}" placeholder="Например: PRIMERA">
+                            <div class="form-text">Выводится в выпадающем меню вместо полного названия.</div>
+                        </div>
+
+                        <!-- ЗАГОЛОВОК МЕНЮ С ПОДСКАЗКАМИ -->
+                        <div class="col-md-6">
+                            <label class="form-label text-danger small fw-bold text-uppercase">Заголовок меню (серая плашка)</label>
+                            <input type="text" name="menu_category" id="menu_category_input" class="form-control" value="{{ tournament.menu_category if tournament and tournament.menu_category else '' }}" placeholder="Например: ЧЕМПИОНАТ 2026">
+
+                            <div class="form-text mb-2">Турниры с одинаковым заголовком собираются в одну колонку.</div>
+
+                            <!-- БЛОК СУЩЕСТВУЮЩИХ ПЛАШЕК -->
+                            {% if existing_categories %}
+                            <div class="p-2 bg-light rounded border">
+                                <small class="text-muted d-block mb-2 fw-bold"><i class="bi bi-tags-fill me-1"></i> Существующие заголовки (кликните для выбора):</small>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for cat in existing_categories %}
+                                        <span class="badge bg-secondary px-3 py-2 shadow-sm"
+                                              style="cursor: pointer; font-size: 13px; transition: 0.2s;"
+                                              onmouseover="this.classList.replace('bg-secondary', 'bg-primary')"
+                                              onmouseout="this.classList.replace('bg-primary', 'bg-secondary')"
+                                              onclick="document.getElementById('menu_category_input').value = this.innerText">
+                                            {{ cat }}
+                                        </span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-3">
                             <label class="form-label text-muted small fw-bold text-uppercase">Сезон *</label>
                             <input type="text" name="season" class="form-control" value="{{ tournament.season if tournament else '2026' }}" required>
                         </div>
 
+                        <div class="col-md-3 d-flex align-items-center">
+                            <div class="form-check form-switch mt-4">
+                                <input class="form-check-input" type="checkbox" name="show_in_menu" id="show_in_menu" {% if tournament and tournament.show_in_menu %}checked{% elif not tournament %}checked{% endif %}>
+                                <label class="form-check-label fw-bold small" for="show_in_menu">Показывать в меню</label>
+                            </div>
+                        </div>
+
+                        <!-- 2. ОПИСАНИЕ И ДАТЫ -->
                         <div class="col-12">
                             <label class="form-label text-muted small fw-bold text-uppercase">Описание</label>
                             <textarea name="description" class="form-control" rows="2">{{ tournament.description if tournament and tournament.description else '' }}</textarea>
@@ -38,6 +82,7 @@
                             <input type="datetime-local" name="end_at" class="form-control" value="{{ tournament.end_at.strftime('%Y-%m-%dT%H:%M') if tournament and tournament.end_at else '' }}">
                         </div>
 
+                        <!-- 3. ХАРАКТЕРИСТИКИ -->
                         <div class="col-md-4">
                             <label class="form-label text-muted small fw-bold text-uppercase">Дивизион *</label>
                             <select name="division" class="form-select" required>
@@ -67,29 +112,42 @@
                             <input type="number" name="max_teams" class="form-control" value="{{ tournament.max_teams if tournament else 16 }}" required>
                         </div>
 
-                        <!-- НОВОЕ ПОЛЕ: ФОРМАТ (Чемпионат или Кубок) -->
-                        <div class="col-md-4">
+                        <!-- 4. СИСТЕМА И СТАТУС -->
+                        <div class="col-md-3">
                             <label class="form-label text-danger small fw-bold text-uppercase">Тип системы</label>
                             <select name="tournament_format" class="form-select border-danger">
-                                <option value="ROUND_ROBIN" {% if tournament and tournament.tournament_format == 'ROUND_ROBIN' %}selected{% endif %}>Чемпионат (Круговая)</option>
-                                <option value="GROUPS_PLAYOFF" {% if tournament and tournament.tournament_format == 'GROUPS_PLAYOFF' %}selected{% endif %}>Кубок (Плей-офф)</option>
+                                <!-- ВАЖНО: value должны быть маленькими буквами (как в Enum) -->
+                                <option value="round_robin" {% if tournament and tournament.tournament_format and tournament.tournament_format.value == 'round_robin' %}selected{% endif %}>Круговая</option>
+                                <option value="groups_playoff" {% if tournament and tournament.tournament_format and tournament.tournament_format.value == 'groups_playoff' %}selected{% endif %}>Плей-офф</option>
                             </select>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <label class="form-label text-muted small fw-bold text-uppercase">Статус *</label>
                             <select name="status" class="form-select" required>
                                 {% for s in statuses %}
-                                <option value="{{ s.value }}" {% if tournament and tournament.status == s %}selected{% endif %}>{{ s.value }}</option>
+                                    <option value="{{ s.value }}" {% if tournament and tournament.status.value == s.value %}selected{% endif %}>
+                                        {% if s.value == 'draft' %}Черновик
+                                        {% elif s.value == 'accepting_applications' %}Прием заявок
+                                        {% elif s.value == 'active' %}Активный
+                                        {% elif s.value == 'finished' %}Завершен
+                                        {% else %}{{ s.value }}
+                                        {% endif %}
+                                    </option>
                                 {% endfor %}
                             </select>
                         </div>
 
-                        <div class="col-md-4">
-                            <label class="form-label text-muted small fw-bold text-uppercase">Логотип турнира</label>
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Порядок (Sort)</label>
+                            <input type="number" name="sort_order" class="form-control" value="{{ tournament.sort_order if tournament else 0 }}">
+                        </div>
+
+                        <div class="col-md-3">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Логотип</label>
                             <input type="file" name="logo" class="form-control" accept="image/*">
                             {% if tournament and tournament.logo_url %}
-                                <small class="text-success d-block mt-1">Текущий: <a href="{{ tournament.logo_url }}" target="_blank">Посмотреть</a></small>
+                                <small class="text-success d-block mt-1 text-truncate">Есть логотип</small>
                             {% endif %}
                         </div>
                     </div>
@@ -103,57 +161,33 @@
         </div>
     </div>
 
+    <!-- ===================================================================== -->
     <!-- ПРАВАЯ КОЛОНКА: УПРАВЛЕНИЕ (Только если турнир уже создан) -->
+    <!-- ===================================================================== -->
     {% if tournament %}
     <div class="col-lg-4">
 
-        <!-- БЛОК ГЕНЕРАЦИИ AI-КАРТОЧКИ (ДОБАВЛЕНО) -->
-        <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%); border: 2px solid #ffc107 !important;">
-            <div class="card-body p-4">
-                <h5 class="fw-bold mb-2 text-dark"><i class="fas fa-magic text-warning me-1"></i> Карточка чемпиона</h5>
-                <p class="text-muted small mb-3">Сгенерируйте красивую картинку с итоговой таблицей и AI-фоном.</p>
-
-                <form action="/admin/tournaments/{{ tournament.id }}/generate-card" method="POST">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-uppercase">Стиль AI-фона</label>
-                        <select name="prompt_index" class="form-select border-warning">
-                            <option value="0">🏟️ Ночной стадион и конфетти</option>
-                            <option value="1">🏆 Кубок и фейерверк</option>
-                            <option value="2">🌟 Прожекторы и дым</option>
-                            <option value="3">🎯 Минимализм (синий фон)</option>
-                        </select>
-                    </div>
-                    <button type="submit" class="btn btn-warning w-100 fw-bold text-dark shadow-sm">
-                        🪄 Сгенерировать картинку
-                    </button>
-                </form>
-
-                <!-- ПРЕВЬЮ ГОТОВОЙ КАРТИНКИ -->
-                {% if request.query_params.get('card_url') %}
-                <div class="mt-4 pt-3 border-top border-warning">
-                    <h6 class="fw-bold text-dark mb-2">Готово!</h6>
-                    <img src="{{ request.query_params.get('card_url') }}"
-                         class="img-fluid rounded shadow mb-3"
-                         alt="Карточка чемпиона">
-
-                    <a href="{{ request.query_params.get('card_url') }}" download class="btn btn-dark w-100 fw-bold">
-                        <i class="fas fa-download me-1"></i> Скачать PNG
-                    </a>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-        <!-- КОНЕЦ БЛОКА ГЕНЕРАЦИИ КАРТОЧКИ -->
-
+        <!-- УПРАВЛЕНИЕ ТУРНИРОМ -->
         <div class="card border-0 shadow-sm mb-4 bg-light">
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-3 border-bottom pb-2">Управление турниром</h5>
 
                 <div class="d-grid gap-2 mb-4">
+                    <a href="/admin/tournaments/{{ tournament.id }}/regulations" class="btn btn-warning fw-bold text-dark d-flex justify-content-between align-items-center">
+                        <span>Регламент турнира</span>
+                        <i class="bi bi-journal-text"></i>
+                    </a>
+
+                    <a href="/admin/tournaments/{{ tournament.id }}/structure" class="btn btn-dark fw-bold d-flex justify-content-between align-items-center">
+                        <span>Таблицы и Сетки</span>
+                        <i class="bi bi-diagram-2"></i>
+                    </a>
+
                     <a href="/admin/tournaments/{{ tournament.id }}/teams" class="btn btn-primary d-flex justify-content-between align-items-center">
                         <span>Команды турнира</span>
                         <i class="fas fa-users"></i>
                     </a>
+
                     <a href="/admin/matches?tournament_id={{ tournament.id }}" class="btn btn-info text-white d-flex justify-content-between align-items-center">
                         <span>Матчи турнира</span>
                         <i class="fas fa-futbol"></i>
@@ -184,6 +218,43 @@
                 </form>
             </div>
         </div>
+
+        <!-- БЛОК ГЕНЕРАЦИИ AI-КАРТОЧКИ -->
+        <div class="card border-0 shadow-sm mb-4" style="background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%); border: 2px solid #ffc107 !important;">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-2 text-dark"><i class="fas fa-magic text-warning me-1"></i> Карточка чемпиона</h5>
+                <p class="text-muted small mb-3">Сгенерируйте красивую картинку с итоговой таблицей и AI-фоном.</p>
+
+                <form action="/admin/tournaments/{{ tournament.id }}/generate-card" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase">Стиль AI-фона</label>
+                        <select name="prompt_index" class="form-select border-warning">
+                            <option value="0">🏟️ Ночной стадион и конфетти</option>
+                            <option value="1">🏆 Кубок и фейерверк</option>
+                            <option value="2">🌟 Прожекторы и дым</option>
+                            <option value="3">🎯 Минимализм (синий фон)</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-bold text-dark shadow-sm">
+                        🪄 Сгенерировать картинку
+                    </button>
+                </form>
+
+                <!-- ПРЕВЬЮ ГОТОВОЙ КАРТИНКИ -->
+                {% if request.query_params.get('card_url') %}
+                <div class="mt-4 pt-3 border-top border-warning">
+                    <h6 class="fw-bold text-dark mb-2">Готово!</h6>
+                    <img src="{{ request.query_params.get('card_url') }}"
+                         class="img-fluid rounded shadow mb-3"
+                         alt="Карточка чемпиона">
+                    <a href="{{ request.query_params.get('card_url') }}" download class="btn btn-dark w-100 fw-bold">
+                        <i class="fas fa-download me-1"></i> Скачать PNG
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
     </div>
     {% endif %}
 </div>

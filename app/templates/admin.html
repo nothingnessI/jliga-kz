@@ -13,9 +13,15 @@
     .dash-card-header { padding: 15px 20px; background: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; font-weight: 700; color: #2b3035; }
     .dash-card-header i { color: #0d6efd; font-size: 1.2rem; margin-right: 8px; }
 
-    .dash-list-item { padding: 12px 20px; border-bottom: 1px solid #f8f9fa; display: flex; align-items: center; transition: background 0.2s; }
-    .dash-list-item:hover { background: #f8f9fa; }
+    .dash-list-item { padding: 12px 20px; border-bottom: 1px solid #f8f9fa; display: flex; align-items: center; transition: background 0.2s; text-decoration: none; color: inherit; }
+    .dash-list-item:hover { background: #f8f9fa; color: inherit; }
     .dash-list-item:last-child { border-bottom: none; }
+
+    /* ================= СТАТИСТИКА ================= */
+    .stat-card { border-radius: 12px; color: white; overflow: hidden; position: relative; transition: transform 0.2s; }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important; }
+    .stat-card .card-body { padding: 20px; z-index: 2; position: relative; }
+    .stat-card .icon-bg { position: absolute; right: -10px; bottom: -10px; font-size: 5rem; opacity: 0.15; z-index: 1; transform: rotate(-15deg); }
 
     /* ================= СТИЛИ ИНСТРУКЦИИ (ТАЙМЛАЙН) ================= */
     .guide-container { background: #fff; border-radius: 16px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); margin-top: 20px; }
@@ -37,8 +43,6 @@
 
     .badge-soft-primary { background: #e0f2fe; color: #0284c7; border: 1px solid #bae6fd; }
     .badge-soft-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-
-    .hover-bg-light:hover { background-color: #f8f9fa; }
 </style>
 
 <!-- Шапка -->
@@ -50,12 +54,69 @@
     <span class="badge bg-dark fs-6 px-3 py-2 rounded-pill shadow-sm"><i class="bi bi-shield-check me-1 text-success"></i> Администратор</span>
 </div>
 
-<!-- ================= БЛОК 1: АКТИВНЫЕ ДАШБОРДЫ ================= -->
+<!-- ================= БЛОК СТАТИСТИКИ (КЛИКАБЕЛЬНЫЙ) ================= -->
+<div class="row g-3 mb-4">
+    <!-- Турниры -->
+    <div class="col-md-3">
+        <a href="/admin/tournaments" class="text-decoration-none">
+            <div class="card stat-card border-0 shadow-sm" style="background: linear-gradient(135deg, #1a3c56 0%, #0f2537 100%);">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <h6 class="text-white-50 text-uppercase mb-1 fw-bold" style="font-size: 12px;">Турниры</h6>
+                        <h2 class="mb-0 fw-bold text-white">{{ total_tournaments }}</h2>
+                    </div>
+                    <i class="bi bi-trophy icon-bg text-white"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    <!-- Команды -->
+    <div class="col-md-3">
+        <a href="/admin/teams?show_all=true" class="text-decoration-none">
+            <div class="card stat-card border-0 shadow-sm" style="background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <h6 class="text-white-50 text-uppercase mb-1 fw-bold" style="font-size: 12px;">Команды</h6>
+                        <h2 class="mb-0 fw-bold text-white">{{ total_teams }}</h2>
+                    </div>
+                    <i class="bi bi-shield icon-bg text-white"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    <!-- Матчи сегодня -->
+    <div class="col-md-3">
+        <a href="/admin/matches" class="text-decoration-none">
+            <div class="card stat-card border-0 shadow-sm" style="background: linear-gradient(135deg, #198754 0%, #146c43 100%);">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <h6 class="text-white-50 text-uppercase mb-1 fw-bold" style="font-size: 12px;">Матчи сегодня</h6>
+                        <h2 class="mb-0 fw-bold text-white">{{ today_matches_count }}</h2>
+                    </div>
+                    <i class="bi bi-calendar-event icon-bg text-white"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+    <!-- Баны -->
+    <div class="col-md-3">
+        <a href="/admin/disqualifications" class="text-decoration-none">
+            <div class="card stat-card border-0 shadow-sm" style="background: linear-gradient(135deg, #dc3545 0%, #b02a37 100%);">
+                <div class="card-body d-flex align-items-center justify-content-between">
+                    <div>
+                        <h6 class="text-white-50 text-uppercase mb-1 fw-bold" style="font-size: 12px;">Активные баны</h6>
+                        <h2 class="mb-0 fw-bold text-white">{{ active_disq_count }}</h2>
+                    </div>
+                    <i class="bi bi-person-x icon-bg text-white"></i>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- ================= ОСНОВНОЙ БЛОК ================= -->
 <div class="row g-4 mb-4">
-
-    <!-- ЛЕВАЯ КОЛОНКА (Матчи и Новости) -->
     <div class="col-lg-8">
-
         <!-- Ближайшие матчи -->
         <div class="dash-card">
             <div class="dash-card-header">
@@ -64,7 +125,8 @@
             </div>
             <div class="list-group list-group-flush">
                 {% for m in upcoming_matches %}
-                <div class="dash-list-item">
+                <!-- КАЖДЫЙ МАТЧ - ССЫЛКА НА РЕДАКТИРОВАНИЕ -->
+                <a href="/admin/matches/{{ m.id }}/edit" class="dash-list-item">
                     <div style="width: 100px;" class="text-muted small fw-bold">
                         {{ m.match_date.strftime('%d.%m %H:%M') if m.match_date else 'TBA' }}
                     </div>
@@ -82,7 +144,7 @@
                     <div class="text-end" style="width: 150px;">
                         <span class="badge badge-soft-primary text-truncate" style="max-width: 100%;" title="{{ m.tournament.name }}">{{ m.tournament.name }}</span>
                     </div>
-                </div>
+                </a>
                 {% else %}
                 <div class="p-4 text-center text-muted">
                     <i class="bi bi-calendar-x fs-3 d-block mb-2"></i> Нет запланированных матчей
@@ -99,7 +161,8 @@
             </div>
             <div class="list-group list-group-flush">
                 {% for n in recent_news %}
-                <div class="dash-list-item">
+                <!-- НОВОСТЬ - ССЫЛКА НА РЕДАКТИРОВАНИЕ -->
+                <a href="/admin/news/{{ n.id }}/edit" class="dash-list-item">
                     <div class="me-3 flex-shrink-0">
                         {% if n.image_url %}
                             <img src="{{ n.image_url }}" style="width: 50px; height: 50px; object-fit: cover; border-radius: 8px;">
@@ -110,11 +173,11 @@
                         {% endif %}
                     </div>
                     <div class="flex-grow-1">
-                        <a href="/news/{{ n.id }}" target="_blank" class="fw-bold text-dark text-decoration-none d-block text-truncate" style="font-size: 14px;">{{ n.title }}</a>
+                        <div class="fw-bold text-dark text-decoration-none d-block text-truncate" style="font-size: 14px;">{{ n.title }}</div>
                         <small class="text-muted"><i class="bi bi-clock me-1"></i> {{ n.published_at.strftime('%d.%m.%Y') if n.published_at else '' }}</small>
                     </div>
-                    <a href="/admin/news/{{ n.id }}/edit" class="btn btn-sm btn-outline-secondary ms-3"><i class="bi bi-pencil"></i></a>
-                </div>
+                    <div class="text-secondary ms-3"><i class="bi bi-pencil-square fs-5"></i></div>
+                </a>
                 {% else %}
                 <div class="p-4 text-center text-muted">
                     <i class="bi bi-file-earmark-x fs-3 d-block mb-2"></i> Новостей пока нет
@@ -122,49 +185,51 @@
                 {% endfor %}
             </div>
         </div>
-
     </div>
 
-    <!-- ПРАВАЯ КОЛОНКА (Турниры и Команды) -->
     <div class="col-lg-4">
-
         <!-- Активные турниры -->
         <div class="dash-card">
             <div class="dash-card-header">
-                <div><i class="bi bi-trophy"></i> Турниры 2026</div>
+                <div><i class="bi bi-trophy"></i> Активные турниры</div>
             </div>
             <div class="p-3">
                 {% for t in active_tournaments %}
-                <a href="/tournaments/{{ t.id }}" target="_blank" class="d-block p-2 mb-2 rounded text-decoration-none border hover-bg-light" style="transition: 0.2s;">
-                    <div class="d-flex align-items-center gap-2">
-                        <img src="{{ t.logo_url or '/static/default_tournament.png' }}" width="30" height="30" style="object-fit: contain;">
-                        <div>
-                            <div class="fw-bold text-dark text-truncate" style="font-size: 13px; max-width: 200px;">{{ t.name }}</div>
-                            <div class="text-muted" style="font-size: 11px;">Сезон {{ t.season }}</div>
+                <!-- ТУРНИР - ССЫЛКА НА РЕДАКТИРОВАНИЕ -->
+                <a href="/admin/tournaments/{{ t.id }}/edit" class="d-block p-2 mb-2 rounded text-decoration-none border hover-bg-light" style="transition: 0.2s;">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <img src="{{ t.logo_url or '/static/default_tournament.png' }}" width="30" height="30" style="object-fit: contain;">
+                            <div>
+                                <div class="fw-bold text-dark text-truncate" style="font-size: 13px; max-width: 200px;">{{ t.name }}</div>
+                                <div class="text-muted" style="font-size: 11px;">Сезон {{ t.season }}</div>
+                            </div>
                         </div>
+                        <i class="bi bi-pencil text-secondary"></i>
                     </div>
                 </a>
                 {% else %}
-                <div class="text-center text-muted small py-3">Нет турниров</div>
+                <div class="text-center text-muted small py-3">Нет активных турниров</div>
                 {% endfor %}
             </div>
         </div>
 
-        <!-- Недавно добавленные команды -->
+        <!-- Новые команды -->
         <div class="dash-card">
             <div class="dash-card-header">
                 <div><i class="bi bi-shield-plus"></i> Новые команды</div>
             </div>
             <div class="list-group list-group-flush">
                 {% for team in recent_teams %}
-                <div class="dash-list-item p-3">
+                <!-- КОМАНДА - ССЫЛКА НА РЕДАКТИРОВАНИЕ -->
+                <a href="/admin/teams/{{ team.id }}/edit" class="dash-list-item p-3">
                     <img src="{{ team.logo_url or '/static/default_team.png' }}" width="35" height="35" class="me-3" style="object-fit: contain;">
                     <div class="flex-grow-1">
                         <div class="fw-bold text-dark" style="font-size: 13px;">{{ team.name }}</div>
                         <div class="text-muted" style="font-size: 11px;">{{ team.city or 'Город не указан' }}</div>
                     </div>
-                    <a href="/admin/teams/{{ team.id }}/edit" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></a>
-                </div>
+                    <div class="text-secondary"><i class="bi bi-pencil-square fs-5"></i></div>
+                </a>
                 {% else %}
                 <div class="p-4 text-center text-muted">
                     <i class="bi bi-people fs-3 d-block mb-2"></i> Команд пока нет
@@ -172,7 +237,6 @@
                 {% endfor %}
             </div>
         </div>
-
     </div>
 </div>
 

@@ -2,10 +2,31 @@
 
 {% block admin_content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h4 class="fw-bold m-0">Команды</h4>
-    <a href="/admin/teams/create" class="btn btn-primary fw-bold">
-        <i class="bi bi-plus-lg"></i> Добавить команду
-    </a>
+    <div class="d-flex align-items-center gap-3">
+        <h4 class="fw-bold m-0">Команды</h4>
+
+        <!-- ПЕРЕКЛЮЧАТЕЛЬ ФИЛЬТРА -->
+        {% if show_all %}
+            <a href="/admin/teams" class="btn btn-sm btn-outline-secondary" title="Скрыть архивные команды">
+                <i class="bi bi-funnel"></i> Только активные
+            </a>
+        {% else %}
+            <a href="/admin/teams?show_all=true" class="btn btn-sm btn-outline-secondary" title="Показать все команды, включая старые">
+                <i class="bi bi-funnel"></i> Показать всех
+            </a>
+        {% endif %}
+    </div>
+
+    <div class="d-flex gap-2">
+        <!-- Кнопка для перехода на форму слияния -->
+        <a href="/admin/teams/merge" class="btn btn-warning fw-bold" title="Слить дублирующиеся команды">
+            <i class="bi bi-arrow-left-right"></i> Объединить команды
+        </a>
+
+        <a href="/admin/teams/create" class="btn btn-primary fw-bold">
+            <i class="bi bi-plus-lg"></i> Добавить команду
+        </a>
+    </div>
 </div>
 
 <div class="card border-0 shadow-sm">
@@ -48,7 +69,7 @@
                         <!-- Статус -->
                         <td class="text-center">
                             {% if team.is_active %}
-                                <span class="badge bg-success">Активна</span>
+                                <span class="badge bg-success" title="Участвует в активном турнире">Активна</span>
                             {% else %}
                                 <span class="badge bg-secondary">Неактивна</span>
                             {% endif %}
@@ -80,8 +101,13 @@
                     <tr>
                         <td colspan="6" class="text-center py-5 text-muted">
                             <i class="bi bi-shield-x fs-1 d-block mb-3 text-secondary"></i>
-                            Команды пока не добавлены. <br>
-                            Нажмите «Добавить команду», чтобы начать.
+                            {% if show_all %}
+                                Команды пока не добавлены. <br>
+                                Нажмите «Добавить команду», чтобы начать.
+                            {% else %}
+                                Нет команд, участвующих в активных турнирах. <br>
+                                <a href="/admin/teams?show_all=true" class="btn btn-sm btn-outline-secondary mt-3">Показать всех</a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

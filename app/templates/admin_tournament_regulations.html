@@ -1,0 +1,208 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold m-0">Регламент: {{ tournament.name }}</h4>
+    <a href="/admin/tournaments/{{ tournament.id }}/edit" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Назад</a>
+</div>
+
+<form method="post" action="/admin/tournaments/{{ tournament.id }}/regulations">
+    <div class="row g-4">
+        <!-- ЛЕВАЯ КОЛОНКА -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold border-bottom">Формат и очки</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Формат группового этапа</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="allow_draws" value="true" id="draws_yes" {% if tournament.allow_draws %}checked{% endif %}>
+                            <label class="form-check-label" for="draws_yes">Ничьи возможны</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="allow_draws" value="false" id="draws_no" {% if not tournament.allow_draws %}checked{% endif %}>
+                            <label class="form-check-label" for="draws_no">До победы</label>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="row g-2 text-center">
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">За победу</label>
+                            <input type="number" name="points_win" class="form-control text-center" value="{{ tournament.points_win }}">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">За ничью</label>
+                            <input type="number" name="points_draw" class="form-control text-center" value="{{ tournament.points_draw }}">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">За поражение</label>
+                            <input type="number" name="points_loss" class="form-control text-center" value="{{ tournament.points_loss }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold border-bottom">Время матча</div>
+                <div class="card-body d-flex gap-3">
+                    <div>
+                        <label class="form-label small fw-bold">Кол-во периодов</label>
+                        <input type="number" name="periods_count" class="form-control" value="{{ tournament.periods_count }}">
+                    </div>
+                    <div>
+                        <label class="form-label small fw-bold">Длительность (мин)</label>
+                        <input type="number" name="period_duration" class="form-control" value="{{ tournament.period_duration }}">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold border-bottom">Дисквалификации</div>
+                <div class="card-body">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="auto_disqualifications" id="auto_disq" {% if tournament.auto_disqualifications %}checked{% endif %}>
+                        <label class="form-check-label fw-bold" for="auto_disq">Включить автоматические дисквалификации</label>
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">Желтых до бана</label>
+                            <input type="number" name="yellow_cards_limit" class="form-control" value="{{ tournament.yellow_cards_limit }}">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">Пропуск за ЖК</label>
+                            <input type="number" name="yellow_suspension" class="form-control" value="{{ tournament.yellow_suspension }}">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label small fw-bold">Пропуск за КК</label>
+                            <input type="number" name="red_suspension" class="form-control" value="{{ tournament.red_suspension }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ПРАВАЯ КОЛОНКА -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white fw-bold border-bottom">Дополнительно</div>
+                <div class="card-body">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" name="tech_loss_goals" id="tech_loss" {% if tournament.tech_loss_goals %}checked{% endif %}>
+                        <label class="form-check-label" for="tech_loss">Учёт голов при техническом поражении</label>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Макс. игроков в основе</label>
+                            <input type="number" name="max_starting_players" class="form-control" value="{{ tournament.max_starting_players }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold">Макс. игроков на замене</label>
+                            <input type="number" name="max_bench_players" class="form-control" value="{{ tournament.max_bench_players }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- РАНЖИРОВАНИЕ (Drag and Drop) -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white fw-bold border-bottom">Ранжирование команд при равенстве очков</div>
+                <div class="card-body">
+                    <input type="hidden" name="tie_breakers" id="tie_breakers_input" value='{{ tournament.tie_breakers | tojson if tournament.tie_breakers else "[]" }}'>
+
+                    <ul id="tie-breaker-list" class="list-group mb-3">
+                        <!-- Список будет сгенерирован JS -->
+                    </ul>
+
+                    <div class="d-flex gap-2">
+                        <select id="available-tie-breakers" class="form-select">
+                            <option value="h2h_points">Очки в личных встречах</option>
+                            <option value="h2h_wins">Победы в личных встречах</option>
+                            <option value="h2h_goal_diff">Разница мячей в личных встречах</option>
+                            <option value="goal_diff">Общая разница мячей</option>
+                            <option value="h2h_goals_for">Забитые мячи в личных встречах</option>
+                            <option value="wins">Количество побед</option>
+                            <option value="goals_for">Общее количество забитых мячей</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" onclick="addTieBreaker()">Добавить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 text-end">
+        <button type="submit" class="btn btn-success btn-lg px-5 fw-bold"><i class="bi bi-save me-2"></i> Сохранить регламент</button>
+    </div>
+</form>
+
+<!-- Подключаем SortableJS -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script>
+    const allRules = {
+        "h2h_points": "Очки в личных встречах",
+        "h2h_wins": "Победы в личных встречах",
+        "h2h_goal_diff": "Разница мячей в личных встречах",
+        "goal_diff": "Общая разница мячей",
+        "h2h_goals_for": "Забитые мячи в личных встречах",
+        "wins": "Количество побед",
+        "goals_for": "Общее количество забитых мячей"
+    };
+
+    let currentRules = JSON.parse(document.getElementById('tie_breakers_input').value || "[]");
+
+    function renderRules() {
+        const list = document.getElementById('tie-breaker-list');
+        list.innerHTML = '';
+
+        if (currentRules.length === 0) {
+            list.innerHTML = '<li class="list-group-item text-muted text-center">Правила не добавлены (сортировка по умолчанию: Очки -> Разница -> Забитые)</li>';
+        }
+
+        currentRules.forEach((rule, index) => {
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center bg-light mb-1 border rounded';
+            li.dataset.id = rule;
+            li.innerHTML = `
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-grip-vertical fs-5 text-muted" style="cursor: grab;"></i>
+                    <span class="fw-bold">${index + 1}. ${allRules[rule] || rule}</span>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeRule('${rule}')"><i class="bi bi-x-lg"></i></button>
+            `;
+            list.appendChild(li);
+        });
+
+        document.getElementById('tie_breakers_input').value = JSON.stringify(currentRules);
+    }
+
+    function addTieBreaker() {
+        const select = document.getElementById('available-tie-breakers');
+        const val = select.value;
+        if (!currentRules.includes(val)) {
+            currentRules.push(val);
+            renderRules();
+        }
+    }
+
+    function removeRule(rule) {
+        currentRules = currentRules.filter(r => r !== rule);
+        renderRules();
+    }
+
+    // Инициализация Drag-and-Drop
+    new Sortable(document.getElementById('tie-breaker-list'), {
+        animation: 150,
+        onEnd: function (evt) {
+            const newOrder = [];
+            document.querySelectorAll('#tie-breaker-list li').forEach(li => {
+                if (li.dataset.id) newRules.push(li.dataset.id);
+            });
+            currentRules = newOrder;
+            document.getElementById('tie_breakers_input').value = JSON.stringify(currentRules);
+        }
+    });
+
+    // Первичный рендер
+    renderRules();
+</script>
+{% endblock %}

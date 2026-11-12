@@ -1,0 +1,148 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<!-- Подключаем библиотеку для Drag-and-Drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold m-0">Порядок турниров</h4>
+    <a href="/admin/tournaments" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Назад к турнирам
+    </a>
+</div>
+
+<!-- Выбор сезона -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-3">
+        <form method="GET" action="/admin/tournaments/reorder" class="d-flex align-items-center gap-3">
+            <label class="fw-bold text-nowrap m-0">Выберите сезон:</label>
+            <select name="season" class="form-select w-auto" onchange="this.form.submit()">
+                {% for s in available_seasons %}
+                    <option value="{{ s }}" {% if s == current_season %}selected{% endif %}>{{ s }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+
+<div class="alert alert-info border-info shadow-sm mb-4">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <strong>Инструкция:</strong> Зажмите карточку турнира левой кнопкой мыши и перетащите её вверх или вниз. Порядок сохраняется автоматически.
+</div>
+
+<!-- Список для перетаскивания -->
+<div id="tournament-list" class="d-flex flex-column gap-2 mb-4">
+    {% for t in tournaments %}
+    <div class="card border-0 shadow-sm" data-id="{{ t.id }}" style="cursor: grab;">
+        <div class="card-body p-3 d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center gap-3">
+                <i class="bi bi-grip-vertical fs-4 text-muted"></i>
+                {% if t.logo_url %}
+                    <img src="{{ t.logo_url }}" style="height: 40px; width: 40px; object-fit: contain;">
+                {% else %}
+                    <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 40px; width: 40px;">
+                        <i class="bi bi-trophy text-muted"></i>
+                    </div>
+                {% endif %}
+                <div>
+                    <h6 class="fw-bold m-0 text-dark">{{ t.name }}</h6>
+                    <div class="text-muted small">{{ t.division }} | {{ t.age_category }}</div>
+                </div>
+            </div>
+            <div class="text-end">
+                {% if t.status.value == 'active' %}
+                    <span class="badge bg-success">Активен</span>
+                {% else %}
+                    <span class="badge bg-secondary">{{ t.status.value }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning text-center">В этом сезоне пока нет турниров.</div>
+    {% endfor %}
+</div>
+
+<!-- Кнопка сохранения (появляется при изменении) -->
+<div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1000; display: none;" id="save-bar">
+    <button onclick="saveOrder()" class="btn btn-primary btn-lg shadow-lg fw-bold rounded-pill px-5">
+        <i class="bi bi-save me-2"></i> Сохранить порядок
+    </button>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const list = document.getElementById('tournament-list');
+        const saveBar = document.getElementById('save-bar');
+
+        // Инициализация SortableJS
+        if (list) {
+            new Sortable(list, {
+                animation: 150,
+                ghostClass: 'bg-light', // Класс для "призрака" при перетаскивании
+                onEnd: function (evt) {
+                    // Показываем кнопку сохранения, как только порядок был изменен
+                    saveBar.style.display = 'block';
+                }
+            });
+        }
+    });
+
+    // Функция отправки нового порядка на сервер
+    function saveOrder() {
+        const items = document.querySelectorAll('#tournament-list .card');
+        const data = [];
+        
+        items.forEach((item, index) => {
+            data.push({
+                id: parseInt(item.getAttribute('data-id')),
+                sort_order: index // 0, 1, 2, 3...
+            });
+        });
+
+        const btn = document.querySelector('#save-bar button');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Сохранение...';
+        btn.disabled = true;
+
+        fetch('/admin/tournaments/reorder/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.status === 'ok') {
+                btn.innerHTML = '<i class="bi bi-check-lg me-2"></i> Сохранено!';
+                btn.classList.replace('btn-primary', 'btn-success');
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.replace('btn-success', 'btn-primary');
+                    btn.disabled = false;
+                    document.getElementById('save-bar').style.display = 'none';
+                }, 2000);
+            } else {
+                alert('Ошибка: ' + res.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert('Ошибка сети: ' + err);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+</script>
+
+<style>
+    /* Стиль для элемента, который тащат */
+    .sortable-ghost {
+        opacity: 0.4;
+        background-color: #f8f9fa !important;
+        border: 2px dashed #0d6efd !important;
+    }
+</style>
+{% endblock %}

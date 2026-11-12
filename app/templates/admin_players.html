@@ -8,6 +8,22 @@
     </a>
 </div>
 
+<!-- ПАНЕЛЬ ПОИСКА -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body py-3">
+        <form method="GET" action="/admin/players" class="d-flex gap-3 align-items-center flex-wrap">
+            <span class="fw-bold text-muted small text-uppercase">Поиск:</span>
+            <input type="text" name="search" class="form-control form-control-sm w-auto" style="min-width: 250px;"
+                   placeholder="Введите имя или фамилию..." value="{{ current_search }}">
+            <button type="submit" class="btn btn-sm btn-secondary">Найти</button>
+            {% if current_search %}
+                <a href="/admin/players" class="btn btn-sm btn-outline-danger">Сбросить</a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+<!-- ТАБЛИЦА ИГРОКОВ -->
 <div class="card border-0 shadow-sm">
     <div class="card-body p-0">
         <table class="table table-hover mb-0">
@@ -54,7 +70,15 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="text-center py-5 text-muted">Игроки пока не добавлены.</td>
+                    <td colspan="5" class="text-center py-5 text-muted">
+                        {% if current_search %}
+                            <i class="bi bi-search fs-1 d-block mb-3 text-secondary"></i>
+                            <h5>Ничего не найдено</h5>
+                            <p>По запросу «<b>{{ current_search }}</b>» игроков не найдено.</p>
+                        {% else %}
+                            Игроки пока не добавлены.
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
