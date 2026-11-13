@@ -432,16 +432,26 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 @router.get("/tournaments/{tournament_id}")
 async def tournament_page(tournament_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    import re
+    from collections import defaultdict
+    from sqlalchemy import func, or_, select
+    from sqlalchemy.orm import selectinload
+    from datetime import datetime, timezone
+
+    # 1. ПОЛУЧАЕМ ТУРНИР
     tournament = await db.get(Tournament, tournament_id)
     if not tournament:
         raise HTTPException(status_code=404, detail="Турнир не найден")
 
-    # 1. ТАБЛИЦА
+    # =========================================================================
+    # 2. ТУРНИРНАЯ ТАБЛИЦА
+    # =========================================================================
     stmt_standings = select(TournamentStanding).where(
         TournamentStanding.tournament_id == tournament_id
     ).options(selectinload(TournamentStanding.team))
 
     standings_raw = (await db.execute(stmt_standings)).scalars().all()
+
     is_cup = any(s.group_name for s in standings_raw) or tournament.division == "CUP"
 
     if is_cup:
@@ -456,7 +466,9 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
             grouped_standings[group_name] = []
         grouped_standings[group_name].append(s)
 
-    # 2. МАТЧИ
+    # =========================================================================
+    # 3. МАТЧИ (Групповой этап и Сетки)
+    # =========================================================================
     stmt_matches = select(Match).where(Match.tournament_id == tournament_id).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
@@ -473,27 +485,47 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
         )
     )
 
-    # 3. РАЗДЕЛЯЕМ НА ГРУППЫ И ПЛЕЙ-ОФФ (для сетки)
     group_matches = [m for m in matches if m.stage == MatchStage.GROUP or m.stage is None]
     playoff_matches = [m for m in matches if m.stage in [MatchStage.PLAYOFF, MatchStage.FINAL]]
-    playoff_matches.sort(key=lambda x: (x.round or 0, x.match_date or fallback_date))
 
+    # --- ИСПРАВЛЕНИЕ СЕТОК: Жесткий парсинг по тексту ---
     brackets_data = {}
     for m in playoff_matches:
         bracket_name = m.group_name if m.group_name else "Плей-офф"
         if bracket_name not in brackets_data:
             brackets_data[bracket_name] = {}
-        r_num = m.round if m.round else 1
+
+        # Берем название стадии (например, "4 тур / Четвертьфинал")
+        s_name = (m.stage_name or "").upper()
+
+        # Жестко определяем раунд по тексту, игнорируя ошибочную цифру "4" в базе
+        if "1/8" in s_name or "ВОСЬМ" in s_name:
+            r_num = 1
+        elif "1/4" in s_name or "ЧЕТВЕРТЬ" in s_name:
+            r_num = 2
+        elif "1/2" in s_name or "ПОЛУ" in s_name:
+            r_num = 3
+        elif "ФИНАЛ" in s_name and "ПОЛУ" not in s_name and "ЧЕТВЕРТЬ" not in s_name:
+            r_num = 4
+        elif ("3" in s_name and ("МЕСТО" in s_name or "ТРЕТЬ" in s_name or "БРОНЗ" in s_name)):
+            r_num = 5
+        else:
+            # Если текста нет, только тогда берем цифру из базы
+            r_num = m.round if m.round else 1
+
         if r_num not in brackets_data[bracket_name]:
             brackets_data[bracket_name][r_num] = []
         brackets_data[bracket_name][r_num].append(m)
 
+    # Сортируем раунды по порядку (1, 2, 3, 4...)
     for b_name in brackets_data:
         brackets_data[b_name] = dict(sorted(brackets_data[b_name].items()))
 
     round_names = {1: "1/8 ФИНАЛА", 2: "1/4 ФИНАЛА", 3: "1/2 ФИНАЛА", 4: "ФИНАЛ", 5: "ЗА 3 МЕСТО"}
 
-    # 4. ШАХМАТКА
+    # =========================================================================
+    # 4. ШАХМАТКА (Результаты личных встреч)
+    # =========================================================================
     matrix_data = {}
     for m in matches:
         score = f"{m.home_score}-{m.away_score}" if m.home_score is not None and m.away_score is not None else "-:-"
@@ -501,7 +533,9 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
 
     teams_list = [s.team for s in standings]
 
-    # 5. ПРОГРЕСС
+    # =========================================================================
+    # 5. ПРОГРЕСС (Последние 5 игр для таблицы)
+    # =========================================================================
     progress_data = {}
     for team in teams_list:
         team_matches = [m for m in matches if m.home_team_id == team.id or m.away_team_id == team.id]
@@ -516,7 +550,9 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
                 recent_form.append({"result": res, "match_id": m.id})
         progress_data[team.id] = recent_form
 
-    # 6. ПОПАП (Данные для модального окна)
+    # =========================================================================
+    # 6. ДАННЫЕ ДЛЯ ПОПАПОВ МАТЧЕЙ
+    # =========================================================================
     matches_dict = {}
     for m in matches:
         events_list = []
@@ -555,11 +591,12 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
             "no_events_but_score": bool(m.home_score is not None and len(events_list) == 0),
         }
 
-    # 7. КАЛЕНДАРЬ (ГРУППИРОВКА ПО ТУРАМ И ДАТАМ)
+    # =========================================================================
+    # 7. КАЛЕНДАРЬ (Группировка по турам и датам)
+    # =========================================================================
     matches_by_round = defaultdict(list)
     matches_by_date = defaultdict(list)
 
-    # Умная сортировка: сначала будущие (по возрастанию), потом прошлые (от новых к старым)
     matches.sort(key=lambda x: (
         0 if x.status == MatchStatus.SCHEDULED else 1,
         x.match_date.timestamp() if x.status == MatchStatus.SCHEDULED and x.match_date else 9999999999,
@@ -567,12 +604,11 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
     ))
 
     for m in matches:
-        # ГЛАВНОЕ ИСПРАВЛЕНИЕ: Опираемся на stage_name (название тура), а не на поле stage
         if m.status == MatchStatus.SCHEDULED:
             group_key = "БЛИЖАЙШИЕ МАТЧИ"
         else:
             if m.stage_name:
-                group_key = m.stage_name.upper()  # Например: "7 ТУР" или "1/4 ФИНАЛА"
+                group_key = m.stage_name.upper()
             elif m.round and str(m.round).isdigit() and int(m.round) > 0:
                 group_key = f"{m.round} ТУР"
             else:
@@ -580,7 +616,6 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
 
         matches_by_round[group_key].append(m)
 
-        # Группировка по датам
         if m.match_date:
             months_ru = {1: "ЯНВАРЯ", 2: "ФЕВРАЛЯ", 3: "МАРТА", 4: "АПРЕЛЯ", 5: "МАЯ", 6: "ИЮНЯ",
                          7: "ИЮЛЯ", 8: "АВГУСТА", 9: "СЕНТЯБРЯ", 10: "ОКТЯБРЯ", 11: "НОЯБРЯ", 12: "ДЕКАБРЯ"}
@@ -592,8 +627,6 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
         else:
             matches_by_date['ДАТА TBA'].append(m)
 
-    import re
-    # Сортируем группы туров: "БЛИЖАЙШИЕ МАТЧИ" первые, плей-офф последние, остальные по возрастанию номера
     def group_sort_key(item):
         key = item[0]
         if key == "БЛИЖАЙШИЕ МАТЧИ": return (0, 0)
@@ -605,7 +638,9 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
 
     matches_by_round = dict(sorted(matches_by_round.items(), key=group_sort_key))
 
-    # 8. СТАТИСТИКА
+    # =========================================================================
+    # 8. СТАТИСТИКА ИГРОКОВ
+    # =========================================================================
     stmt_stats_goals = select(TeamPlayer).join(Player).where(
         TeamPlayer.tournament_id == tournament_id, func.coalesce(TeamPlayer.stats_goals, 0) > 0
     ).options(selectinload(TeamPlayer.player), selectinload(TeamPlayer.team)).order_by(
@@ -621,7 +656,9 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
     )
     tournament_stats_cards = (await db.execute(stmt_stats_cards)).scalars().all()
 
+    # =========================================================================
     # 9. ДИСКВАЛИФИКАЦИИ
+    # =========================================================================
     stmt_disq = select(Disqualification).where(Disqualification.tournament_id == tournament_id).options(
         selectinload(Disqualification.player), selectinload(Disqualification.team)
     ).order_by(Disqualification.decision_date.desc())
@@ -629,20 +666,36 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
     active_disq = [d for d in all_disq if d.matches_remaining and d.matches_remaining > 0]
     completed_disq = [d for d in all_disq if not d.matches_remaining or d.matches_remaining == 0]
 
-    # 10. НОВОСТИ
-    stmt_news = select(News).where(News.is_published == True, News.tournament_id == tournament_id).order_by(
-        News.published_at.desc()).limit(9)
+    # =========================================================================
+    # 10. НОВОСТИ ТУРНИРА
+    # =========================================================================
+    stmt_news = select(News).where(
+        News.is_published == True, News.tournament_id == tournament_id
+    ).order_by(News.published_at.desc()).limit(9)
     tournament_news = (await db.execute(stmt_news)).scalars().all()
 
+    # =========================================================================
     # ОТДАЕМ В ШАБЛОН
+    # =========================================================================
     return await render_page(request, db, "tournament_detail.html", context={
-        "tournament": tournament, "grouped_standings": grouped_standings, "is_cup": is_cup,
-        "brackets_data": brackets_data, "round_names": round_names, "matches": matches,
-        "standings": standings, "teams_list": teams_list, "matrix": matrix_data,
-        "progress": progress_data, "matches_dict": matches_dict,
-        "matches_by_round": matches_by_round, "matches_by_date": matches_by_date,
-        "tournament_stats_goals": tournament_stats_goals, "tournament_stats_cards": tournament_stats_cards,
-        "active_disq": active_disq, "completed_disq": completed_disq, "tournament_news": tournament_news,
+        "tournament": tournament,
+        "grouped_standings": grouped_standings,
+        "is_cup": is_cup,
+        "brackets_data": brackets_data,
+        "round_names": round_names,
+        "matches": matches,
+        "standings": standings,
+        "teams_list": teams_list,
+        "matrix": matrix_data,
+        "progress": progress_data,
+        "matches_dict": matches_dict,
+        "matches_by_round": matches_by_round,
+        "matches_by_date": matches_by_date,
+        "tournament_stats_goals": tournament_stats_goals,
+        "tournament_stats_cards": tournament_stats_cards,
+        "active_disq": active_disq,
+        "completed_disq": completed_disq,
+        "tournament_news": tournament_news,
     })
 
 
