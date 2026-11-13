@@ -102,7 +102,6 @@
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label small fw-bold">ТИП</label>
-                            <!-- ИСПРАВЛЕНИЕ: значения в нижнем регистре, как в БД -->
                             <select name="event_type" class="form-select" required>
                                 <option value="goal">Гол</option>
                                 <option value="penalty_goal">Пенальти</option>
@@ -129,8 +128,8 @@
                         <label class="form-label small fw-bold">ИГРОК</label>
                         <select name="player_id" class="form-select" required id="player-select">
                             <option value="">Сначала выберите команду...</option>
-                            {% for tp in home_players %}<option value="{{ tp.player.id }}" data-team="{{ match.home_team_id }}" class="d-none">{{ tp.player.last_name }}</option>{% endfor %}
-                            {% for tp in away_players %}<option value="{{ tp.player.id }}" data-team="{{ match.away_team_id }}" class="d-none">{{ tp.player.last_name }}</option>{% endfor %}
+                            {% for tp in home_players %}<option value="{{ tp.player.id }}" data-team="{{ match.home_team_id }}" class="d-none">{{ tp.player.last_name }} {{ tp.player.first_name }}</option>{% endfor %}
+                            {% for tp in away_players %}<option value="{{ tp.player.id }}" data-team="{{ match.away_team_id }}" class="d-none">{{ tp.player.last_name }} {{ tp.player.first_name }}</option>{% endfor %}
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary w-100 fw-bold">Добавить</button>
@@ -179,7 +178,6 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Тип события</label>
-                        <!-- ИСПРАВЛЕНИЕ: значения в нижнем регистре -->
                         <select name="event_type" class="form-select" id="edit-event-type" required>
                             <option value="goal">Гол</option>
                             <option value="penalty_goal">Пенальти</option>
@@ -237,8 +235,8 @@ teamSelect.addEventListener("change", function() {
 });
 
 const playersData = [
-    {% for tp in home_players %}{ id: "{{ tp.player.id }}", name: "{{ tp.player.last_name }}", team: "{{ match.home_team_id }}" },{% endfor %}
-    {% for tp in away_players %}{ id: "{{ tp.player.id }}", name: "{{ tp.player.last_name }}", team: "{{ match.away_team_id }}" },{% endfor %}
+    {% for tp in home_players %}{ id: "{{ tp.player.id }}", name: "{{ tp.player.last_name }} {{ tp.player.first_name }}", team: "{{ match.home_team_id }}" },{% endfor %}
+    {% for tp in away_players %}{ id: "{{ tp.player.id }}", name: "{{ tp.player.last_name }} {{ tp.player.first_name }}", team: "{{ match.away_team_id }}" },{% endfor %}
 ];
 
 function fillEditModal(eventId, teamId, playerId, eventType, minute, comment) {

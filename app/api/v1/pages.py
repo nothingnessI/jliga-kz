@@ -175,8 +175,17 @@ from sqlalchemy import select, or_, desc, case, update, delete
 @router.get("/")
 async def home_page(request: Request, tournament_id: int = None, db: AsyncSession = Depends(get_db)):
     await check_and_finish_expired_tournaments(db)
-    from datetime import date
+
+    from datetime import datetime, timezone, timedelta
     from sqlalchemy import func
+
+    # Безопасное получение часового пояса (защита от падения на Windows без tzdata)
+    try:
+        from zoneinfo import ZoneInfo
+        local_tz = ZoneInfo("Asia/Almaty")
+    except Exception:
+        # Фоллбек: жестко задаем UTC+5 (Алматы)
+        local_tz = timezone(timedelta(hours=5))
 
     # 1. ПОЛУЧАЕМ ПОСЛЕДНИЙ СЕЗОН
     latest_season = await db.scalar(select(Tournament.season).order_by(Tournament.season.desc()).limit(1))
@@ -191,9 +200,7 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
         Tournament.season == latest_season,
         or_(*conditions)
     ).order_by(
-        # Сначала строго по твоему порядку из админки
         Tournament.sort_order.asc(),
-        # Если sort_order одинаковый (например, везде 0), тогда по алфавиту
         Tournament.name.asc()
     )
     tournaments = (await db.execute(stmt_tournaments)).scalars().all()
@@ -206,10 +213,14 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     if not active_tournament and tournaments:
         active_tournament = tournaments[0]
 
-    # 4. МАТЧИ НА СЕГОДНЯ
-    today = date.today()
+    # 4. МАТЧИ НА СЕГОДНЯ (С УЧЕТОМ ЧАСОВОГО ПОЯСА)
+    now_local = datetime.now(local_tz)
+    start_of_day = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day = start_of_day + timedelta(days=1)
+
     stmt_today = select(Match).where(
-        func.date(Match.match_date) == today
+        Match.match_date >= start_of_day,
+        Match.match_date < end_of_day
     ).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
