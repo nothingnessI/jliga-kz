@@ -264,8 +264,11 @@
                                     {% endif %}
                                 </td>
                                 <td class="text-start text-truncate" style="max-width: 150px;">
-                                    <img src="{{ s.team.logo_url or '/static/default_team.png' }}" width="18" height="18" class="me-2" style="object-fit: contain;">
-                                    <span class="fw-bold text-dark">{{ s.team.name }}</span>
+                                    <!-- ССЫЛКА НА КОМАНДУ -->
+                                    <a href="/teams/{{ s.team.id }}" class="text-decoration-none d-inline-flex align-items-center hover-card" title="Профиль команды {{ s.team.name }}">
+                                        <img src="{{ s.team.logo_url or '/static/default_team.png' }}" width="18" height="18" class="me-2" style="object-fit: contain;">
+                                        <span class="fw-bold text-dark">{{ s.team.name }}</span>
+                                    </a>
                                 </td>
                                 <td class="text-muted">{{ s.games_played }}</td>
                                 <td><span class="badge bg-dark rounded-pill px-2">{{ s.points }}</span></td>

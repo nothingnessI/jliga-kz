@@ -174,7 +174,6 @@ from sqlalchemy import select, or_, desc, case, update, delete
 
 @router.get("/")
 async def home_page(request: Request, tournament_id: int = None, db: AsyncSession = Depends(get_db)):
-
     await check_and_finish_expired_tournaments(db)
     from datetime import date
     from sqlalchemy import func
@@ -202,12 +201,9 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     # 3. ОПРЕДЕЛЯЕМ АКТИВНЫЙ ТУРНИР (для правой колонки)
     active_tournament = None
     if tournament_id:
-        # Если в URL передан ID (пользователь выбрал турнир из списка)
         active_tournament = next((t for t in tournaments if t.id == tournament_id), None)
 
-    # Если ID не передан (зашли просто на сайт) ИЛИ передан неверный ID
     if not active_tournament and tournaments:
-        # Берем САМЫЙ ПЕРВЫЙ турнир из отсортированного списка
         active_tournament = tournaments[0]
 
     # 4. МАТЧИ НА СЕГОДНЯ
@@ -272,8 +268,12 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
         )
         active_disqualifications = (await db.execute(stmt_disq)).scalars().all()
 
-    # 6. ПОСЛЕДНИЕ НОВОСТИ
-    stmt_news = select(News).where(News.is_published == True).order_by(News.published_at.desc()).limit(4)
+    # 6. ПОСЛЕДНИЕ НОВОСТИ (ОБНОВЛЕНА СОРТИРОВКА)
+    stmt_news = select(News).where(News.is_published == True).order_by(
+        News.sort_order.asc(),
+        News.published_at.desc(),
+        News.id.desc()
+    ).limit(4)
     latest_news = (await db.execute(stmt_news)).scalars().all()
 
     # 7. РЕНДЕР
@@ -283,7 +283,7 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
         "latest_news": latest_news,
         "standings": standings,
         "top_scorers": top_scorers,
-        "active_disqualifications": active_disqualifications,  # <--- Передаем в шаблон
+        "active_disqualifications": active_disqualifications,
         "active_tournament": active_tournament,
         "selected_tournament_id": active_tournament.id if active_tournament else None,
         "latest_season": latest_season
@@ -941,7 +941,7 @@ async def news_page(
     team_id: int = None,
     db: AsyncSession = Depends(get_db)
 ):
-    limit = 10 # На оригинальном сайте новости крупные, поэтому по 10 штук на страницу
+    limit = 10
     skip = (page - 1) * limit
 
     # Получаем списки для фильтров
@@ -961,11 +961,15 @@ async def news_page(
         stmt = stmt.join(News.teams).where(Team.id == team_id)
         count_stmt = count_stmt.join(News.teams).where(Team.id == team_id)
 
-    # Загружаем связи и сортируем
+    # Загружаем связи и сортируем (ОБНОВЛЕНА СОРТИРОВКА)
     stmt = stmt.options(
         selectinload(News.teams),
         selectinload(News.tournament)
-    ).order_by(News.published_at.desc()).offset(skip).limit(limit)
+    ).order_by(
+        News.sort_order.asc(),
+        News.published_at.desc(),
+        News.id.desc()
+    ).offset(skip).limit(limit)
 
     total_news = await db.scalar(count_stmt)
     news_list = (await db.execute(stmt)).scalars().all()
@@ -2516,16 +2520,36 @@ async def admin_news_list(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Создаем запрос
-    stmt = select(News).order_by(News.published_at.desc(), News.id.desc())
-
-    # ВЫПОЛНЯЕМ запрос и получаем список
+    # Сортируем по sort_order, а затем по дате
+    stmt = select(News).order_by(News.sort_order.asc(), News.published_at.desc(), News.id.desc())
     news_list = (await db.execute(stmt)).scalars().all()
 
     return await render_page(request, db, "admin_news.html", context={
         "user": user,
-        "news_list": news_list  # <--- Передаем уже полученный список, а не stmt
+        "news_list": news_list
     })
+
+
+@router.post("/admin/news/reorder/save")
+async def admin_news_reorder_save(request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    try:
+        data = await request.json()
+        for item in data:
+            n_id = item.get("id")
+            new_order = item.get("sort_order")
+            if n_id is not None and new_order is not None:
+                n = await db.get(News, n_id)
+                if n:
+                    n.sort_order = new_order
+                    db.add(n)
+        await db.commit()
+        return {"status": "ok", "message": "Порядок сохранен"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 
 
 @router.get("/admin/news/create")

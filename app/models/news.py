@@ -23,6 +23,7 @@ class News(Base, TimestampMixin):
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     tags: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
 
     # Старая привязка к турниру (оставляем)
     tournament_id: Mapped[int | None] = mapped_column(ForeignKey("tournaments.id", ondelete="SET NULL"))

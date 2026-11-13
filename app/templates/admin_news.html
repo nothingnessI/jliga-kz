@@ -1,11 +1,19 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
+<!-- Подключаем SortableJS для Drag and Drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h4 class="fw-bold m-0">Новости</h4>
     <a href="/admin/news/create" class="btn btn-primary fw-bold">
         <i class="bi bi-plus-lg"></i> Написать новость
     </a>
+</div>
+
+<div class="alert alert-info border-info shadow-sm mb-4">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <strong>Инструкция:</strong> Зажмите иконку <i class="bi bi-grip-vertical fs-5 align-middle"></i> слева от новости, чтобы перетащить её вверх или вниз. После изменения порядка нажмите кнопку <b>«Сохранить порядок»</b>.
 </div>
 
 <div class="card border-0 shadow-sm">
@@ -14,6 +22,9 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light">
                     <tr>
+                        <!-- НОВАЯ КОЛОНКА ДЛЯ DRAG & DROP -->
+                        <th class="py-3 px-3" style="width: 40px;"></th>
+
                         <th class="py-3 px-4" style="width: 80px;">Обложка</th>
                         <th>Заголовок</th>
                         <th>Дата публикации</th>
@@ -21,9 +32,16 @@
                         <th class="text-end px-4" style="width: 150px;">Действия</th>
                     </tr>
                 </thead>
-                <tbody>
+                <!-- ДОБАВЛЕН ID ДЛЯ JS -->
+                <tbody id="news-list">
                     {% for n in news_list %}
-                    <tr>
+                    <!-- ДОБАВЛЕН data-id -->
+                    <tr data-id="{{ n.id }}">
+                        <!-- РУЧКА ДЛЯ ПЕРЕТАСКИВАНИЯ -->
+                        <td class="text-center px-3 text-muted" style="cursor: grab;" title="Перетащите, чтобы изменить порядок">
+                            <i class="bi bi-grip-vertical fs-5"></i>
+                        </td>
+
                         <td class="px-4">
                             {% if n.image_url %}
                                 <img src="{{ n.image_url }}" alt="cover" style="height: 45px; width: 60px; object-fit: cover; border-radius: 4px;">
@@ -63,7 +81,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
+                        <td colspan="6" class="text-center py-5 text-muted">
                             <i class="bi bi-newspaper fs-1 d-block mb-3 text-secondary"></i>
                             Новостей пока нет. <br>
                             Нажмите «Написать новость», чтобы создать первую.
@@ -75,4 +93,75 @@
         </div>
     </div>
 </div>
+
+<!-- Кнопка сохранения (появляется при изменении) -->
+<div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1000; display: none;" id="save-bar">
+    <button onclick="saveOrder()" class="btn btn-primary btn-lg shadow-lg fw-bold rounded-pill px-5">
+        <i class="bi bi-save me-2"></i> Сохранить порядок
+    </button>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const list = document.getElementById('news-list');
+        const saveBar = document.getElementById('save-bar');
+
+        if (list) {
+            new Sortable(list, {
+                animation: 150,
+                handle: '.bi-grip-vertical', // Тянем только за иконку
+                ghostClass: 'bg-light',
+                onEnd: function (evt) {
+                    // Показываем кнопку сохранения при изменении порядка
+                    saveBar.style.display = 'block';
+                }
+            });
+        }
+    });
+
+    function saveOrder() {
+        const items = document.querySelectorAll('#news-list tr[data-id]');
+        const data = [];
+
+        items.forEach((item, index) => {
+            data.push({
+                id: parseInt(item.getAttribute('data-id')),
+                sort_order: index
+            });
+        });
+
+        const btn = document.querySelector('#save-bar button');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Сохранение...';
+        btn.disabled = true;
+
+        fetch('/admin/news/reorder/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.status === 'ok') {
+                btn.innerHTML = '<i class="bi bi-check-lg me-2"></i> Сохранено!';
+                btn.classList.replace('btn-primary', 'btn-success');
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.replace('btn-success', 'btn-primary');
+                    btn.disabled = false;
+                    document.getElementById('save-bar').style.display = 'none';
+                }, 2000);
+            } else {
+                alert('Ошибка: ' + res.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert('Ошибка сети: ' + err);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+</script>
 {% endblock %}
