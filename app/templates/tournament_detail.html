@@ -851,15 +851,29 @@
         <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div class="text-end fw-bold fs-5 w-40" id="modalHomeName"></div>
+
+        <!-- ИСПРАВЛЕННЫЙ БЛОК: Счет строго по центру через CSS Grid -->
+        <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 15px; margin-bottom: 1.5rem;">
+
+            <!-- Хозяева (занимают левую 1fr, текст прижат вправо) -->
+            <div class="text-end" style="word-wrap: break-word;">
+                <div class="fw-bold fs-5" id="modalHomeName"></div>
+            </div>
+
+            <!-- Счет (автоматическая ширина, всегда в центре) -->
             <div class="text-center">
-                <div class="fs-3 fw-bold bg-dark text-white rounded px-3 py-1 shadow-sm" id="modalScore"></div>
+                <div class="fs-3 fw-bold bg-dark text-white rounded px-3 py-1 shadow-sm d-inline-block" style="white-space: nowrap;" id="modalScore"></div>
                 <div class="text-danger fw-bold mt-1 d-none" id="modalPenalties" style="font-size: 12px;"></div>
                 <div class="badge bg-danger mt-1 d-none" id="modalTechLoss" style="font-size: 10px;">Тех. поражение</div>
             </div>
-            <div class="text-start fw-bold fs-5 w-40" id="modalAwayName"></div>
+
+            <!-- Гости (занимают правую 1fr, текст прижат влево) -->
+            <div class="text-start" style="word-wrap: break-word;">
+                <div class="fw-bold fs-5" id="modalAwayName"></div>
+            </div>
+
         </div>
+
         <div class="row g-0 border-top pt-3" id="modalEventsRow"></div>
       </div>
       <div class="modal-footer border-0 bg-light p-3">
@@ -919,6 +933,7 @@
 
         document.getElementById('modalDate').textContent = data.date;
         document.getElementById('modalStadium').innerHTML = `<i class="bi bi-geo-alt-fill text-danger"></i> ${data.stadium}`;
+
         document.getElementById('modalHomeName').textContent = data.home_name;
         document.getElementById('modalAwayName').textContent = data.away_name;
         document.getElementById('modalScore').textContent = `${data.home_score} : ${data.away_score}`;

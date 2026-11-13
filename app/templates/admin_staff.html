@@ -1,0 +1,184 @@
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+<!-- Подключаем SortableJS для Drag & Drop -->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold m-0">Сотрудники</h4>
+    <a href="/admin/staff/create" class="btn btn-primary fw-bold">
+        <i class="bi bi-plus-lg"></i> Добавить сотрудника
+    </a>
+</div>
+
+<div class="alert alert-info border-info shadow-sm mb-4">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <strong>Инструкция:</strong> Зажмите иконку <i class="bi bi-grip-vertical fs-5 align-middle"></i> слева от сотрудника, чтобы изменить его порядок.
+    Сотрудники с одинаковым <b>Рангом</b> на сайте группируются в отдельные блоки.
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <!-- Колонка для ручки Drag & Drop -->
+                        <th class="py-3 px-3 text-center" style="width: 40px;"></th>
+
+                        <th class="py-3 px-3" style="width: 80px;">Фото</th>
+                        <th>ФИО</th>
+                        <th>Категория (Ранг)</th> <!-- НОВАЯ КОЛОНКА -->
+                        <th>Должность</th>
+                        <th class="text-center">Статус</th>
+                        <th class="text-end px-4" style="width: 150px;">Действия</th>
+                    </tr>
+                </thead>
+                <!-- ID для инициализации SortableJS -->
+                <tbody id="staff-list">
+                    {% for s in staff_list %}
+                    <!-- data-id для отправки на сервер -->
+                    <tr data-id="{{ s.id }}">
+                        <!-- Ручка для перетаскивания -->
+                        <td class="text-center px-3 text-muted" style="cursor: grab;" title="Перетащите, чтобы изменить порядок">
+                            <i class="bi bi-grip-vertical fs-5"></i>
+                        </td>
+
+                        <!-- Фото -->
+                        <td class="px-3">
+                            {% if s.photo_url %}
+                                <img src="{{ s.photo_url }}" alt="photo" style="height: 45px; width: 45px; object-fit: cover; border-radius: 50%;">
+                            {% else %}
+                                <div class="bg-secondary bg-opacity-25 rounded-circle d-flex align-items-center justify-content-center" style="height: 45px; width: 45px;">
+                                    <i class="bi bi-person text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- ФИО -->
+                        <td class="fw-bold text-dark">{{ s.full_name }}</td>
+
+                        <!-- Ранг (Категория) -->
+                        <td>
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary">{{ s.rank }}</span>
+                        </td>
+
+                        <!-- Должность -->
+                        <td>
+                            <span class="text-muted small">{{ s.position }}</span>
+                        </td>
+
+                        <!-- Статус -->
+                        <td class="text-center">
+                            {% if s.is_active %}
+                                <span class="badge bg-success">Активен</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Скрыт</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Действия -->
+                        <td class="text-end px-4">
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="/admin/staff/{{ s.id }}/edit" class="btn btn-sm btn-outline-primary" title="Редактировать">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <form action="/admin/staff/{{ s.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Удалить этого сотрудника?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <!-- Если список пуст -->
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <i class="bi bi-people fs-1 d-block mb-3 text-secondary"></i>
+                            Список сотрудников пуст. <br>
+                            Нажмите «Добавить сотрудника», чтобы создать первого.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Всплывающая кнопка сохранения (появляется при изменении порядка) -->
+<div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1000; display: none;" id="save-bar">
+    <button onclick="saveOrder()" class="btn btn-primary btn-lg shadow-lg fw-bold rounded-pill px-5">
+        <i class="bi bi-save me-2"></i> Сохранить порядок
+    </button>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const list = document.getElementById('staff-list');
+        const saveBar = document.getElementById('save-bar');
+
+        if (list) {
+            new Sortable(list, {
+                animation: 150,
+                handle: '.bi-grip-vertical', // Тянем строго за иконку
+                ghostClass: 'bg-light',      // Подсветка при перетаскивании
+                onEnd: function (evt) {
+                    // Показываем кнопку сохранения при любом изменении порядка
+                    saveBar.style.display = 'block';
+                }
+            });
+        }
+    });
+
+    function saveOrder() {
+        const items = document.querySelectorAll('#staff-list tr[data-id]');
+        const data = [];
+
+        // Собираем новый порядок
+        items.forEach((item, index) => {
+            data.push({
+                id: parseInt(item.getAttribute('data-id')),
+                sort_order: index
+            });
+        });
+
+        const btn = document.querySelector('#save-bar button');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Сохранение...';
+        btn.disabled = true;
+
+        // Отправляем на сервер
+        fetch('/admin/staff/reorder/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(res => {
+            if (res.status === 'ok') {
+                btn.innerHTML = '<i class="bi bi-check-lg me-2"></i> Сохранено!';
+                btn.classList.replace('btn-primary', 'btn-success');
+
+                // Возвращаем кнопку в исходное состояние через 2 секунды
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.classList.replace('btn-success', 'btn-primary');
+                    btn.disabled = false;
+                    document.getElementById('save-bar').style.display = 'none';
+                }, 2000);
+            } else {
+                alert('Ошибка сохранения: ' + res.message);
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        })
+        .catch(err => {
+            alert('Ошибка сети: ' + err);
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+</script>
+{% endblock %}

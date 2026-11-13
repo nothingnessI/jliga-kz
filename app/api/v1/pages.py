@@ -473,12 +473,11 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
         )
     )
 
-    # 3. РАЗДЕЛЯЕМ НА ГРУППЫ И ПЛЕЙ-ОФФ
+    # 3. РАЗДЕЛЯЕМ НА ГРУППЫ И ПЛЕЙ-ОФФ (для сетки)
     group_matches = [m for m in matches if m.stage == MatchStage.GROUP or m.stage is None]
     playoff_matches = [m for m in matches if m.stage in [MatchStage.PLAYOFF, MatchStage.FINAL]]
     playoff_matches.sort(key=lambda x: (x.round or 0, x.match_date or fallback_date))
 
-    # Группируем плей-офф по СЕТКАМ (group_name)
     brackets_data = {}
     for m in playoff_matches:
         bracket_name = m.group_name if m.group_name else "Плей-офф"
@@ -517,7 +516,7 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
                 recent_form.append({"result": res, "match_id": m.id})
         progress_data[team.id] = recent_form
 
-    # 6. ПОПАП
+    # 6. ПОПАП (Данные для модального окна)
     matches_dict = {}
     for m in matches:
         events_list = []
@@ -525,11 +524,16 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
             sorted_events = sorted(m.events, key=lambda x: x.minute)
             for e in sorted_events:
                 event_str = str(e.event_type).upper()
-                if "YELLOW" in event_str: etype = "YELLOW"
-                elif "RED" in event_str: etype = "RED"
-                elif "OWN" in event_str: etype = "OWN_GOAL"
-                elif "PENALTY" in event_str: etype = "PENALTY"
-                else: etype = "GOAL"
+                if "YELLOW" in event_str:
+                    etype = "YELLOW"
+                elif "RED" in event_str:
+                    etype = "RED"
+                elif "OWN" in event_str:
+                    etype = "OWN_GOAL"
+                elif "PENALTY" in event_str:
+                    etype = "PENALTY"
+                else:
+                    etype = "GOAL"
 
                 events_list.append({
                     "minute": e.minute, "team_id": e.team_id,
@@ -542,16 +546,16 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
             "home_team_id": m.home_team_id, "away_team_id": m.away_team_id,
             "home_score": m.home_score if m.home_score is not None else 0,
             "away_score": m.away_score if m.away_score is not None else 0,
-            "home_penalty": m.home_penalty,  # <--- ДОБАВИЛИ СЮДА
-            "away_penalty": m.away_penalty,  # <--- ДОБАВИЛИ СЮДА
-            "stage_name": m.stage_name,      # <--- ДОБАВИЛИ СЮДА
+            "home_penalty": m.home_penalty,
+            "away_penalty": m.away_penalty,
+            "stage_name": m.stage_name,
             "tech_loss": m.tech_loss,
             "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
             "stadium": m.stadium or 'Стадион TBA', "events": events_list,
             "no_events_but_score": bool(m.home_score is not None and len(events_list) == 0),
         }
 
-    # 7. КАЛЕНДАРЬ (ПО ТУРАМ И ДАТАМ)
+    # 7. КАЛЕНДАРЬ (ГРУППИРОВКА ПО ТУРАМ И ДАТАМ)
     matches_by_round = defaultdict(list)
     matches_by_date = defaultdict(list)
 
@@ -563,21 +567,25 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
     ))
 
     for m in matches:
-        # Группировка по турам
+        # ГЛАВНОЕ ИСПРАВЛЕНИЕ: Опираемся на stage_name (название тура), а не на поле stage
         if m.status == MatchStatus.SCHEDULED:
             group_key = "БЛИЖАЙШИЕ МАТЧИ"
         else:
-            if m.round and str(m.round).isdigit() and int(m.round) > 0:
-                group_key = f"{m.round} ТУР" if m.stage == MatchStage.GROUP else "ПЛЕЙ-ОФФ"
+            if m.stage_name:
+                group_key = m.stage_name.upper()  # Например: "7 ТУР" или "1/4 ФИНАЛА"
+            elif m.round and str(m.round).isdigit() and int(m.round) > 0:
+                group_key = f"{m.round} ТУР"
             else:
                 group_key = "ГРУППОВОЙ ЭТАП"
+
         matches_by_round[group_key].append(m)
 
         # Группировка по датам
         if m.match_date:
             months_ru = {1: "ЯНВАРЯ", 2: "ФЕВРАЛЯ", 3: "МАРТА", 4: "АПРЕЛЯ", 5: "МАЯ", 6: "ИЮНЯ",
                          7: "ИЮЛЯ", 8: "АВГУСТА", 9: "СЕНТЯБРЯ", 10: "ОКТЯБРЯ", 11: "НОЯБРЯ", 12: "ДЕКАБРЯ"}
-            weekdays_ru = {0: "ПОНЕДЕЛЬНИК", 1: "ВТОРНИК", 2: "СРЕДА", 3: "ЧЕТВЕРГ", 4: "ПЯТНИЦА", 5: "СУББОТА", 6: "ВОСКРЕСЕНЬЕ"}
+            weekdays_ru = {0: "ПОНЕДЕЛЬНИК", 1: "ВТОРНИК", 2: "СРЕДА", 3: "ЧЕТВЕРГ", 4: "ПЯТНИЦА", 5: "СУББОТА",
+                           6: "ВОСКРЕСЕНЬЕ"}
             dt = m.match_date
             date_str = f"{dt.day} {months_ru[dt.month]}, {weekdays_ru[dt.weekday()]}"
             matches_by_date[date_str].append(m)
@@ -585,14 +593,17 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
             matches_by_date['ДАТА TBA'].append(m)
 
     import re
-    # Сортируем группы туров: "БЛИЖАЙШИЕ МАТЧИ" первые, остальные от новых туров к старым
+    # Сортируем группы туров: "БЛИЖАЙШИЕ МАТЧИ" первые, плей-офф последние, остальные по возрастанию номера
     def group_sort_key(item):
         key = item[0]
-        if key == "БЛИЖАЙШИЕ МАТЧИ": return 9999
-        match = re.search(r'\d+', key)
-        return int(match.group()) if match else 0
+        if key == "БЛИЖАЙШИЕ МАТЧИ": return (0, 0)
+        if "ПЛЕЙ-ОФФ" in key or "ФИНАЛ" in key or "1/" in key: return (2, 0)
 
-    matches_by_round = dict(sorted(matches_by_round.items(), key=group_sort_key, reverse=True))
+        match = re.search(r'\d+', key)
+        if match: return (1, int(match.group()))
+        return (1, 999)
+
+    matches_by_round = dict(sorted(matches_by_round.items(), key=group_sort_key))
 
     # 8. СТАТИСТИКА
     stmt_stats_goals = select(TeamPlayer).join(Player).where(
@@ -623,7 +634,7 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
         News.published_at.desc()).limit(9)
     tournament_news = (await db.execute(stmt_news)).scalars().all()
 
-    # ОТДАЕМ В ШАБЛОН (Убрали m.home_penalty и т.д. отсюда, они теперь в matches_dict)
+    # ОТДАЕМ В ШАБЛОН
     return await render_page(request, db, "tournament_detail.html", context={
         "tournament": tournament, "grouped_standings": grouped_standings, "is_cup": is_cup,
         "brackets_data": brackets_data, "round_names": round_names, "matches": matches,
@@ -705,10 +716,14 @@ async def participants_teams_page(
 @router.get("/participants/players")
 async def participants_players_page(
         request: Request,
+        page: int = 1,
         search: str = None,
         db: AsyncSession = Depends(get_db)
 ):
-    # 1. Подзапрос: Базовая статистика из TeamPlayer (суммируем по всем турнирам)
+    limit = 50  # По сколько игроков выводить на страницу
+    skip = (page - 1) * limit
+
+    # 1. Подзапрос: Базовая статистика из TeamPlayer
     stats_subq = select(
         TeamPlayer.player_id,
         func.coalesce(func.sum(TeamPlayer.stats_games), 0).label('games'),
@@ -724,7 +739,16 @@ async def participants_players_page(
         func.count(MatchEvent.id).label('pen_goals')
     ).where(MatchEvent.event_type == MatchEventType.PENALTY_GOAL).group_by(MatchEvent.player_id).subquery()
 
-    # 3. Основной запрос с JOIN'ами
+    # 3. Считаем общее количество игроков для пагинации
+    count_stmt = select(func.count()).select_from(Player)
+    if search:
+        count_stmt = count_stmt.where(
+            or_(Player.last_name.ilike(f"%{search}%"), Player.first_name.ilike(f"%{search}%")))
+
+    total_players = await db.scalar(count_stmt)
+    total_pages = (total_players + limit - 1) // limit if total_players > 0 else 1
+
+    # 4. Основной запрос с JOIN'ами
     stmt = select(
         Player,
         stats_subq.c.games,
@@ -743,16 +767,15 @@ async def participants_players_page(
     if search:
         stmt = stmt.where(or_(Player.last_name.ilike(f"%{search}%"), Player.first_name.ilike(f"%{search}%")))
 
-    # Сортировка по умолчанию: по играм (как на скрине)
-    stmt = stmt.order_by(func.coalesce(stats_subq.c.games, 0).desc()).limit(100)
+    # Сортировка и пагинация
+    stmt = stmt.order_by(func.coalesce(stats_subq.c.games, 0).desc()).offset(skip).limit(limit)
 
     results = (await db.execute(stmt)).all()
 
-    # 4. Формируем список данных для шаблона
+    # 5. Формируем список данных для шаблона
     players_data = []
     for row in results:
         p = row[0]
-        # Защита от None: если игрок без заявок, ставим 0
         g = row[1] or 0
         goals = row[2] or 0
         assists = row[3] or 0
@@ -768,7 +791,6 @@ async def participants_players_page(
             "yc": yc,
             "rc": rc,
             "pen_goals": pen_goals,
-            # Теперь делим безопасно, так как g всегда число (0 или больше)
             "avg_goals": round(goals / g, 2) if g > 0 else 0.0,
             "avg_assists": round(assists / g, 2) if g > 0 else 0.0,
             "goal_assist": goals + assists,
@@ -777,7 +799,9 @@ async def participants_players_page(
 
     return await render_page(request, db, "players_list.html", context={
         "players_data": players_data,
-        "current_search": search or ""
+        "current_search": search or "",
+        "page": page,
+        "total_pages": total_pages
     })
 
 
@@ -937,10 +961,14 @@ async def participants_coaches_page(request: Request, search: str = None, db: As
 async def news_page(
     request: Request,
     page: int = 1,
-    tournament_id: int = None,
-    team_id: int = None,
+    tournament_id: str = None,
+    team_id: str = None,
     db: AsyncSession = Depends(get_db)
 ):
+    # Безопасно парсим ID (если строка пустая или не число, будет None)
+    t_id = int(tournament_id) if tournament_id and tournament_id.isdigit() else None
+    tm_id = int(team_id) if team_id and team_id.isdigit() else None
+
     limit = 10
     skip = (page - 1) * limit
 
@@ -953,15 +981,15 @@ async def news_page(
     count_stmt = select(func.count()).select_from(News).where(News.is_published == True)
 
     # Применяем фильтры
-    if tournament_id:
-        stmt = stmt.where(News.tournament_id == tournament_id)
-        count_stmt = count_stmt.where(News.tournament_id == tournament_id)
+    if t_id:
+        stmt = stmt.where(News.tournament_id == t_id)
+        count_stmt = count_stmt.where(News.tournament_id == t_id)
 
-    if team_id:
-        stmt = stmt.join(News.teams).where(Team.id == team_id)
-        count_stmt = count_stmt.join(News.teams).where(Team.id == team_id)
+    if tm_id:
+        stmt = stmt.join(News.teams).where(Team.id == tm_id)
+        count_stmt = count_stmt.join(News.teams).where(Team.id == tm_id)
 
-    # Загружаем связи и сортируем (ОБНОВЛЕНА СОРТИРОВКА)
+    # Загружаем связи и сортируем
     stmt = stmt.options(
         selectinload(News.teams),
         selectinload(News.tournament)
@@ -981,8 +1009,8 @@ async def news_page(
         "total_pages": total_pages,
         "tournaments": tournaments,
         "teams": teams,
-        "selected_tournament": tournament_id,
-        "selected_team": team_id
+        "selected_tournament": t_id, # Передаем уже преобразованный ID
+        "selected_team": tm_id       # Передаем уже преобразованный ID
     })
 
 
@@ -1139,9 +1167,160 @@ async def stadiums_page(request: Request, db: AsyncSession = Depends(get_db)):
     return await render_page(request, db, "stadiums.html", context={"stadiums": stadiums})
 
 
+from app.schemas.stadium import StadiumCreate, StadiumUpdate # используем как референс для форм
+from app.models.staff import Staff
+from collections import OrderedDict
+
+
+# ==========================================
+# ПУБЛИЧНАЯ СТРАНИЦА СОТРУДНИКОВ
+# ==========================================
 @router.get("/management")
 async def management_page(request: Request, db: AsyncSession = Depends(get_db)):
-    return await render_page(request, db, "management.html")
+    staff_list = (await db.execute(
+        select(Staff).where(Staff.is_active == True).order_by(Staff.sort_order.asc(), Staff.id.asc())
+    )).scalars().all()
+
+    # Группируем по РАНГУ (а не по должности)
+    grouped_staff = OrderedDict()
+    for person in staff_list:
+        if person.rank not in grouped_staff:
+            grouped_staff[person.rank] = []
+        grouped_staff[person.rank].append(person)
+
+    return await render_page(request, db, "management.html", context={"grouped_staff": grouped_staff})
+
+
+# ==========================================
+# АДМИНКА: СПИСОК
+# ==========================================
+@router.get("/admin/staff")
+async def admin_staff_list(request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    staff_list = (await db.execute(
+        select(Staff).order_by(Staff.sort_order.asc(), Staff.id.asc())
+    )).scalars().all()
+
+    # Собираем уникальные значения для подсказок
+    all_ranks = sorted(list(set(s.rank for s in staff_list)))
+    all_positions = sorted(list(set(s.position for s in staff_list)))
+
+    return await render_page(request, db, "admin_staff.html", context={
+        "user": user,
+        "staff_list": staff_list,
+        "all_ranks": all_ranks,
+        "all_positions": all_positions
+    })
+
+
+# ==========================================
+# АДМИНКА: СОЗДАНИЕ И РЕДАКТИРОВАНИЕ
+# ==========================================
+@router.get("/admin/staff/create")
+async def admin_staff_create_form(request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    staff_list = (await db.execute(select(Staff))).scalars().all()
+    all_ranks = sorted(list(set(s.rank for s in staff_list)))
+    all_positions = sorted(list(set(s.position for s in staff_list)))
+
+    return await render_page(request, db, "admin_staff_form.html", context={
+        "user": user, "staff": None, "all_ranks": all_ranks, "all_positions": all_positions
+    })
+
+
+@router.post("/admin/staff/create")
+async def admin_staff_create(
+        request: Request,
+        full_name: str = Form(...),
+        rank: str = Form(...),  # Новое поле
+        position: str = Form(...),
+        social_url: str = Form(None),
+        is_active: bool = Form(False),
+        photo: UploadFile = File(None),
+        db: AsyncSession = Depends(get_db)
+):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    photo_url = await save_upload_file(photo, "staff")
+
+    new_staff = Staff(
+        full_name=full_name,
+        rank=rank,
+        position=position,
+        social_url=social_url,
+        photo_url=photo_url,
+        is_active=is_active
+    )
+    db.add(new_staff)
+    await db.commit()
+    return RedirectResponse(url="/admin/staff", status_code=303)
+
+
+@router.get("/admin/staff/{staff_id}/edit")
+async def admin_staff_edit_form(staff_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    staff = await db.get(Staff, staff_id)
+    if not staff: return RedirectResponse(url="/admin/staff", status_code=303)
+
+    staff_list = (await db.execute(select(Staff))).scalars().all()
+    all_ranks = sorted(list(set(s.rank for s in staff_list)))
+    all_positions = sorted(list(set(s.position for s in staff_list)))
+
+    return await render_page(request, db, "admin_staff_form.html", context={
+        "user": user, "staff": staff, "all_ranks": all_ranks, "all_positions": all_positions
+    })
+
+
+@router.post("/admin/staff/{staff_id}/edit")
+async def admin_staff_edit(
+        staff_id: int,
+        request: Request,
+        full_name: str = Form(...),
+        rank: str = Form(...),  # Новое поле
+        position: str = Form(...),
+        social_url: str = Form(None),
+        is_active: bool = Form(False),
+        photo: UploadFile = File(None),
+        db: AsyncSession = Depends(get_db)
+):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    staff = await db.get(Staff, staff_id)
+    if not staff: return RedirectResponse(url="/admin/staff", status_code=303)
+
+    new_photo_url = await save_upload_file(photo, "staff")
+    if new_photo_url:
+        staff.photo_url = new_photo_url
+
+    staff.full_name = full_name
+    staff.rank = rank
+    staff.position = position
+    staff.social_url = social_url
+    staff.is_active = is_active
+
+    db.add(staff)
+    await db.commit()
+    return RedirectResponse(url="/admin/staff", status_code=303)
+
+
+@router.post("/admin/staff/{staff_id}/delete")
+async def admin_staff_delete(staff_id: int, request: Request, db: AsyncSession = Depends(get_db)):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse): return user
+
+    staff = await db.get(Staff, staff_id)
+    if staff:
+        await db.delete(staff)
+        await db.commit()
+    return RedirectResponse(url="/admin/staff", status_code=303)
 
 
 @router.get("/partners")
@@ -2500,6 +2679,7 @@ async def admin_match_event_add(
 
     return RedirectResponse(url=f"/admin/matches/{match_id}/events", status_code=303)
 
+
 @router.post("/admin/matches/{match_id}/events/{event_id}/delete")
 async def admin_match_event_delete(match_id: int, event_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -2511,6 +2691,10 @@ async def admin_match_event_delete(match_id: int, event_id: int, request: Reques
         await crud_match_event.delete(db, db_obj=event)
         if match:
             await recalculate_match_score(match, db)
+
+            # ДОБАВИТЬ ВОТ ЭТО:
+            from app.services.stats_recalc import StatsRecalculator
+            await StatsRecalculator.recalculate_all(db, match.tournament_id)
 
     return RedirectResponse(url=f"/admin/matches/{match_id}/events", status_code=303)
 

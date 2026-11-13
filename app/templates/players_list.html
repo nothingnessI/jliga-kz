@@ -24,6 +24,10 @@
 
     /* Стили для скролла, если таблица не влезает */
     .table-responsive { overflow-x: auto; }
+
+    /* Стили пагинации */
+    .pagination .page-link { color: #1e293b; font-weight: 600; }
+    .pagination .active .page-link { background-color: #0f2537; border-color: #0f2537; color: white; }
 </style>
 
 <div class="container-fluid py-5" style="max-width: 1400px;">
@@ -64,7 +68,8 @@
                 <tbody>
                     {% for item in players_data %}
                     <tr>
-                        <td class="fw-bold text-muted row-index">{{ loop.index }}</td>
+                        <!-- Сквозной номер с учетом пагинации -->
+                        <td class="fw-bold text-muted row-index">{{ (page - 1) * 50 + loop.index }}</td>
                         <td class="text-start">
                             <a href="/player/{{ item.player.id }}" class="text-decoration-none text-dark d-flex align-items-center">
                                 <img src="{{ item.player.photo_url or '/static/default_player.png' }}" class="player-photo">
@@ -94,6 +99,36 @@
             </table>
         </div>
     </div>
+
+    <!-- БЛОК ПАГИНАЦИИ -->
+    {% if total_pages > 1 %}
+    <nav class="mt-4 mb-2">
+        <ul class="pagination justify-content-center shadow-sm">
+            <!-- Кнопка "Назад" -->
+            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                <a class="page-link text-dark" href="?page={{ page - 1 }}{% if current_search %}&search={{ current_search }}{% endif %}">Назад</a>
+            </li>
+
+            <!-- Номера страниц -->
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                    <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                {% elif p >= page - 2 and p <= page + 2 %}
+                    <li class="page-item"><a class="page-link text-dark" href="?page={{ p }}{% if current_search %}&search={{ current_search }}{% endif %}">{{ p }}</a></li>
+                {% elif p == 1 or p == total_pages %}
+                    <li class="page-item"><a class="page-link text-dark" href="?page={{ p }}{% if current_search %}&search={{ current_search }}{% endif %}">{{ p }}</a></li>
+                {% elif p == page - 3 or p == page + 3 %}
+                    <li class="page-item disabled"><span class="page-link text-muted">...</span></li>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Кнопка "Вперед" -->
+            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                <a class="page-link text-dark" href="?page={{ page + 1 }}{% if current_search %}&search={{ current_search }}{% endif %}">Вперед</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
 </div>
 
 <!-- УНИВЕРСАЛЬНЫЙ СКРИПТ СОРТИРОВКИ -->
@@ -136,8 +171,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
 
                 tbody.innerHTML = "";
-                rows.forEach((row, idx) => {
-                    if (row.querySelector('.row-index')) row.querySelector('.row-index').textContent = idx + 1;
+                rows.forEach((row) => {
                     tbody.appendChild(row);
                 });
             });

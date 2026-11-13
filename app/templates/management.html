@@ -2,22 +2,61 @@
 
 {% block content %}
 <div class="mb-4 border-bottom pb-2">
-    <h3 class="text-uppercase fw-bold m-0">Руководители</h3>
+    <h3 class="text-uppercase fw-bold m-0">Сотрудники</h3>
 </div>
 
-<div class="row mt-5">
-    <!-- Карточка руководителя -->
-    <div class="col-md-4 col-lg-3">
-        <div class="card border-0 shadow-sm">
-            <!-- Фото -->
-            <img src="/static/JLigaOwners/ras.jpg" class="card-img-top" alt="Рашид Алиев" style="height: 300px; object-fit: cover; object-position: top;">
-            
-            <!-- Информация -->
-            <div class="card-body">
-                <h5 class="card-title fw-bold mb-1">Рашид<br>Алиев</h5>
-                <p class="card-text text-muted mt-3">Президент Лиги</p>
+{% for rank_name, people in grouped_staff.items() %}
+    <div class="mb-5">
+        <!-- Заголовок группы (Ранг) -->
+        <h4 class="fw-bold border-bottom pb-2 mb-4" style="color: #1a3c56;">{{ rank_name }}</h4>
+
+        <div class="row">
+            {% for person in people %}
+            <div class="col-md-4 col-lg-3 mb-4">
+
+                {% if person.social_url %}
+                    <!-- Карточка со ссылкой -->
+                    <a href="{{ person.social_url }}" target="_blank" class="text-decoration-none text-dark d-block h-100">
+                        <div class="card border-0 shadow-sm h-100 hover-lift" style="cursor: pointer;">
+                            {% if person.photo_url %}
+                                <img src="{{ person.photo_url }}" class="card-img-top" alt="{{ person.full_name }}" style="height: 300px; object-fit: cover; object-position: top;">
+                            {% else %}
+                                <div class="bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="height: 300px;">
+                                    <i class="bi bi-person text-muted" style="font-size: 4rem;"></i>
+                                </div>
+                            {% endif %}
+                            <div class="card-body text-center">
+                                <h5 class="card-title fw-bold mb-1 text-uppercase">{{ person.full_name }}</h5>
+                                <p class="card-text text-muted mt-2 mb-0" style="font-size: 14px;">{{ person.position }}</p>
+                            </div>
+                        </div>
+                    </a>
+                {% else %}
+                    <!-- Обычная карточка -->
+                    <div class="card border-0 shadow-sm h-100">
+                        {% if person.photo_url %}
+                            <img src="{{ person.photo_url }}" class="card-img-top" alt="{{ person.full_name }}" style="height: 300px; object-fit: cover; object-position: top;">
+                        {% else %}
+                            <div class="bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="height: 300px;">
+                                <i class="bi bi-person text-muted" style="font-size: 4rem;"></i>
+                            </div>
+                        {% endif %}
+                        <div class="card-body text-center">
+                            <h5 class="card-title fw-bold mb-1 text-uppercase">{{ person.full_name }}</h5>
+                            <p class="card-text text-muted mt-2 mb-0" style="font-size: 14px;">{{ person.position }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+
             </div>
+            {% endfor %}
         </div>
     </div>
-</div>
+{% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="bi bi-people fs-1 d-block mb-3"></i>
+        <h5 class="fw-bold">Список сотрудников пуст</h5>
+        <p class="mb-0 small">Добавьте сотрудников через админ-панель.</p>
+    </div>
+{% endfor %}
 {% endblock %}
