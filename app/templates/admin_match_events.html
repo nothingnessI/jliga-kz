@@ -102,13 +102,14 @@
                     <div class="row g-2 mb-3">
                         <div class="col-6">
                             <label class="form-label small fw-bold">ТИП</label>
+                            <!-- ИСПРАВЛЕНИЕ: значения в нижнем регистре, как в БД -->
                             <select name="event_type" class="form-select" required>
-                                <option value="GOAL">Гол</option>
-                                <option value="PENALTY_GOAL">Пенальти</option>
-                                <option value="OWN_GOAL">Автогол (в свои)</option> <!-- ДОБАВЛЕНО -->
+                                <option value="goal">Гол</option>
+                                <option value="penalty_goal">Пенальти</option>
+                                <option value="own_goal">Автогол (в свои)</option>
                                 <option value="ASSIST">Голевой пас</option>
-                                <option value="YELLOW_CARD">Желтая карточка</option>
-                                <option value="RED_CARD">Красная карточка</option>
+                                <option value="yellow_card">Желтая карточка</option>
+                                <option value="red_card">Красная карточка</option>
                             </select>
                         </div>
                         <div class="col-6">
@@ -178,13 +179,14 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label small fw-bold">Тип события</label>
+                        <!-- ИСПРАВЛЕНИЕ: значения в нижнем регистре -->
                         <select name="event_type" class="form-select" id="edit-event-type" required>
-                            <option value="GOAL">Гол</option>
-                            <option value="PENALTY_GOAL">Пенальти</option>
-                            <option value="OWN_GOAL">Автогол (в свои)</option> <!-- ДОБАВЛЕНО -->
+                            <option value="goal">Гол</option>
+                            <option value="penalty_goal">Пенальти</option>
+                            <option value="own_goal">Автогол (в свои)</option>
                             <option value="ASSIST">Голевой пас</option>
-                            <option value="YELLOW_CARD">Желтая</option>
-                            <option value="RED_CARD">Красная</option>
+                            <option value="yellow_card">Желтая</option>
+                            <option value="red_card">Красная</option>
                         </select>
                     </div>
                     <div class="mb-3">

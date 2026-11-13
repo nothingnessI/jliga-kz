@@ -2697,26 +2697,43 @@ async def admin_match_events(match_id: int, request: Request, db: AsyncSession =
 
 @router.post("/admin/matches/{match_id}/events/add")
 async def admin_match_event_add(
-        match_id: int, request: Request, team_id: int = Form(...), player_id: int = Form(...),
-        event_type: MatchEventType = Form(...), minute: int = Form(...),
-        assist_player_id: int = Form(None),  # <--- ДОБАВИЛИ АССИСТА
-        comment: str = Form(None), db: AsyncSession = Depends(get_db)
+        match_id: int,
+        request: Request,
+        team_id: int = Form(...),
+        player_id: int = Form(...),
+        event_type: str = Form(...),  # <-- ИЗМЕНЕНО НА STR
+        minute: int = Form(...),
+        assist_player_id: int = Form(None),
+        comment: str = Form(None),
+        db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
     match = await db.get(Match, match_id)
-    if not match: return RedirectResponse(url="/admin/matches", status_code=303)
+    if not match:
+        return RedirectResponse(url="/admin/matches", status_code=303)
 
-    # 1. Добавляем основное событие (Гол, Карточка)
+    # --- ИСПРАВЛЕНИЕ: Умная конвертация строки в Enum ---
+    try:
+        # Пытаемся найти по значению ('goal'), но если не выходит - ищем по имени ('GOAL')
+        try:
+            e_type = MatchEventType(event_type.lower())
+        except ValueError:
+            e_type = MatchEventType[event_type.upper()]
+    except (ValueError, KeyError):
+        # Если вообще непонятное значение, ставим дефолт (или выдаем ошибку)
+        raise HTTPException(status_code=400, detail=f"Неверный тип события: {event_type}")
+
+    # 1. Добавляем основное событие
     event_in = MatchEventCreate(
         match_id=match_id, team_id=team_id, player_id=player_id,
-        event_type=event_type, minute=minute, comment=comment
+        event_type=e_type, minute=minute, comment=comment
     )
     await crud_match_event.create(db, obj_in=event_in)
 
     # 2. Если это гол и выбран ассистент — добавляем событие ассиста
-    if event_type in [MatchEventType.GOAL, MatchEventType.PENALTY_GOAL] and assist_player_id:
+    if e_type in [MatchEventType.GOAL, MatchEventType.PENALTY_GOAL] and assist_player_id:
         assist_in = MatchEventCreate(
             match_id=match_id, team_id=team_id, player_id=assist_player_id,
             event_type=MatchEventType.ASSIST, minute=minute
@@ -2726,7 +2743,7 @@ async def admin_match_event_add(
     # 3. Пересчитываем счет матча
     await recalculate_match_score(match, db)
 
-    # 4. ГЛАВНОЕ: Запускаем полный пересчет всей статистики
+    # 4. Запускаем полный пересчет всей статистики
     from app.services.stats_recalc import StatsRecalculator
     await StatsRecalculator.recalculate_all(db, match.tournament_id)
 
