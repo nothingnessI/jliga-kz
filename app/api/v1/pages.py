@@ -2373,7 +2373,18 @@ async def admin_match_create(
     if home_team_id == away_team_id:
         raise HTTPException(status_code=400, detail="Команда не может играть сама с собой")
 
-    parsed_date = datetime.fromisoformat(match_date) if match_date else None
+    from zoneinfo import ZoneInfo
+
+    try:
+        local_tz = ZoneInfo("Asia/Almaty")
+    except Exception:
+        from datetime import timezone, timedelta
+        local_tz = timezone(timedelta(hours=5))
+
+    if match_date:
+        parsed_date = datetime.fromisoformat(match_date).replace(tzinfo=local_tz)
+    else:
+        parsed_date = None
 
     # Парсим стадию
     match_stage = None
@@ -2448,12 +2459,25 @@ async def admin_match_edit(
     if home_team_id == away_team_id:
         raise HTTPException(status_code=400, detail="Команда не может играть сама с собой")
 
-    # 2. Запоминаем старый статус (чтобы понять, изменился ли он)
+    # 2. Запоминаем старый статус
     old_status = match.status
 
-    # 3. Парсим данные из формы
-    parsed_date = datetime.fromisoformat(match_date) if match_date else None
+    # 3. Парсим дату с учетом часового пояса Алматы
+    from zoneinfo import ZoneInfo
+    from datetime import datetime, timezone, timedelta
 
+    try:
+        local_tz = ZoneInfo("Asia/Almaty")
+    except Exception:
+        # Фоллбек, если на сервере нет tzdata
+        local_tz = timezone(timedelta(hours=5))
+
+    if match_date:
+        parsed_date = datetime.fromisoformat(match_date).replace(tzinfo=local_tz)
+    else:
+        parsed_date = None
+
+    # 4. Парсим стадию
     match_stage = None
     if stage:
         from app.models.enums import MatchStage
@@ -2462,7 +2486,7 @@ async def admin_match_edit(
         except ValueError:
             pass
 
-    # 4. Обновляем данные матча в БД
+    # 5. Обновляем данные матча в БД
     match_in = MatchUpdate(
         tournament_id=tournament_id, home_team_id=home_team_id, away_team_id=away_team_id,
         match_date=parsed_date, stadium=stadium, home_score=home_score, away_score=away_score,
@@ -2473,12 +2497,12 @@ async def admin_match_edit(
     await crud_match.update(db, db_obj=match, obj_in=match_in)
 
     # =========================================================================
-    # 5. УМНАЯ ЛОГИКА ПЕРЕСЧЕТА
+    # 6. УМНАЯ ЛОГИКА ПЕРЕСЧЕТА
     # =========================================================================
     from app.services.stats_recalc import StatsRecalculator
     from app.services.disqualifications import DisqualificationService
 
-    # Проверяем, есть ли в базе счет (быстрое добавление) ИЛИ админ сам сменил статус на Завершен
+    # Проверяем, есть ли счет или админ сменил статус на Завершен
     is_finished_now = (status == MatchStatus.FINISHED) or (home_score is not None and away_score is not None)
 
     if is_finished_now:
@@ -2489,20 +2513,19 @@ async def admin_match_edit(
             await db.commit()
             await db.refresh(match)
 
-        # Если матч ТОЛЬКО ЧТО перешел в статус "Завершен" (т.е. раньше был SCHEDULED)
+        # Если матч ТОЛЬКО ЧТО перешел в статус "Завершен"
         if old_status != MatchStatus.FINISHED:
-            # А) Списываем отбытые матчи у текущих дисквалификаций
+            # А) Списываем отбытые матчи у дисквалификаций
             await DisqualificationService.process_match_finished(db, match)
             # Б) Автоматически выдаем новые за красные или желтые
             await DisqualificationService.auto_suspend_by_cards(db, match)
 
-        # В) В любом случае пересчитываем всю таблицу и статистику
-        # (это нужно, если админ зашел и просто исправил счет уже завершенного матча)
+        # В) Пересчитываем всю таблицу и статистику
         await StatsRecalculator.recalculate_all(db, tournament_id)
 
-    # Если матч был завершен, а его вернули в статус "Запланирован" (убрали счет)
+    # Если матч был завершен, а его вернули в статус "Запланирован"
     elif old_status == MatchStatus.FINISHED and not is_finished_now:
-        # Пересчитываем таблицу, чтобы отнять очки у команд
+        # Пересчитываем таблицу, чтобы отнять очки
         await StatsRecalculator.recalculate_all(db, tournament_id)
 
     return RedirectResponse(url="/admin/matches", status_code=303)

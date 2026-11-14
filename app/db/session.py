@@ -8,6 +8,11 @@ engine = create_async_engine(
     echo=False,
     max_overflow=10,
     pool_size=10,
+    connect_args={
+        "server_settings": {
+            "timezone": "Asia/Almaty"
+        }
+    }
 )
 
 session_factory = async_sessionmaker(

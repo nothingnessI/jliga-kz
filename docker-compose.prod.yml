@@ -6,6 +6,8 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
+      TZ: "Asia/Almaty"        # Время контейнера
+      PGTZ: "Asia/Almaty"      # Время PostgreSQL
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,6 +23,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env.prod
+    environment:
+      - TZ=Asia/Almaty
     volumes:
       - ./app/static/uploads:/app/app/static/uploads
     depends_on:
@@ -28,9 +32,12 @@ services:
         condition: service_healthy
     networks:
       - jliga_net
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped
+    environment:
+      - TZ=Asia/Almaty
     ports:
       - "80:80"
       - "443:443"
