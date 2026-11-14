@@ -1,7 +1,6 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
-<!-- ШАПКА -->
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
     <h4 class="fw-bold m-0">Управление матчами</h4>
     <a href="/admin/matches/create" class="btn btn-primary fw-bold">
@@ -9,28 +8,34 @@
     </a>
 </div>
 
-<!-- ПАНЕЛЬ ФИЛЬТРОВ (Без хитрых слоев и z-index) -->
+<!-- ПАНЕЛЬ ФИЛЬТРОВ -->
 <div class="card border-0 shadow-sm mb-4">
-    <div class="card-body">
-        <form method="GET" action="/admin/matches" class="row g-2">
-            <div class="col-12 col-md-4">
-                <!-- form-control-lg делает поле большим и удобным для пальцев -->
-                <input type="text" name="search" class="form-control form-control-lg" placeholder="Название команды..." value="{{ current_search or '' }}" autocomplete="off">
-            </div>
-            <div class="col-12 col-md-4">
-                <select name="tournament_id" class="form-select form-select-lg" onchange="this.form.submit()">
-                    <option value="">Все турниры</option>
-                    {% for t in tournaments %}
-                        <option value="{{ t.id }}" {% if current_tournament_id == t.id|string %}selected{% endif %}>
-                            {{ t.name }} ({{ t.season }})
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-12 col-md-4 d-flex gap-2">
-                <button type="submit" class="btn btn-secondary btn-lg w-100 fw-bold">Найти</button>
+    <div class="card-body p-3">
+        <!-- Добавили id="searchForm" для JS -->
+        <form method="GET" action="/admin/matches" class="d-flex flex-column gap-3" id="searchForm">
+
+            <label for="search-input" class="m-0 w-100" style="cursor: text;">
+                <input type="text" id="search-input" name="search" class="form-control" placeholder="Название команды..." value="{{ current_search or '' }}" autocomplete="off" style="padding: 12px; font-size: 16px;">
+            </label>
+
+            <!-- Убрали onchange="this.form.submit()", чтобы форма не грузилась при случайном выборе -->
+            <select name="tournament_id" class="form-select" style="padding: 12px; font-size: 16px;">
+                <option value="">Все турниры</option>
+                {% for t in tournaments %}
+                    <option value="{{ t.id }}" {% if current_tournament_id == t.id|string %}selected{% endif %}>
+                        {{ t.name }} ({{ t.season }})
+                    </option>
+                {% endfor %}
+            </select>
+
+            <div class="d-flex gap-2">
+                <!-- Добавили id="searchBtn" и спиннер для JS -->
+                <button type="submit" id="searchBtn" class="btn btn-secondary flex-grow-1 d-flex justify-content-center align-items-center gap-2" style="padding: 12px;">
+                    <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    <span id="btnText">Найти</span>
+                </button>
                 {% if current_search or current_tournament_id %}
-                    <a href="/admin/matches" class="btn btn-outline-danger btn-lg d-flex align-items-center justify-content-center" style="min-width: 60px;">
+                    <a href="/admin/matches" class="btn btn-outline-danger d-flex align-items-center justify-content-center" style="padding: 12px; min-width: 60px;">
                         <i class="bi bi-x-lg"></i>
                     </a>
                 {% endif %}
@@ -39,13 +44,18 @@
     </div>
 </div>
 
+{% if matches %}
+<div class="alert alert-info py-2 px-3 small border-info shadow-sm mb-3">
+    <i class="bi bi-info-circle me-1"></i> Показаны последние 100 матчей. Если нужного матча нет, воспользуйтесь поиском или фильтром по турниру.
+</div>
+{% endif %}
+
 <!-- СПИСОК МАТЧЕЙ -->
 <div class="d-flex flex-column gap-3">
     {% for match in matches %}
     <div class="card border-0 shadow-sm match-card">
         <div class="card-body p-3">
 
-            <!-- Дата и Статус -->
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
                     {% if match.match_date %}
@@ -62,7 +72,6 @@
                 </div>
             </div>
 
-            <!-- Турнир -->
             <div class="mb-3">
                 <a href="/admin/tournaments/{{ match.tournament_id }}/edit" class="text-decoration-none">
                     <div class="fw-bold text-truncate" style="color: #0d3b66;"><i class="bi bi-trophy me-1"></i>{{ match.tournament.name }}</div>
@@ -70,9 +79,7 @@
                 </a>
             </div>
 
-            <!-- Команды и Счет -->
             <div class="d-flex align-items-center justify-content-between bg-light p-2 rounded mb-3">
-                <!-- Хозяева -->
                 <div class="d-flex align-items-center justify-content-end gap-2 flex-grow-1" style="width: 0;">
                     <span class="fw-bold text-end text-truncate" style="font-size: 15px;">{{ match.home_team.name }}</span>
                     {% if match.home_team.logo_url %}
@@ -82,17 +89,12 @@
                     {% endif %}
                 </div>
 
-                <!-- Счет -->
                 <div class="text-center px-3">
                     <div class="fw-bold fs-5">
                         {{ match.home_score if match.home_score is not none else '-' }} : {{ match.away_score if match.away_score is not none else '-' }}
                     </div>
-                    {% if match.home_penalty is not none and match.away_penalty is not none %}
-                        <div class="text-danger fw-bold" style="font-size: 11px;">Пен: {{ match.home_penalty }}:{{ match.away_penalty }}</div>
-                    {% endif %}
                 </div>
 
-                <!-- Гости -->
                 <div class="d-flex align-items-center justify-content-start gap-2 flex-grow-1" style="width: 0;">
                     {% if match.away_team.logo_url %}
                         <img src="{{ match.away_team.logo_url }}" class="bg-white border rounded-circle p-1" style="width: 30px; height: 30px; object-fit: contain; flex-shrink: 0;">
@@ -103,16 +105,15 @@
                 </div>
             </div>
 
-            <!-- Кнопки действий -->
             <div class="d-flex gap-2">
-                <a href="/admin/matches/{{ match.id }}/events" class="btn btn-sm btn-outline-info flex-grow-1 fw-bold">
+                <a href="/admin/matches/{{ match.id }}/events" class="btn btn-sm btn-outline-info flex-grow-1 fw-bold py-2">
                     <i class="bi bi-activity"></i> События
                 </a>
-                <a href="/admin/matches/{{ match.id }}/edit" class="btn btn-sm btn-outline-primary flex-grow-1 fw-bold">
+                <a href="/admin/matches/{{ match.id }}/edit" class="btn btn-sm btn-outline-primary flex-grow-1 fw-bold py-2">
                     <i class="bi bi-pencil"></i> Изменить
                 </a>
                 <form action="/admin/matches/{{ match.id }}/delete" method="post" class="flex-grow-1" onsubmit="return confirm('Удалить матч?');">
-                    <button type="submit" class="btn btn-sm btn-outline-danger w-100 fw-bold">
+                    <button type="submit" class="btn btn-sm btn-outline-danger w-100 fw-bold py-2">
                         <i class="bi bi-trash"></i> Удалить
                     </button>
                 </form>
@@ -131,10 +132,21 @@
     {% endfor %}
 </div>
 
-<style>
-    /* Убрали transform и transition, чтобы на iPhone не было зависаний кликов */
-    .match-card {
-        border-left: 4px solid transparent !important;
-    }
-</style>
+<!-- JS для спиннера загрузки -->
+<script>
+    document.getElementById('searchForm').addEventListener('submit', function() {
+        const btn = document.getElementById('searchBtn');
+        const text = document.getElementById('btnText');
+        const spinner = document.getElementById('btnSpinner');
+
+        // Блокируем кнопку, чтобы не нажать дважды
+        btn.disabled = true;
+        btn.classList.remove('btn-secondary');
+        btn.classList.add('btn-dark');
+
+        // Показываем спиннер и меняем текст
+        text.textContent = 'Загрузка...';
+        spinner.classList.remove('d-none');
+    });
+</script>
 {% endblock %}
