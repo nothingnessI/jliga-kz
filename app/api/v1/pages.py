@@ -2316,7 +2316,7 @@ async def admin_matches_list(
         Match.id.desc()
     )
 
-    stmt = stmt.limit(50)
+    stmt = stmt.limit(100)
 
     matches = (await db.execute(stmt)).unique().scalars().all()
     tournaments = (await db.execute(select(Tournament).order_by(Tournament.name))).scalars().all()
