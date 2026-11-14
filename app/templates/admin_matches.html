@@ -9,18 +9,16 @@
     </a>
 </div>
 
-<!-- ПАНЕЛЬ ФИЛЬТРОВ -->
-<div class="card border-0 shadow-sm mb-4">
+<!-- ПАНЕЛЬ ФИЛЬТРОВ (Упрощенная и надежная) -->
+<div class="card border-0 shadow-sm mb-4" style="position: relative; z-index: 100;">
     <div class="card-body py-3">
-        <form method="GET" action="/admin/matches" class="row g-2 align-items-center">
-            <div class="col-12 col-md-auto d-none d-md-block">
-                <span class="fw-bold text-muted small text-uppercase">Поиск:</span>
+        <form method="GET" action="/admin/matches" class="d-flex flex-column flex-md-row gap-2">
+            <div class="flex-grow-1">
+                <!-- Убрали form-control-sm, чтобы поле было крупнее -->
+                <input type="text" name="search" class="form-control" placeholder="Название команды..." value="{{ current_search or '' }}" autocomplete="off">
             </div>
-            <div class="col-12 col-md-3">
-                <input type="text" name="search" class="form-control form-control-sm" placeholder="Название команды..." value="{{ current_search }}">
-            </div>
-            <div class="col-12 col-md-4">
-                <select name="tournament_id" class="form-select form-select-sm" onchange="this.form.submit()">
+            <div style="min-width: 200px;">
+                <select name="tournament_id" class="form-select" onchange="this.form.submit()">
                     <option value="">Все турниры</option>
                     {% for t in tournaments %}
                         <option value="{{ t.id }}" {% if current_tournament_id == t.id|string %}selected{% endif %}>
@@ -29,10 +27,10 @@
                     {% endfor %}
                 </select>
             </div>
-            <div class="col-12 col-md-auto d-flex gap-2">
-                <button type="submit" class="btn btn-sm btn-secondary w-100">Найти</button>
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-secondary px-4 flex-grow-1 flex-md-grow-0">Найти</button>
                 {% if current_search or current_tournament_id %}
-                    <a href="/admin/matches" class="btn btn-sm btn-outline-danger w-100">Сбросить</a>
+                    <a href="/admin/matches" class="btn btn-outline-danger">Сброс</a>
                 {% endif %}
             </div>
         </form>
@@ -75,7 +73,7 @@
                     </a>
                 </div>
 
-                <!-- 3. Команды и Счет (Главный блок) -->
+                <!-- 3. Команды и Счет -->
                 <div class="d-flex align-items-center justify-content-center flex-grow-1 gap-2 gap-md-4 py-2 py-lg-0 bg-light bg-lg-transparent rounded">
                     <!-- Хозяева -->
                     <div class="d-flex align-items-center justify-content-end gap-2 flex-grow-1" style="width: 0; min-width: 100px;">
@@ -110,7 +108,7 @@
                     </div>
                 </div>
 
-                <!-- 4. Статус для ПК (скрыт на мобилке) -->
+                <!-- 4. Статус для ПК -->
                 <div class="d-none d-lg-block text-center" style="width: 100px;">
                     <span class="badge bg-{{ 'success' if match.status.value|lower == 'finished' else 'danger' if match.status.value|lower == 'live' else 'secondary' }} w-100 py-2">
                         {{ match.status.value|upper }}
@@ -159,7 +157,6 @@
         border-left-color: #0d3b66 !important;
     }
 
-    /* Утилита для прозрачного фона на ПК (чтобы убрать bg-light на десктопе) */
     @media (min-width: 992px) {
         .bg-lg-transparent {
             background-color: transparent !important;
