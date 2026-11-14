@@ -713,13 +713,23 @@ async def tournament_page(tournament_id: int, request: Request, db: AsyncSession
 @router.get("/participants/teams")
 async def participants_teams_page(
         request: Request,
-        season: str = "all",
+        page: int = 1,
+        season: str = None,  # Изменено: по умолчанию None
         search: str = None,
         db: AsyncSession = Depends(get_db)
 ):
-    # 1. Получаем сезоны
+    limit = 20  # По сколько команд выводить на страницу
+    skip = (page - 1) * limit
+
+    # 1. Получаем доступные сезоны
     seasons_result = await db.execute(select(Tournament.season).distinct().order_by(Tournament.season.desc()))
     available_seasons = [s[0] for s in seasons_result.all() if s[0]]
+
+    # ИЗМЕНЕНО: Если сезон не выбран, берем самый последний (текущий год)
+    if not season and available_seasons:
+        season = available_seasons[0]
+    elif not season:
+        season = "all"
 
     # 2. Запрос матчей
     stmt = select(Match).where(Match.status == MatchStatus.FINISHED)
@@ -730,19 +740,21 @@ async def participants_teams_page(
     # 3. Считаем статистику
     team_stats = {}
     for m in all_matches:
-        if m.home_team_id not in team_stats: team_stats[m.home_team_id] = {'games': 0, 'wins': 0, 'clean_sheets': 0,
-                                                                           'goals': 0}
-        if m.away_team_id not in team_stats: team_stats[m.away_team_id] = {'games': 0, 'wins': 0, 'clean_sheets': 0,
-                                                                           'goals': 0}
+        if m.home_team_id not in team_stats:
+            team_stats[m.home_team_id] = {'games': 0, 'wins': 0, 'clean_sheets': 0, 'goals': 0}
+        if m.away_team_id not in team_stats:
+            team_stats[m.away_team_id] = {'games': 0, 'wins': 0, 'clean_sheets': 0, 'goals': 0}
 
         h = team_stats[m.home_team_id]
         a = team_stats[m.away_team_id]
-        h['games'] += 1;
+        h['games'] += 1
         a['games'] += 1
-        h['goals'] += (m.home_score or 0);
+        h['goals'] += (m.home_score or 0)
         a['goals'] += (m.away_score or 0)
+
         if m.away_score == 0: h['clean_sheets'] += 1
         if m.home_score == 0: a['clean_sheets'] += 1
+
         if (m.home_score or 0) > (m.away_score or 0):
             h['wins'] += 1
         elif (m.away_score or 0) > (m.home_score or 0):
@@ -762,18 +774,26 @@ async def participants_teams_page(
                 "team": t, "games": stats['games'], "wins": stats['wins'],
                 "clean_sheets": stats['clean_sheets'], "goals": stats['goals']
             })
-        elif not search:  # Если поиска нет, показываем всех (даже с нулями)
+        elif not search and season == "all":  # Показываем команды с нулями только если выбран "За все время"
             teams_data.append({
                 "team": t, "games": 0, "wins": 0, "clean_sheets": 0, "goals": 0
             })
 
+    # Сортируем по количеству игр
     teams_data = sorted(teams_data, key=lambda x: x['games'], reverse=True)
 
+    # 5. ПАГИНАЦИЯ
+    total_teams = len(teams_data)
+    total_pages = (total_teams + limit - 1) // limit if total_teams > 0 else 1
+    paginated_teams = teams_data[skip:skip + limit]
+
     return await render_page(request, db, "participants.html", context={
-        "teams_data": teams_data,
+        "teams_data": paginated_teams,  # Передаем только кусок данных
         "available_seasons": available_seasons,
         "current_season": season,
-        "current_search": search or ""
+        "current_search": search or "",
+        "page": page,  # Передаем текущую страницу
+        "total_pages": total_pages  # Переда# ем всего страниц
     })
 
 

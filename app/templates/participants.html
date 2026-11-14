@@ -2,43 +2,72 @@
 
 {% block content %}
 <style>
-    .sortable-th { cursor: pointer; user-select: none; position: relative; background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase; padding: 15px 10px; border-bottom: 2px solid #e2e8f0;}
+    /* Стили для таблицы и сортировки */
+    .sortable-th {
+        cursor: pointer; user-select: none; position: relative;
+        background: #f8fafc; color: #64748b; font-size: 12px; font-weight: 700;
+        text-transform: uppercase; padding: 15px 10px; border-bottom: 2px solid #e2e8f0;
+        white-space: nowrap;
+    }
     .sortable-th:hover { background: #e2e8f0; }
     .sortable-th::after { content: '↕'; opacity: 0.3; margin-left: 5px; font-size: 14px; }
     .sortable-th.sort-asc::after { content: '↑'; opacity: 1; color: #0d6efd; }
     .sortable-th.sort-desc::after { content: '↓'; opacity: 1; color: #0d6efd; }
 
-    .table-custom td { vertical-align: middle; padding: 12px 10px; font-size: 14px; font-weight: 600; color: #1e293b; border-bottom: 1px solid #f1f5f9; }
+    .table-custom td {
+        vertical-align: middle; padding: 12px 10px; font-size: 14px;
+        font-weight: 600; color: #1e293b; border-bottom: 1px solid #f1f5f9;
+        white-space: nowrap;
+    }
     .table-custom tbody tr:hover { background-color: #f8fafc; }
     .team-logo { width: 28px; height: 28px; object-fit: contain; margin-right: 10px; }
+
+    /* Фикс для iOS Safari (чтобы не было зума) */
+    .form-control, .form-select {
+        font-size: 16px !important;
+    }
+
+    /* Стили пагинации */
+    .pagination .page-link { color: #1e293b; font-weight: 600; }
+    .pagination .active .page-link { background-color: #0f2537; border-color: #0f2537; color: white; }
 </style>
 
-<div class="container py-5">
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+<div class="container py-3 py-md-5" style="max-width: 1200px;">
+
+    <!-- ШАПКА И ФИЛЬТРЫ -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
         <h2 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px;">Команды</h2>
 
-        <!-- Фильтры -->
-        <form method="GET" action="/participants/teams" class="d-flex gap-2 align-items-center flex-wrap">
-            <div class="input-group" style="width: 250px;">
+        <!-- Фильтры (адаптивные) -->
+        <form method="GET" action="/participants/teams" class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
+            <div class="input-group flex-grow-1" style="min-width: 200px;">
                 <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" name="search" class="form-control" placeholder="Поиск по названию..." value="{{ current_search }}">
+                <input type="text" name="search" class="form-control" placeholder="Поиск по названию..." value="{{ current_search or '' }}">
             </div>
-            <select name="season" class="form-select fw-bold" style="width: 200px;" onchange="this.form.submit()">
-                <option value="all" {% if current_season == 'all' %}selected{% endif %}>За все время</option>
-                {% for s in available_seasons %}
-                    <option value="{{ s }}" {% if current_season == s %}selected{% endif %}>{{ s }} сезон</option>
-                {% endfor %}
-            </select>
-            <button type="submit" class="btn btn-primary fw-bold">Найти</button>
-            {% if current_search %}
-                <a href="/participants/teams?season={{ current_season }}" class="btn btn-outline-danger"><i class="bi bi-x-lg"></i></a>
-            {% endif %}
+
+            <div class="d-flex gap-2">
+                <select name="season" class="form-select fw-bold flex-grow-1" style="min-width: 140px;" onchange="this.form.submit()">
+                    <option value="all" {% if current_season == 'all' %}selected{% endif %}>За все время</option>
+                    {% for s in available_seasons %}
+                        <option value="{{ s }}" {% if current_season == s %}selected{% endif %}>{{ s }} сезон</option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit" class="btn btn-primary fw-bold px-4">Найти</button>
+
+                {% if current_search %}
+                    <a href="/participants/teams?season={{ current_season }}" class="btn btn-outline-danger d-flex align-items-center justify-content-center" title="Сбросить поиск">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                {% endif %}
+            </div>
         </form>
     </div>
 
+    <!-- ТАБЛИЦА -->
     <div class="card border-0 shadow-sm" style="border-radius: 8px; overflow: hidden;">
         <div class="table-responsive">
-            <table class="table table-custom mb-0 text-center sortable-table">
+            <table class="table table-custom mb-0 text-center sortable-table" style="min-width: 600px;">
                 <thead>
                     <tr>
                         <th style="width: 50px;" class="text-center">#</th>
@@ -52,7 +81,8 @@
                 <tbody>
                     {% for item in teams_data %}
                     <tr>
-                        <td class="fw-bold text-muted row-index">{{ loop.index }}</td>
+                        <!-- Считаем сквозной номер с учетом пагинации -->
+                        <td class="fw-bold text-muted row-index">{{ (page - 1) * 20 + loop.index }}</td>
                         <td class="text-start">
                             <a href="/teams/{{ item.team.id }}" class="text-decoration-none text-dark d-flex align-items-center">
                                 <img src="{{ item.team.logo_url or '/static/default_team.png' }}" class="team-logo">
@@ -71,9 +101,40 @@
             </table>
         </div>
     </div>
+
+    <!-- БЛОК ПАГИНАЦИИ -->
+    {% if total_pages > 1 %}
+    <nav class="mt-4 mb-2">
+        <ul class="pagination justify-content-center shadow-sm flex-wrap">
+            <!-- Кнопка "Назад" -->
+            <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                <a class="page-link text-dark" href="?page={{ page - 1 }}&season={{ current_season }}{% if current_search %}&search={{ current_search }}{% endif %}">Назад</a>
+            </li>
+
+            <!-- Номера страниц -->
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                    <li class="page-item active"><span class="page-link">{{ p }}</span></li>
+                {% elif p >= page - 1 and p <= page + 1 %}
+                    <li class="page-item"><a class="page-link text-dark" href="?page={{ p }}&season={{ current_season }}{% if current_search %}&search={{ current_search }}{% endif %}">{{ p }}</a></li>
+                {% elif p == 1 or p == total_pages %}
+                    <li class="page-item"><a class="page-link text-dark" href="?page={{ p }}&season={{ current_season }}{% if current_search %}&search={{ current_search }}{% endif %}">{{ p }}</a></li>
+                {% elif p == page - 2 or p == page + 2 %}
+                    <li class="page-item disabled"><span class="page-link text-muted">...</span></li>
+                {% endif %}
+            {% endfor %}
+
+            <!-- Кнопка "Вперед" -->
+            <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                <a class="page-link text-dark" href="?page={{ page + 1 }}&season={{ current_season }}{% if current_search %}&search={{ current_search }}{% endif %}">Вперед</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+
 </div>
 
-<!-- УНИВЕРСАЛЬНЫЙ СКРИПТ СОРТИРОВКИ (потом скопируем его же на страницу игроков) -->
+<!-- УНИВЕРСАЛЬНЫЙ СКРИПТ СОРТИРОВКИ -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     document.querySelectorAll('.sortable-table').forEach(table => {
@@ -81,7 +142,6 @@ document.addEventListener("DOMContentLoaded", function() {
         const tbody = table.querySelector('tbody');
 
         headers.forEach((header, index) => {
-            // Ищем индекс колонки среди ВСЕХ th
             const colIndex = Array.from(header.parentNode.children).indexOf(header);
 
             header.addEventListener("click", () => {
@@ -114,7 +174,11 @@ document.addEventListener("DOMContentLoaded", function() {
 
                 tbody.innerHTML = "";
                 rows.forEach((row, idx) => {
-                    if (row.querySelector('.row-index')) row.querySelector('.row-index').textContent = idx + 1;
+                    // Обновляем сквозной номер при сортировке внутри страницы
+                    if (row.querySelector('.row-index')) {
+                        const baseNumber = {{ (page - 1) * 20 }};
+                        row.querySelector('.row-index').textContent = baseNumber + idx + 1;
+                    }
                     tbody.appendChild(row);
                 });
             });

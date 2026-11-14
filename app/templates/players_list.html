@@ -22,34 +22,56 @@
     .table-custom tbody tr:hover { background-color: #f8fafc; }
     .player-photo { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; margin-right: 10px; border: 1px solid #e2e8f0;}
 
-    /* Стили для скролла, если таблица не влезает */
-    .table-responsive { overflow-x: auto; }
+    /* Плавный скролл для таблицы на iOS */
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
 
     /* Стили пагинации */
     .pagination .page-link { color: #1e293b; font-weight: 600; }
     .pagination .active .page-link { background-color: #0f2537; border-color: #0f2537; color: white; }
+
+    /* Фикс для iOS Safari (чтобы не было зума при клике на поиск) */
+    .form-control {
+        font-size: 16px !important;
+    }
+
+    /* Утилиты для адаптивности кнопок */
+    @media (min-width: 576px) {
+        .w-sm-auto { width: auto !important; }
+    }
 </style>
 
-<div class="container-fluid py-5" style="max-width: 1400px;">
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+<div class="container-fluid py-3 py-md-5" style="max-width: 1400px;">
+
+    <!-- ШАПКА И ПОИСК -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
         <h2 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px;">Игроки</h2>
 
-        <!-- Поиск -->
-        <form method="GET" action="/participants/players" class="d-flex gap-2 align-items-center flex-wrap">
-            <div class="input-group" style="width: 300px;">
+        <!-- Поиск (адаптивный) -->
+        <form method="GET" action="/participants/players" class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">
+            <div class="input-group flex-grow-1" style="min-width: 250px;">
                 <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                <input type="text" name="search" class="form-control" placeholder="Поиск по ФИО..." value="{{ current_search }}">
+                <input type="text" name="search" class="form-control" placeholder="Поиск по ФИО..." value="{{ current_search or '' }}">
             </div>
-            <button type="submit" class="btn btn-primary fw-bold">НАЙТИ</button>
-            {% if current_search %}
-                <a href="/participants/players" class="btn btn-outline-danger"><i class="bi bi-x-lg"></i></a>
-            {% endif %}
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-primary fw-bold px-4 flex-grow-1 flex-sm-grow-0">НАЙТИ</button>
+                {% if current_search %}
+                    <a href="/participants/players" class="btn btn-outline-danger d-flex align-items-center justify-content-center px-3" title="Сбросить поиск">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                {% endif %}
+            </div>
         </form>
     </div>
 
+    <!-- ТАБЛИЦА -->
     <div class="card border-0 shadow-sm" style="border-radius: 8px; overflow: hidden;">
         <div class="table-responsive">
-            <table class="table table-custom mb-0 text-center sortable-table" style="min-width: 1000px;">
+            <!-- min-width: 900px заставляет таблицу скроллиться на телефонах, а не сжиматься -->
+            <table class="table table-custom mb-0 text-center sortable-table" style="min-width: 900px;">
                 <thead>
                     <tr>
                         <th style="width: 50px;" class="text-center">#</th>
@@ -103,7 +125,7 @@
     <!-- БЛОК ПАГИНАЦИИ -->
     {% if total_pages > 1 %}
     <nav class="mt-4 mb-2">
-        <ul class="pagination justify-content-center shadow-sm">
+        <ul class="pagination justify-content-center shadow-sm flex-wrap">
             <!-- Кнопка "Назад" -->
             <li class="page-item {% if page == 1 %}disabled{% endif %}">
                 <a class="page-link text-dark" href="?page={{ page - 1 }}{% if current_search %}&search={{ current_search }}{% endif %}">Назад</a>
@@ -113,11 +135,11 @@
             {% for p in range(1, total_pages + 1) %}
                 {% if p == page %}
                     <li class="page-item active"><span class="page-link">{{ p }}</span></li>
-                {% elif p >= page - 2 and p <= page + 2 %}
+                {% elif p >= page - 1 and p <= page + 1 %}
                     <li class="page-item"><a class="page-link text-dark" href="?page={{ p }}{% if current_search %}&search={{ current_search }}{% endif %}">{{ p }}</a></li>
                 {% elif p == 1 or p == total_pages %}
                     <li class="page-item"><a class="page-link text-dark" href="?page={{ p }}{% if current_search %}&search={{ current_search }}{% endif %}">{{ p }}</a></li>
-                {% elif p == page - 3 or p == page + 3 %}
+                {% elif p == page - 2 or p == page + 2 %}
                     <li class="page-item disabled"><span class="page-link text-muted">...</span></li>
                 {% endif %}
             {% endfor %}

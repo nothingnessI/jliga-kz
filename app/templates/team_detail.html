@@ -29,22 +29,29 @@
     .team-menu .list-group-item.active { background-color: #d8232a; color: #ffffff; border-left: 5px solid #fff; padding-left: 15px; }
     .team-menu i { font-size: 14px; margin-right: 10px; width: 20px; text-align: center; }
 
+    /* Мобильное меню (горизонтальный скролл) */
+    .mobile-menu-scroll {
+        display: flex; overflow-x: auto; -webkit-overflow-scrolling: touch;
+        gap: 8px; padding-bottom: 10px; margin-bottom: 15px; white-space: nowrap;
+    }
+    .mobile-menu-scroll .btn { flex-shrink: 0; font-size: 13px; font-weight: 600; text-transform: uppercase; }
+
     /* ================= КАЛЕНДАРЬ ================= */
-    .calendar-header { background: #fff; padding: 15px 20px; font-weight: 800; text-transform: uppercase; font-size: 14px; border-bottom: 1px solid #e2e8f0; border-left: 4px solid #0f2537; color: #0f2537;}
-    .match-row { display: flex; align-items: center; padding: 15px 20px; border-bottom: 1px solid #f1f5f9; background: #fff; transition: background 0.2s; text-decoration: none; color: inherit;}
+    .calendar-header { background: #fff; padding: 12px 15px; font-weight: 800; text-transform: uppercase; font-size: 13px; border-bottom: 1px solid #e2e8f0; border-left: 4px solid #0f2537; color: #0f2537; margin-top: 10px; border-radius: 4px 4px 0 0;}
+    .match-row { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #f1f5f9; background: #fff; transition: background 0.2s; text-decoration: none; color: inherit;}
     .match-row:hover { background: #f8fafc; }
 
-    .match-date-box { width: 110px; flex-shrink: 0; line-height: 1.2; }
+    .match-date-box { width: 100px; flex-shrink: 0; line-height: 1.2; text-align: center; }
     .match-date-main { font-weight: 800; font-size: 13px; color: #1e293b; }
     .match-date-time { font-weight: 700; font-size: 12px; color: #64748b; }
     .match-stadium { font-size: 11px; color: #94a3b8; margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px;}
 
-    .match-teams { display: flex; align-items: center; justify-content: center; flex-grow: 1; gap: 15px; }
-    .match-team-home { width: 35%; text-align: right; font-weight: 700; font-size: 14px; color: #1e293b; }
-    .match-team-away { width: 35%; text-align: left; font-weight: 700; font-size: 14px; color: #1e293b; }
-    .match-score { background: #0f2537; color: #fff; font-weight: 800; padding: 6px 15px; border-radius: 6px; font-size: 15px; min-width: 70px; text-align: center;}
+    .match-teams { display: flex; align-items: center; justify-content: center; flex-grow: 1; gap: 10px; }
+    .match-team-home { width: 35%; text-align: right; font-weight: 700; font-size: 14px; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .match-team-away { width: 35%; text-align: left; font-weight: 700; font-size: 14px; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .match-score { background: #0f2537; color: #fff; font-weight: 800; padding: 6px 12px; border-radius: 6px; font-size: 15px; min-width: 60px; text-align: center; flex-shrink: 0;}
 
-    .match-result-badge { width: 40px; text-align: right; flex-shrink: 0; }
+    .match-result-badge { width: 30px; text-align: right; flex-shrink: 0; margin-left: 10px; }
 
     /* ================= СОСТАВ (КАРТОЧКИ) ================= */
     .player-card {
@@ -52,38 +59,55 @@
         overflow: hidden; text-align: center; transition: transform 0.2s, box-shadow 0.2s;
     }
     .player-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
-    .player-photo { width: 100px; height: 100px; object-fit: cover; border-radius: 50%; border: 3px solid #f1f5f9; margin-top: -50px; background: #fff; }
-    .player-photo-placeholder { width: 100px; height: 100px; border-radius: 50%; border: 3px solid #f1f5f9; margin-top: -50px; background: #f8fafc; display: flex; align-items: center; justify-content: center; margin-left: auto; margin-right: auto;}
+    .player-photo { width: 80px; height: 80px; object-fit: cover; border-radius: 50%; border: 3px solid #f1f5f9; margin-top: -40px; background: #fff; }
+    .player-photo-placeholder { width: 80px; height: 80px; border-radius: 50%; border: 3px solid #f1f5f9; margin-top: -40px; background: #f8fafc; display: flex; align-items: center; justify-content: center; margin-left: auto; margin-right: auto;}
 
     /* ================= МИНИ-ТАБЛИЦА ================= */
-    .table-mini th { font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; padding: 10px; background: #f8fafc;}
-    .table-mini td { font-size: 13px; font-weight: 700; vertical-align: middle; padding: 10px; border-bottom: 1px solid #f1f5f9;}
+    .table-mini th { font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 2px solid #e2e8f0; padding: 8px; background: #f8fafc;}
+    .table-mini td { font-size: 13px; font-weight: 700; vertical-align: middle; padding: 8px; border-bottom: 1px solid #f1f5f9;}
     .table-mini tbody tr:hover { background-color: #f8fafc; }
+
+    /* ================= МОБИЛЬНЫЕ СТИЛИ ================= */
+    @media (max-width: 767.98px) {
+        /* Шапка */
+        .team-header-title { font-size: 24px !important; }
+
+        /* Календарь (Перестраиваем строку в карточку) */
+        .match-row { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px; position: relative; }
+        .match-date-box { width: 100%; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #e2e8f0; padding-bottom: 8px; text-align: left; }
+        .match-stadium { max-width: 150px; text-align: right; margin-top: 0; }
+
+        .match-teams { width: 100%; justify-content: space-between; gap: 5px; }
+        .match-team-home, .match-team-away { width: 40%; font-size: 13px; }
+        .match-score { font-size: 14px; padding: 4px 10px; }
+
+        .match-result-badge { position: absolute; bottom: 12px; right: 12px; width: auto; }
+    }
 </style>
 
-<div class="container py-4 mt-3">
+<div class="container py-3 py-md-4 mt-2">
 
     <!-- ================= 1. ШАПКА КОМАНДЫ ================= -->
-    <div class="team-header-card mb-4">
+    <div class="team-header-card mb-3 mb-md-4">
         <div class="row g-0">
             <!-- Логотип -->
-            <div class="col-md-3 d-flex align-items-center justify-content-center p-4 border-end bg-light">
+            <div class="col-12 col-md-3 d-flex align-items-center justify-content-center p-3 p-md-4 border-bottom border-md-end bg-light">
                 {% if team.logo_url %}
-                    <img src="{{ team.logo_url }}" alt="{{ team.name }}" style="max-height: 140px; max-width: 100%; object-fit: contain;">
+                    <img src="{{ team.logo_url }}" alt="{{ team.name }}" style="max-height: 100px; max-width: 100%; object-fit: contain;">
                 {% else %}
-                    <i class="bi bi-shield-fill text-secondary" style="font-size: 6rem;"></i>
+                    <i class="bi bi-shield-fill text-secondary" style="font-size: 5rem;"></i>
                 {% endif %}
             </div>
 
             <!-- Информация -->
-            <div class="col-md-9 p-4 d-flex flex-column justify-content-between">
+            <div class="col-12 col-md-9 p-3 p-md-4 d-flex flex-column justify-content-between text-center text-md-start">
                 <div>
-                    <h1 class="fw-bold m-0 text-uppercase text-brand-dark" style="font-size: 36px; letter-spacing: 1px;">{{ team.name }}</h1>
-                    <p class="text-muted fs-5 mb-0 mt-1"><i class="bi bi-geo-alt-fill text-danger me-1"></i> {{ team.city or 'Алматы' }}</p>
+                    <h1 class="fw-bold m-0 text-uppercase text-brand-dark team-header-title" style="letter-spacing: 1px;">{{ team.name }}</h1>
+                    <p class="text-muted fs-6 mb-0 mt-1"><i class="bi bi-geo-alt-fill text-danger me-1"></i> {{ team.city or 'Город не указан' }}</p>
                 </div>
 
                 <!-- Форма -->
-                <div class="d-flex justify-content-end align-items-center gap-2 mt-4">
+                <div class="d-flex justify-content-center justify-content-md-end align-items-center gap-2 mt-3 mt-md-4 flex-wrap">
                     <span class="text-muted small text-uppercase fw-bold me-2" style="letter-spacing: 1px;">Последние матчи:</span>
                     {% for res in recent_form %}
                         <span class="badge {% if res == 'В' %}bg-success{% elif res == 'Н' %}bg-warning text-dark{% else %}bg-danger{% endif %} p-2 fs-6 rounded-1 shadow-sm" style="width: 32px;">
@@ -99,43 +123,56 @@
 
     <!-- ================= 2. БЛОК СТАТИСТИКИ ================= -->
     <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
-        <div class="card-body p-4 d-flex justify-content-around text-center flex-wrap gap-3">
-            <div class="flex-fill">
-                <i class="bi bi-calendar-event text-secondary mb-2 d-block" style="font-size: 32px;"></i>
-                <span class="text-muted small text-uppercase fw-bold" style="font-size: 12px;">Игры</span>
-                <h2 class="fw-bold m-0 text-brand-blue">{{ stats.games or 0 }}</h2>
-            </div>
-            <div class="border-start d-none d-md-block"></div>
-            <div class="flex-fill">
-                <i class="bi bi-star text-secondary mb-2 d-block" style="font-size: 32px;"></i>
-                <span class="text-muted small text-uppercase fw-bold" style="font-size: 12px;">Победы</span>
-                <h2 class="fw-bold m-0 text-brand-blue">{{ stats.wins or 0 }}</h2>
-            </div>
-            <div class="border-start d-none d-md-block"></div>
-            <div class="flex-fill">
-                <i class="bi bi-dribbble text-secondary mb-2 d-block" style="font-size: 32px;"></i>
-                <span class="text-muted small text-uppercase fw-bold" style="font-size: 12px;">Голы</span>
-                <h2 class="fw-bold m-0 text-brand-blue">{{ stats.goals or 0 }}</h2>
-            </div>
-            <div class="border-start d-none d-md-block"></div>
-            <div class="flex-fill">
-                <i class="bi bi-trophy text-secondary mb-2 d-block" style="font-size: 32px;"></i>
-                <span class="text-muted small text-uppercase fw-bold" style="font-size: 12px;">Турниры</span>
-                <h2 class="fw-bold m-0 text-brand-blue">{{ stats.tournaments or 0 }}</h2>
+        <div class="card-body p-3 p-md-4">
+            <!-- На мобилке сетка 2x2, на ПК в одну строку -->
+            <div class="row g-3 text-center">
+                <div class="col-6 col-md-3">
+                    <i class="bi bi-calendar-event text-secondary mb-1 d-block" style="font-size: 28px;"></i>
+                    <span class="text-muted small text-uppercase fw-bold" style="font-size: 11px;">Игры</span>
+                    <h3 class="fw-bold m-0 text-brand-blue">{{ stats.games or 0 }}</h3>
+                </div>
+                <div class="col-6 col-md-3">
+                    <i class="bi bi-star text-secondary mb-1 d-block" style="font-size: 28px;"></i>
+                    <span class="text-muted small text-uppercase fw-bold" style="font-size: 11px;">Победы</span>
+                    <h3 class="fw-bold m-0 text-brand-blue">{{ stats.wins or 0 }}</h3>
+                </div>
+                <div class="col-6 col-md-3">
+                    <i class="bi bi-dribbble text-secondary mb-1 d-block" style="font-size: 28px;"></i>
+                    <span class="text-muted small text-uppercase fw-bold" style="font-size: 11px;">Голы</span>
+                    <h3 class="fw-bold m-0 text-brand-blue">{{ stats.goals or 0 }}</h3>
+                </div>
+                <div class="col-6 col-md-3">
+                    <i class="bi bi-trophy text-secondary mb-1 d-block" style="font-size: 28px;"></i>
+                    <span class="text-muted small text-uppercase fw-bold" style="font-size: 11px;">Турниры</span>
+                    <h3 class="fw-bold m-0 text-brand-blue">{{ stats.tournaments or 0 }}</h3>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-3 g-md-4">
         <!-- ================= ЛЕВАЯ ЧАСТЬ (КОНТЕНТ) ================= -->
-        <div class="col-lg-9">
+        <div class="col-12 col-lg-9">
+
+            <!-- МОБИЛЬНОЕ МЕНЮ (Горизонтальный скролл) -->
+            <div class="d-lg-none mobile-menu-scroll" id="mobile-menu">
+                <button class="btn btn-dark active" onclick="switchTeamTab('info', this)">
+                    <i class="bi bi-info-circle me-1"></i> Инфо
+                </button>
+                <button class="btn btn-outline-dark" onclick="switchTeamTab('roster', this)">
+                    <i class="bi bi-people me-1"></i> Состав
+                </button>
+                <button class="btn btn-outline-dark" onclick="switchTeamTab('news', this)">
+                    <i class="bi bi-newspaper me-1"></i> Новости
+                </button>
+            </div>
 
             <!-- ВКЛАДКА: ИНФО / КАЛЕНДАРЬ -->
             <div id="tab-info" class="tab-section">
                 <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
                     <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
-                        <h4 class="m-0 fw-bold text-uppercase text-brand-dark" style="font-size: 18px;">Календарь</h4>
-                        <span class="text-muted small fw-bold">Сезон {{ active_tournament.season if active_tournament else '' }}</span>
+                        <h4 class="m-0 fw-bold text-uppercase text-brand-dark" style="font-size: 16px;">Календарь</h4>
+                        <span class="text-muted small fw-bold d-none d-sm-block">Сезон {{ active_tournament.season if active_tournament else '' }}</span>
                     </div>
 
                     <div class="card-body p-0">
@@ -144,7 +181,7 @@
 
                             {% for m in matches %}
                             <a href="/matches/{{ m.id }}" class="match-row">
-                                <!-- Дата -->
+                                <!-- Дата и Стадион -->
                                 <div class="match-date-box">
                                     <div class="match-date-main">{{ m.match_date.strftime('%d.%m.%Y') if m.match_date else 'TBA' }}</div>
                                     <div class="match-date-time">{{ m.match_date.strftime('%H:%M') if m.match_date else '' }}</div>
@@ -155,13 +192,13 @@
                                 <div class="match-teams">
                                     <div class="match-team-home">
                                         {{ m.home_team.name }}
-                                        <img src="{{ m.home_team.logo_url or '/static/default_team.png' }}" width="24" height="24" class="ms-2" style="object-fit: contain;">
+                                        <img src="{{ m.home_team.logo_url or '/static/default_team.png' }}" width="20" height="20" class="ms-1 d-none d-md-inline" style="object-fit: contain;">
                                     </div>
                                     <div class="match-score">
                                         {% if m.home_score is not none %}{{ m.home_score }} - {{ m.away_score }}{% else %}- : -{% endif %}
                                     </div>
                                     <div class="match-team-away">
-                                        <img src="{{ m.away_team.logo_url or '/static/default_team.png' }}" width="24" height="24" class="me-2" style="object-fit: contain;">
+                                        <img src="{{ m.away_team.logo_url or '/static/default_team.png' }}" width="20" height="20" class="me-1 d-none d-md-inline" style="object-fit: contain;">
                                         {{ m.away_team.name }}
                                     </div>
                                 </div>
@@ -170,11 +207,11 @@
                                 <div class="match-result-badge">
                                     {% if m.home_score is not none %}
                                         {% if (m.home_team_id == team.id and m.home_score > m.away_score) or (m.away_team_id == team.id and m.away_score > m.home_score) %}
-                                            <span class="badge bg-success fs-6 rounded-1">В</span>
+                                            <span class="badge bg-success rounded-1">В</span>
                                         {% elif (m.home_team_id == team.id and m.home_score < m.away_score) or (m.away_team_id == team.id and m.away_score < m.home_score) %}
-                                            <span class="badge bg-danger fs-6 rounded-1">П</span>
+                                            <span class="badge bg-danger rounded-1">П</span>
                                         {% else %}
-                                            <span class="badge bg-secondary fs-6 rounded-1">Н</span>
+                                            <span class="badge bg-secondary rounded-1">Н</span>
                                         {% endif %}
                                     {% endif %}
                                 </div>
@@ -193,46 +230,43 @@
             <!-- ВКЛАДКА: СОСТАВ -->
             <div id="tab-roster" class="tab-section" style="display: none;">
                 <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
-                    <div class="card-header bg-white py-3 border-bottom">
-                        <ul class="nav nav-pills" id="pills-tab" role="tablist">
+                    <div class="card-header bg-white py-2 py-md-3 border-bottom">
+                        <ul class="nav nav-pills flex-nowrap overflow-auto" id="pills-tab" role="tablist" style="-webkit-overflow-scrolling: touch;">
                             <li class="nav-item">
-                                <button class="nav-link active fw-bold text-uppercase" id="pills-current-tab" data-bs-toggle="pill" data-bs-target="#pills-current" type="button">Текущий состав</button>
+                                <button class="nav-link active fw-bold text-uppercase" id="pills-current-tab" data-bs-toggle="pill" data-bs-target="#pills-current" type="button" style="font-size: 13px;">Текущий</button>
                             </li>
                             <li class="nav-item">
-                                <button class="nav-link fw-bold text-uppercase text-muted" id="pills-left-tab" data-bs-toggle="pill" data-bs-target="#pills-left" type="button">Ушедшие игроки</button>
+                                <button class="nav-link fw-bold text-uppercase text-muted" id="pills-left-tab" data-bs-toggle="pill" data-bs-target="#pills-left" type="button" style="font-size: 13px;">Ушедшие</button>
                             </li>
                         </ul>
                     </div>
-                    <div class="card-body p-4 bg-light">
+                    <div class="card-body p-2 p-md-4 bg-light">
                         <div class="tab-content" id="pills-tabContent">
 
-                            <!-- Текущий состав (Карточки) -->
+                            <!-- Текущий состав -->
                             <div class="tab-pane fade show active" id="pills-current">
-                                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
+                                <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 g-2 g-md-4">
                                     {% for tp in roster if tp.is_active %}
                                     <div class="col">
-                                        <div class="player-card shadow-sm">
-                                            <!-- Заглушка под фото -->
-                                            <div style="height: 60px; background: linear-gradient(135deg, #0f2537 0%, #1a3c56 100%);"></div>
-
-                                            <div class="card-body p-3 pt-0 position-relative">
+                                        <div class="player-card shadow-sm h-100">
+                                            <div style="height: 50px; background: linear-gradient(135deg, #0f2537 0%, #1a3c56 100%);"></div>
+                                            <div class="card-body p-2 p-md-3 pt-0 position-relative d-flex flex-column">
                                                 {% if tp.player.photo_url %}
-                                                    <img src="{{ tp.player.photo_url }}" class="player-photo shadow-sm">
+                                                    <img src="{{ tp.player.photo_url }}" class="player-photo shadow-sm mx-auto">
                                                 {% else %}
                                                     <div class="player-photo-placeholder shadow-sm">
-                                                        <i class="bi bi-person text-secondary fs-1"></i>
+                                                        <i class="bi bi-person text-secondary fs-3"></i>
                                                     </div>
                                                 {% endif %}
 
-                                                <h6 class="fw-bold text-dark mt-3 mb-1 text-truncate">{{ tp.player.last_name }}<br>{{ tp.player.first_name }}</h6>
-                                                <span class="badge bg-secondary bg-opacity-25 text-dark mb-2">{{ tp.player.position.value if tp.player.position else 'Игрок' }}</span>
+                                                <h6 class="fw-bold text-dark mt-2 mt-md-3 mb-1 text-truncate" style="font-size: 13px;">{{ tp.player.last_name }}<br>{{ tp.player.first_name }}</h6>
+                                                <span class="badge bg-secondary bg-opacity-25 text-dark mb-1" style="font-size: 10px;">{{ tp.player.position.value if tp.player.position else 'Игрок' }}</span>
 
-                                                <div class="text-muted small mt-2" style="font-size: 12px;">
+                                                <div class="text-muted mt-auto" style="font-size: 11px;">
                                                     {% if tp.player.date_of_birth %}
-                                                        {{ tp.player.date_of_birth.strftime('%d.%m.%Y') }} <br>
-                                                        <span class="fw-bold text-brand-blue">({{ tp.player.calculated_age }} лет)</span>
+                                                        <span class="fw-bold text-brand-blue">{{ tp.player.calculated_age }} лет</span>
                                                     {% else %}
-                                                        Возраст не указан
+                                                        -
                                                     {% endif %}
                                                 </div>
                                             </div>
@@ -246,21 +280,21 @@
 
                             <!-- Ушедшие игроки -->
                             <div class="tab-pane fade" id="pills-left">
-                                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
+                                <div class="row row-cols-2 row-cols-sm-3 row-cols-lg-4 g-2 g-md-4">
                                     {% for tp in roster if not tp.is_active %}
                                     <div class="col">
-                                        <div class="player-card shadow-sm opacity-75">
-                                            <div style="height: 60px; background: #94a3b8;"></div>
-                                            <div class="card-body p-3 pt-0 position-relative">
+                                        <div class="player-card shadow-sm opacity-75 h-100">
+                                            <div style="height: 50px; background: #94a3b8;"></div>
+                                            <div class="card-body p-2 p-md-3 pt-0 position-relative">
                                                 {% if tp.player.photo_url %}
-                                                    <img src="{{ tp.player.photo_url }}" class="player-photo shadow-sm" style="filter: grayscale(100%);">
+                                                    <img src="{{ tp.player.photo_url }}" class="player-photo shadow-sm mx-auto" style="filter: grayscale(100%);">
                                                 {% else %}
                                                     <div class="player-photo-placeholder shadow-sm">
-                                                        <i class="bi bi-person text-secondary fs-1"></i>
+                                                        <i class="bi bi-person text-secondary fs-3"></i>
                                                     </div>
                                                 {% endif %}
-                                                <h6 class="fw-bold text-dark mt-3 mb-1 text-truncate">{{ tp.player.last_name }}<br>{{ tp.player.first_name }}</h6>
-                                                <span class="badge bg-light text-dark border mb-2">{{ tp.player.position.value if tp.player.position else 'Игрок' }}</span>
+                                                <h6 class="fw-bold text-dark mt-2 mt-md-3 mb-1 text-truncate" style="font-size: 13px;">{{ tp.player.last_name }}<br>{{ tp.player.first_name }}</h6>
+                                                <span class="badge bg-light text-dark border mb-1" style="font-size: 10px;">{{ tp.player.position.value if tp.player.position else 'Игрок' }}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -278,25 +312,25 @@
             <div id="tab-news" class="tab-section" style="display: none;">
                 <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
                     <div class="card-header bg-white py-3 border-bottom">
-                        <h4 class="m-0 fw-bold text-uppercase text-brand-dark" style="font-size: 18px;">Новости команды</h4>
+                        <h4 class="m-0 fw-bold text-uppercase text-brand-dark" style="font-size: 16px;">Новости команды</h4>
                     </div>
-                    <div class="card-body p-4">
-                        <div class="row g-4">
+                    <div class="card-body p-3 p-md-4">
+                        <div class="row g-3 g-md-4">
                             {% for news in team_news %}
-                            <div class="col-md-6">
+                            <div class="col-12 col-sm-6">
                                 <a href="/news/{{ news.id }}" class="text-decoration-none">
                                     <div class="card border-0 shadow-sm h-100 flex-row" style="border-radius: 8px; overflow: hidden; transition: 0.2s;">
-                                        <div style="width: 40%; background: #e9ecef;">
+                                        <div style="width: 40%; background: #e9ecef; min-height: 100px;">
                                             {% if news.image_url %}
                                                 <img src="{{ news.image_url }}" class="w-100 h-100" style="object-fit: cover;">
                                             {% else %}
                                                 <div class="d-flex align-items-center justify-content-center h-100 text-muted"><i class="bi bi-image fs-3"></i></div>
                                             {% endif %}
                                         </div>
-                                        <div class="card-body p-3 d-flex flex-column" style="width: 60%;">
-                                            <div class="text-danger small fw-bold mb-1">{{ news.published_at.strftime('%d.%m.%Y') if news.published_at else '' }}</div>
-                                            <h6 class="fw-bold text-dark mb-2" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">{{ news.title }}</h6>
-                                            <div class="mt-auto text-brand-blue fw-bold small">Читать <i class="bi bi-chevron-right"></i></div>
+                                        <div class="card-body p-2 p-md-3 d-flex flex-column" style="width: 60%;">
+                                            <div class="text-danger small fw-bold mb-1" style="font-size: 11px;">{{ news.published_at.strftime('%d.%m.%Y') if news.published_at else '' }}</div>
+                                            <h6 class="fw-bold text-dark mb-2" style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; font-size: 13px;">{{ news.title }}</h6>
+                                            <div class="mt-auto text-brand-blue fw-bold small" style="font-size: 12px;">Читать <i class="bi bi-chevron-right"></i></div>
                                         </div>
                                     </div>
                                 </a>
@@ -314,8 +348,8 @@
 
         </div>
 
-        <!-- ================= ПРАВАЯ ЧАСТЬ (САЙДБАР) ================= -->
-        <div class="col-lg-3">
+        <!-- ================= ПРАВАЯ ЧАСТЬ (САЙДБАР - Только для ПК) ================= -->
+        <div class="col-lg-3 d-none d-lg-block">
 
             <!-- Меню навигации (JS-вкладки) -->
             <div class="list-group shadow-sm mb-4 border-0 rounded-0 team-menu" id="team-menu">
@@ -383,16 +417,39 @@
 <script>
     // Логика переключения вкладок без перезагрузки страницы
     function switchTeamTab(tabName, btn) {
-        // 1. Убираем активный класс со всех кнопок меню
-        document.querySelectorAll('#team-menu button').forEach(b => b.classList.remove('active'));
+        // 1. Убираем активный класс со всех кнопок (и в ПК меню, и в мобильном)
+        document.querySelectorAll('#team-menu button, #mobile-menu button').forEach(b => {
+            b.classList.remove('active');
+            // Для мобильного меню меняем цвета
+            if (b.closest('#mobile-menu')) {
+                b.classList.remove('btn-dark');
+                b.classList.add('btn-outline-dark');
+            }
+        });
 
-        // 2. Добавляем активный класс текущей кнопке
-        if (btn) btn.classList.add('active');
+        // 2. Добавляем активный класс нажатой кнопке
+        if (btn) {
+            if (btn.closest('#mobile-menu')) {
+                btn.classList.remove('btn-outline-dark');
+                btn.classList.add('btn-dark');
+            } else {
+                btn.classList.add('active');
+            }
+        }
 
-        // 3. Скрываем все секции контента
+        // 3. Синхронизируем активные кнопки между меню, если нажали на ПК или мобилке
+        if (tabName === 'info') {
+            document.querySelectorAll('#team-menu button')[0].classList.add('active');
+        } else if (tabName === 'roster') {
+            document.querySelectorAll('#team-menu button')[2].classList.add('active');
+        } else if (tabName === 'news') {
+            document.querySelectorAll('#team-menu button')[3].classList.add('active');
+        }
+
+        // 4. Скрываем все секции контента
         document.querySelectorAll('.tab-section').forEach(s => s.style.display = 'none');
 
-        // 4. Показываем нужную секцию
+        // 5. Показываем нужную секцию
         document.getElementById('tab-' + tabName).style.display = 'block';
     }
 </script>

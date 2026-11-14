@@ -2,6 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <!-- ДОБАВЛЕНО: правильное масштабирование на мобильных -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Протокол матча - {{ match.home_team.name }} vs {{ match.away_team.name }}</title>
     <style>
         /* Базовые стили для экрана */
@@ -12,6 +14,9 @@
             padding: 20px;
             font-size: 11px;
             color: #000;
+            /* ДОБАВЛЕНО: позволяет скроллить лист А4 на телефоне в стороны */
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         /* Лист А4 */
@@ -118,16 +123,17 @@
         /* Кнопка печати */
         .print-btn-container { text-align: center; margin-top: 40px; }
         .print-btn {
-            padding: 12px 30px; font-size: 16px; font-weight: bold;
+            padding: 15px 40px; font-size: 16px; font-weight: bold;
             background-color: #0d6efd; color: white; border: none;
             border-radius: 5px; cursor: pointer; text-transform: uppercase;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%; max-width: 400px; /* Кнопка на всю ширину на телефоне */
         }
         .print-btn:hover { background-color: #0b5ed7; }
 
         /* Стили для печати (убираем все тени и фоны) */
         @media print {
-            body { background-color: white; padding: 0; font-size: 10px; }
+            body { background-color: white; padding: 0; font-size: 10px; overflow: visible; }
             .page { box-shadow: none; margin: 0; width: 100%; padding: 0; min-height: auto; }
             .print-btn-container { display: none; }
             @page { size: A4; margin: 10mm; }
@@ -211,7 +217,7 @@
                     <tbody>
                         {% for p in away_roster %}
                         <tr>
-                            <td class="col-num">{{ p.jersey_number or '' }}</td>
+                            <td class="col-num">{{ p jersey_number or '' }}</td>
                             <td>{{ p.player.last_name }} {{ p.player.first_name }}</td>
                             <td class="col-stat">
                                 {% if events_data.get(p.player_id) and events_data[p.player_id].goals %}
@@ -273,7 +279,7 @@
             </table>
         </div>
 
-        <!-- Блок: АВТОГОЛЫ (ДОБАВЛЕНО) -->
+        <!-- Блок: АВТОГОЛЫ -->
         {% if own_goals_data %}
         <div class="punishments-block">
             <div class="section-title">АВТОГОЛЫ:</div>
