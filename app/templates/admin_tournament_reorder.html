@@ -4,19 +4,20 @@
 <!-- Подключаем библиотеку для Drag-and-Drop -->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- ШАПКА -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
     <h4 class="fw-bold m-0">Порядок турниров</h4>
-    <a href="/admin/tournaments" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Назад к турнирам
+    <a href="/admin/tournaments" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
+        <i class="bi bi-arrow-left me-1"></i> Назад к турнирам
     </a>
 </div>
 
 <!-- Выбор сезона -->
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-3">
-        <form method="GET" action="/admin/tournaments/reorder" class="d-flex align-items-center gap-3">
+        <form method="GET" action="/admin/tournaments/reorder" class="d-flex flex-column flex-sm-row align-items-sm-center gap-2 gap-sm-3">
             <label class="fw-bold text-nowrap m-0">Выберите сезон:</label>
-            <select name="season" class="form-select w-auto" onchange="this.form.submit()">
+            <select name="season" class="form-select" onchange="this.form.submit()" style="font-size: 16px;">
                 {% for s in available_seasons %}
                     <option value="{{ s }}" {% if s == current_season %}selected{% endif %}>{{ s }}</option>
                 {% endfor %}
@@ -25,50 +26,94 @@
     </div>
 </div>
 
-<div class="alert alert-info border-info shadow-sm mb-4">
+<div class="alert alert-info border-info shadow-sm mb-4 small">
     <i class="bi bi-info-circle-fill me-2"></i>
-    <strong>Инструкция:</strong> Зажмите карточку турнира левой кнопкой мыши и перетащите её вверх или вниз. Порядок сохраняется автоматически.
+    <strong>Инструкция:</strong> Зажмите иконку <i class="bi bi-grip-vertical fs-5 align-middle"></i> слева от турнира и потяните вверх или вниз. После изменения порядка нажмите кнопку <b>«Сохранить порядок»</b> внизу экрана.
 </div>
 
-<!-- Список для перетаскивания -->
-<div id="tournament-list" class="d-flex flex-column gap-2 mb-4">
+<!-- СПИСОК ДЛЯ ПЕРЕТАСКИВАНИЯ -->
+<div id="tournament-list" class="d-flex flex-column gap-2 mb-5 pb-5">
     {% for t in tournaments %}
-    <div class="card border-0 shadow-sm" data-id="{{ t.id }}" style="cursor: grab;">
-        <div class="card-body p-3 d-flex align-items-center justify-content-between">
-            <div class="d-flex align-items-center gap-3">
-                <i class="bi bi-grip-vertical fs-4 text-muted"></i>
-                {% if t.logo_url %}
-                    <img src="{{ t.logo_url }}" style="height: 40px; width: 40px; object-fit: contain;">
-                {% else %}
-                    <div class="bg-light rounded d-flex align-items-center justify-content-center" style="height: 40px; width: 40px;">
-                        <i class="bi bi-trophy text-muted"></i>
-                    </div>
-                {% endif %}
-                <div>
-                    <h6 class="fw-bold m-0 text-dark">{{ t.name }}</h6>
-                    <div class="text-muted small">{{ t.division }} | {{ t.age_category }}</div>
+    <div class="card border-0 shadow-sm tournament-item" data-id="{{ t.id }}">
+        <div class="card-body p-2 p-md-3 d-flex align-items-center justify-content-between gap-2">
+
+            <!-- Левая часть: Ручка, Лого, Название -->
+            <div class="d-flex align-items-center gap-2 gap-md-3 flex-grow-1" style="min-width: 0;">
+                <!-- Ручка для перетаскивания (увеличена для пальцев) -->
+                <div class="drag-handle text-muted d-flex align-items-center justify-content-center rounded flex-shrink-0"
+                     style="cursor: grab; touch-action: none; width: 40px; height: 40px; background: #f8f9fa;">
+                    <i class="bi bi-grip-vertical fs-4"></i>
+                </div>
+
+                <!-- Логотип -->
+                <div class="flex-shrink-0">
+                    {% if t.logo_url %}
+                        <img src="{{ t.logo_url }}" style="height: 40px; width: 40px; object-fit: contain;">
+                    {% else %}
+                        <div class="bg-light border rounded d-flex align-items-center justify-content-center" style="height: 40px; width: 40px;">
+                            <i class="bi bi-trophy text-secondary"></i>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Инфо -->
+                <div class="text-truncate">
+                    <h6 class="fw-bold m-0 text-dark text-truncate" style="font-size: 14px;">{{ t.name }}</h6>
+                    <div class="text-muted text-truncate" style="font-size: 11px;">{{ t.division }} | {{ t.age_category }}</div>
                 </div>
             </div>
-            <div class="text-end">
-                {% if t.status.value == 'active' %}
+
+            <!-- Правая часть: Статус -->
+            <div class="text-end flex-shrink-0">
+                {% if t.status.value|lower == 'active' %}
                     <span class="badge bg-success">Активен</span>
+                {% elif t.status.value|lower == 'finished' %}
+                    <span class="badge bg-secondary">Завершен</span>
                 {% else %}
-                    <span class="badge bg-secondary">{{ t.status.value }}</span>
+                    <span class="badge bg-warning text-dark">{{ t.status.value|capitalize }}</span>
                 {% endif %}
             </div>
+
         </div>
     </div>
     {% else %}
-    <div class="alert alert-warning text-center">В этом сезоне пока нет турниров.</div>
+    <div class="alert alert-warning text-center shadow-sm border">
+        <i class="bi bi-exclamation-triangle fs-4 d-block mb-2"></i>
+        В этом сезоне пока нет турниров.
+    </div>
     {% endfor %}
 </div>
 
-<!-- Кнопка сохранения (появляется при изменении) -->
-<div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1000; display: none;" id="save-bar">
-    <button onclick="saveOrder()" class="btn btn-primary btn-lg shadow-lg fw-bold rounded-pill px-5">
-        <i class="bi bi-save me-2"></i> Сохранить порядок
-    </button>
+<!-- Кнопка сохранения (адаптивная панель внизу экрана) -->
+<div class="position-fixed bottom-0 start-0 end-0 p-3" style="z-index: 1050; display: none; background: rgba(255,255,255,0.9); backdrop-filter: blur(5px); border-top: 1px solid #dee2e6;" id="save-bar">
+    <div class="container-fluid p-0" style="max-width: 600px; margin: 0 auto;">
+        <button onclick="saveOrder()" class="btn btn-primary btn-lg shadow-lg fw-bold rounded-pill w-100">
+            <i class="bi bi-save me-2"></i> Сохранить порядок
+        </button>
+    </div>
 </div>
+
+<style>
+    /* Стиль для элемента, который тащат */
+    .sortable-ghost {
+        opacity: 0.4;
+        background-color: #e9ecef !important;
+        border: 2px dashed #0d6efd !important;
+    }
+
+    .tournament-item {
+        transition: background-color 0.2s;
+    }
+
+    .drag-handle:hover {
+        background-color: #e2e8f0 !important;
+    }
+
+    /* Фикс для iOS Safari */
+    .form-select {
+        font-size: 16px !important;
+    }
+</style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
@@ -79,7 +124,8 @@
         if (list) {
             new Sortable(list, {
                 animation: 150,
-                ghostClass: 'bg-light', // Класс для "призрака" при перетаскивании
+                handle: '.drag-handle', // Разрешаем тащить ТОЛЬКО за ручку
+                ghostClass: 'sortable-ghost', // Класс для "призрака" при перетаскивании
                 onEnd: function (evt) {
                     // Показываем кнопку сохранения, как только порядок был изменен
                     saveBar.style.display = 'block';
@@ -90,9 +136,9 @@
 
     // Функция отправки нового порядка на сервер
     function saveOrder() {
-        const items = document.querySelectorAll('#tournament-list .card');
+        const items = document.querySelectorAll('#tournament-list .tournament-item');
         const data = [];
-        
+
         items.forEach((item, index) => {
             data.push({
                 id: parseInt(item.getAttribute('data-id')),
@@ -136,13 +182,4 @@
         });
     }
 </script>
-
-<style>
-    /* Стиль для элемента, который тащат */
-    .sortable-ghost {
-        opacity: 0.4;
-        background-color: #f8f9fa !important;
-        border: 2px dashed #0d6efd !important;
-    }
-</style>
 {% endblock %}

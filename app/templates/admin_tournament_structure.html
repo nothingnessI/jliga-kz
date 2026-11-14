@@ -3,46 +3,51 @@
 {% block admin_content %}
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- ШАПКА -->
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-4 gap-3">
     <h4 class="fw-bold m-0">Структура: {{ tournament.name }}</h4>
-    <a href="/admin/tournaments/{{ tournament.id }}/edit" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Назад</a>
+    <a href="/admin/tournaments/{{ tournament.id }}/edit" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
+        <i class="bi bi-arrow-left me-1"></i> Назад
+    </a>
 </div>
 
 <!-- ПАНЕЛЬ УПРАВЛЕНИЯ (СОЗДАНИЕ ГРУПП) -->
 <div class="card border-0 shadow-sm mb-4 bg-light">
     <div class="card-body p-3">
-        <form action="/admin/tournaments/{{ tournament.id }}/structure/add-group" method="POST" class="d-flex align-items-center gap-2">
-            <label class="fw-bold text-nowrap m-0"><i class="bi bi-plus-circle me-1"></i> Создать новую таблицу:</label>
-            <input type="text" name="group_name" class="form-control w-auto" placeholder="Например: Группа А" required>
-            <button type="submit" class="btn btn-primary fw-bold px-4">Добавить</button>
+        <form action="/admin/tournaments/{{ tournament.id }}/structure/add-group" method="POST" class="d-flex flex-column flex-sm-row align-items-sm-center gap-2">
+            <label class="fw-bold m-0"><i class="bi bi-plus-circle me-1"></i> Создать таблицу:</label>
+            <input type="text" name="group_name" class="form-control" placeholder="Например: Группа А" required style="font-size: 16px;">
+            <button type="submit" class="btn btn-primary fw-bold px-4 w-100 w-sm-auto">Добавить</button>
         </form>
     </div>
 </div>
 
-<div class="alert alert-info">
+<div class="alert alert-info border-info shadow-sm small">
     <i class="bi bi-info-circle-fill me-2"></i>
-    Перетаскивайте команды мышкой. Когда закончите, <b>обязательно нажмите кнопку «Сохранить распределение»</b> (она внизу страницы).
+    <strong>Инструкция:</strong> Чтобы перетащить команду, зажмите иконку <i class="bi bi-grip-vertical fs-5 align-middle"></i> слева от названия на секунду, а затем тяните. Когда закончите, нажмите <b>«Сохранить»</b>.
 </div>
 
 <!-- ОСНОВНАЯ ФОРМА СОХРАНЕНИЯ -->
 <form method="POST" action="/admin/tournaments/{{ tournament.id }}/structure/save">
 
-    <div class="row g-4 mb-4">
+    <div class="row g-3 mb-4">
         <!-- КОЛОНКА "НЕ РАСПРЕДЕЛЕНЫ" -->
-        <div class="col-md-4">
+        <div class="col-12 col-md-6 col-lg-4">
             <div class="card border-danger border-2 shadow-sm h-100">
                 <div class="card-header bg-danger text-white fw-bold py-3 d-flex justify-content-between align-items-center">
                     <span><i class="bi bi-inbox me-2"></i> Не распределены</span>
+                    <span class="badge bg-white text-danger">{{ unassigned_teams|length }}</span>
                 </div>
-                <div class="card-body p-2 team-list" data-group="unassigned" style="min-height: 300px; background: #fff5f5;">
+                <div class="card-body p-2 team-list" data-group="unassigned" style="min-height: 250px; background: #fff5f5;">
                     {% for tt in unassigned_teams %}
-                    <div class="card mb-2 border-0 shadow-sm team-item" data-team-id="{{ tt.team_id }}" style="cursor: grab;">
+                    <div class="card mb-2 border-0 shadow-sm team-item" data-team-id="{{ tt.team_id }}">
                         <div class="card-body p-2 d-flex align-items-center gap-2">
-                            <i class="bi bi-grip-vertical text-muted"></i>
+                            <div class="drag-handle text-muted d-flex align-items-center justify-content-center rounded flex-shrink-0" style="cursor: grab; touch-action: none; width: 30px; height: 30px; background: #f8f9fa;">
+                                <i class="bi bi-grip-vertical"></i>
+                            </div>
                             <img src="{{ tt.team.logo_url or '/static/default_team.png' }}" width="24" height="24" style="object-fit: contain;">
-                            <span class="fw-bold text-dark" style="font-size: 14px;">{{ tt.team.name }}</span>
+                            <span class="fw-bold text-dark text-truncate" style="font-size: 14px;">{{ tt.team.name }}</span>
                         </div>
-                        <!-- Скрытое поле для сохранения -->
                         <input type="hidden" name="team_group_{{ tt.team_id }}" class="team-group-input" value="unassigned">
                     </div>
                     {% else %}
@@ -54,20 +59,22 @@
 
         <!-- КОЛОНКИ С ГРУППАМИ -->
         {% for group_name, teams in groups.items() %}
-        <div class="col-md-4">
+        <div class="col-12 col-md-6 col-lg-4">
             <div class="card border-0 shadow-sm h-100">
                 <div class="card-header bg-dark text-white fw-bold d-flex justify-content-between align-items-center py-3">
-                    <span><i class="bi bi-table me-2"></i> {{ group_name }}</span>
+                    <span class="text-truncate"><i class="bi bi-table me-2"></i> {{ group_name }}</span>
+                    <span class="badge bg-white text-dark">{{ teams|length }}</span>
                 </div>
-                <div class="card-body p-2 team-list" data-group="{{ group_name }}" style="min-height: 300px; background: #f8f9fa;">
+                <div class="card-body p-2 team-list" data-group="{{ group_name }}" style="min-height: 250px; background: #f8f9fa;">
                     {% for tt in teams %}
-                    <div class="card mb-2 border-0 shadow-sm team-item" data-team-id="{{ tt.team_id }}" style="cursor: grab;">
+                    <div class="card mb-2 border-0 shadow-sm team-item" data-team-id="{{ tt.team_id }}">
                         <div class="card-body p-2 d-flex align-items-center gap-2">
-                            <i class="bi bi-grip-vertical text-muted"></i>
+                            <div class="drag-handle text-muted d-flex align-items-center justify-content-center rounded flex-shrink-0" style="cursor: grab; touch-action: none; width: 30px; height: 30px; background: #f8f9fa;">
+                                <i class="bi bi-grip-vertical"></i>
+                            </div>
                             <img src="{{ tt.team.logo_url or '/static/default_team.png' }}" width="24" height="24" style="object-fit: contain;">
-                            <span class="fw-bold text-dark" style="font-size: 14px;">{{ tt.team.name }}</span>
+                            <span class="fw-bold text-dark text-truncate" style="font-size: 14px;">{{ tt.team.name }}</span>
                         </div>
-                        <!-- Скрытое поле для сохранения -->
                         <input type="hidden" name="team_group_{{ tt.team_id }}" class="team-group-input" value="{{ group_name }}">
                     </div>
                     {% else %}
@@ -80,40 +87,44 @@
     </div>
 
     <!-- КНОПКА СОХРАНЕНИЯ -->
-    <div class="mb-5 text-end">
-        <button type="submit" class="btn btn-success btn-lg fw-bold px-5 shadow">
+    <div class="mb-5 d-flex justify-content-end">
+        <button type="submit" class="btn btn-success btn-lg fw-bold px-5 shadow w-100 w-sm-auto">
             <i class="bi bi-check2-circle me-2"></i> Сохранить распределение
         </button>
     </div>
 </form>
 
-<hr>
+<hr class="my-4">
 
 <!-- БЛОК СЕТОК ПЛЕЙ-ОФФ -->
 <div class="row">
-    <div class="col-md-6">
+    <div class="col-12 col-md-8 col-lg-6">
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white fw-bold py-3"><i class="bi bi-diagram-3 me-2 text-primary"></i> Управление сетками плей-офф</div>
-            <div class="card-body">
+            <div class="card-body p-3 p-md-4">
+
                 <form action="/admin/tournaments/{{ tournament.id }}/structure/create-bracket" method="POST" class="mb-4">
-                    <label class="form-label fw-bold small text-uppercase">Создать новую сетку</label>
-                    <div class="input-group">
-                        <input type="text" name="bracket_name" class="form-control" placeholder="Например: Плей-офф за 5-8 места" required>
-                        <button type="submit" class="btn btn-primary fw-bold">Создать</button>
+                    <label class="form-label fw-bold small text-uppercase text-muted">Создать новую сетку</label>
+                    <div class="d-flex flex-column flex-sm-row gap-2">
+                        <input type="text" name="bracket_name" class="form-control" placeholder="Например: Плей-офф за 5-8 места" required style="font-size: 16px;">
+                        <button type="submit" class="btn btn-primary fw-bold w-100 w-sm-auto">Создать</button>
                     </div>
                 </form>
 
                 <h6 class="fw-bold border-bottom pb-2 mb-3">Существующие сетки</h6>
                 <div class="list-group">
                     {% for b in brackets %}
-                    <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-dark"><i class="bi bi-trophy text-warning me-2"></i> {{ b }}</span>
-                        <a href="/admin/matches?tournament_id={{ tournament.id }}" class="btn btn-sm btn-outline-secondary">Перейти к матчам</a>
+                    <div class="list-group-item d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 py-3">
+                        <span class="fw-bold text-dark text-truncate"><i class="bi bi-trophy text-warning me-2"></i> {{ b }}</span>
+                        <a href="/admin/matches?tournament_id={{ tournament.id }}" class="btn btn-sm btn-outline-secondary w-100 w-sm-auto">
+                            Перейти к матчам
+                        </a>
                     </div>
                     {% else %}
                     <div class="text-muted text-center py-3">Сетки еще не созданы</div>
                     {% endfor %}
                 </div>
+
             </div>
         </div>
     </div>
@@ -127,9 +138,12 @@
             new Sortable(list, {
                 group: 'shared', // Разрешаем перетаскивание между колонками
                 animation: 150,
-                ghostClass: 'opacity-50',
+                handle: '.drag-handle', // Тянем ТОЛЬКО за иконку с точками
+                delay: 100, // Небольшая задержка
+                delayOnTouchOnly: true, // Задержка работает только на тач-экранах (чтобы можно было скроллить страницу)
+                ghostClass: 'sortable-ghost',
                 onEnd: function (evt) {
-                    // Когда админ отпускает мышку, мы просто меняем скрытое поле у команды
+                    // Когда админ отпускает команду, мы меняем скрытое поле
                     const teamId = evt.item.getAttribute('data-team-id');
                     const newGroup = evt.to.getAttribute('data-group'); // "unassigned" или "Группа А"
 
@@ -159,10 +173,21 @@
 </script>
 
 <style>
+    /* Стиль для элемента, который тащат */
     .sortable-ghost {
         opacity: 0.4;
         background-color: #e9ecef !important;
         border: 2px dashed #0d6efd !important;
+    }
+
+    /* Фикс для iOS Safari */
+    .form-control {
+        font-size: 16px !important;
+    }
+
+    /* Кнопки на ПК не растягиваем */
+    @media (min-width: 576px) {
+        .w-sm-auto { width: auto !important; }
     }
 </style>
 {% endblock %}

@@ -1,49 +1,85 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- ШАПКА -->
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-4 gap-3">
     <h4 class="fw-bold m-0">{% if partner %}Редактировать партнера{% else %}Новый партнер{% endif %}</h4>
-    <a href="/admin/partners" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Назад</a>
+    <a href="/admin/partners" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
+        <i class="bi bi-arrow-left me-1"></i> Назад
+    </a>
 </div>
 
-<div class="card border-0 shadow-sm" style="max-width: 800px;">
-    <div class="card-body p-4">
+<div class="card border-0 shadow-sm mx-auto" style="max-width: 800px; width: 100%;">
+    <div class="card-body p-3 p-md-4">
         <form method="post" enctype="multipart/form-data">
             <div class="row g-3">
-                <div class="col-md-12">
-                    <label class="form-label fw-bold">Название (для админки)</label>
+
+                <!-- НАЗВАНИЕ -->
+                <div class="col-12">
+                    <label class="form-label fw-bold">Название (для админки) *</label>
                     <input type="text" name="name" class="form-control" value="{{ partner.name if partner else '' }}" required>
                 </div>
 
-                <div class="col-md-12">
+                <!-- ССЫЛКА -->
+                <div class="col-12">
                     <label class="form-label fw-bold">Ссылка (URL)</label>
                     <input type="url" name="url" class="form-control" value="{{ partner.url if partner else '' }}" placeholder="https://...">
                 </div>
 
-                <div class="col-md-12">
-                    <label class="form-label fw-bold">Логотип (изображение)</label>
+                <!-- ЛОГОТИП -->
+                <div class="col-12">
+                    <label class="form-label fw-bold">Логотип {% if not partner %}*{% endif %}</label>
+
                     {% if partner and partner.logo_url %}
-                        <div class="mb-2"><img src="{{ partner.logo_url }}" style="max-height: 60px;"></div>
+                        <div class="mb-3 d-flex align-items-center gap-3">
+                            <div class="bg-white border rounded p-1 shadow-sm d-flex justify-content-center align-items-center" style="height: 60px; width: 100px;">
+                                <img src="{{ partner.logo_url }}" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                            </div>
+                            <span class="text-muted small">Текущий логотип</span>
+                        </div>
                     {% endif %}
+
                     <input type="file" name="logo" class="form-control" accept="image/*" {% if not partner %}required{% endif %}>
                 </div>
 
-                <div class="col-md-6">
+                <!-- ПОРЯДОК СОРТИРОВКИ -->
+                <div class="col-12 col-sm-6">
                     <label class="form-label fw-bold">Порядок сортировки</label>
-                    <input type="number" name="sort_order" class="form-control" value="{{ partner.sort_order if partner else 0 }}">
+                    <input type="number" name="sort_order" class="form-control" inputmode="numeric" value="{{ partner.sort_order if partner else 0 }}">
                     <div class="form-text">Чем меньше число, тем левее стоит логотип.</div>
                 </div>
 
-                <div class="col-md-6 d-flex align-items-end pb-2">
-                    <div class="form-check form-switch fs-5">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {% if partner and partner.is_active %}checked{% else %}checked{% endif %}>
-                        <label class="form-check-label fs-6 mt-1" for="is_active">Показывать на сайте</label>
+                <!-- СТАТУС -->
+                <div class="col-12 col-sm-6 mt-4 mt-sm-3">
+                    <div class="form-check form-switch p-3 bg-light rounded border h-100 d-flex align-items-center">
+                        <input class="form-check-input ms-0 me-2 fs-5 mt-0" type="checkbox" name="is_active" id="is_active" {% if partner and partner.is_active %}checked{% else %}checked{% endif %}>
+                        <label class="form-check-label fw-bold ms-4" for="is_active">Показывать на сайте</label>
                     </div>
                 </div>
+
             </div>
 
-            <button type="submit" class="btn btn-primary fw-bold mt-4 px-4">Сохранить</button>
+            <!-- КНОПКИ СОХРАНЕНИЯ -->
+            <div class="mt-4 pt-4 border-top d-flex flex-column flex-sm-row gap-2">
+                <button type="submit" class="btn btn-primary btn-lg fw-bold px-4 w-100 w-sm-auto shadow-sm">
+                    <i class="bi bi-check-lg me-1"></i> Сохранить
+                </button>
+                <a href="/admin/partners" class="btn btn-light btn-lg px-4 w-100 w-sm-auto border">Отмена</a>
+            </div>
         </form>
     </div>
 </div>
+
+<style>
+    /* Фикс для iOS Safari: убирает автозум и делает поля крупнее для пальцев */
+    .form-control, .form-select {
+        font-size: 16px !important;
+        padding: 12px 15px;
+    }
+
+    /* Кнопки на ПК не растягиваем на всю ширину */
+    @media (min-width: 576px) {
+        .w-sm-auto { width: auto !important; }
+    }
+</style>
 {% endblock %}

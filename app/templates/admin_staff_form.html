@@ -1,30 +1,33 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- ШАПКА -->
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-4 gap-3">
     <h4 class="fw-bold m-0">{% if staff %}Редактировать сотрудника{% else %}Новый сотрудник{% endif %}</h4>
-    <a href="/admin/staff" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> Назад</a>
+    <a href="/admin/staff" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
+        <i class="bi bi-arrow-left me-1"></i> Назад
+    </a>
 </div>
 
-<div class="card border-0 shadow-sm" style="max-width: 800px;">
-    <div class="card-body p-4">
+<div class="card border-0 shadow-sm mx-auto" style="max-width: 800px; width: 100%;">
+    <div class="card-body p-3 p-md-4">
         <form method="post" enctype="multipart/form-data">
             <div class="row g-3">
-                <div class="col-md-12">
-                    <label class="form-label fw-bold">ФИО</label>
+                <!-- ФИО -->
+                <div class="col-12">
+                    <label class="form-label fw-bold">ФИО *</label>
                     <input type="text" name="full_name" class="form-control" value="{{ staff.full_name if staff else '' }}" required>
                 </div>
 
-                <div class="col-md-12">
-                    <label class="form-label fw-bold text-primary">Ранг (Отдел / Группа)</label>
-                    <input type="text" name="rank" class="form-control border-primary" list="ranks-list" value="{{ staff.rank if staff else '' }}" placeholder="Например: Руководители, Администрация, Тренеры" required>
+                <!-- РАНГ -->
+                <div class="col-12">
+                    <label class="form-label fw-bold text-primary">Ранг (Отдел / Группа) *</label>
+                    <input type="text" name="rank" class="form-control border-primary" list="ranks-list" value="{{ staff.rank if staff else '' }}" placeholder="Например: Руководители, Администрация" required>
 
-                    <!-- Выпадающий список существующих рангов -->
                     <datalist id="ranks-list">
                         {% for r in all_ranks %}
                             <option value="{{ r }}"></option>
                         {% endfor %}
-                        <!-- Резервные варианты, если база пустая -->
                         <option value="Руководители"></option>
                         <option value="Администрация"></option>
                         <option value="Тренерский штаб"></option>
@@ -32,11 +35,11 @@
                     <div class="form-text">Группа, в которой будет отображаться человек.</div>
                 </div>
 
-                <div class="col-md-12">
-                    <label class="form-label fw-bold">Должность (внутри ранга)</label>
-                    <input type="text" name="position" class="form-control" list="positions-list" value="{{ staff.position if staff else '' }}" placeholder="Например: Президент Лиги, Заместитель директора" required>
+                <!-- ДОЛЖНОСТЬ -->
+                <div class="col-12">
+                    <label class="form-label fw-bold">Должность (внутри ранга) *</label>
+                    <input type="text" name="position" class="form-control" list="positions-list" value="{{ staff.position if staff else '' }}" placeholder="Например: Президент Лиги" required>
 
-                    <!-- Выпадающий список существующих должностей -->
                     <datalist id="positions-list">
                         {% for p in all_positions %}
                             <option value="{{ p }}"></option>
@@ -45,31 +48,57 @@
                     <div class="form-text">Точная должность, которая напишется под ФИО.</div>
                 </div>
 
-                <div class="col-md-12">
+                <!-- СОЦСЕТЬ -->
+                <div class="col-12">
                     <label class="form-label fw-bold">Ссылка на соцсеть (опционально)</label>
-                    <!-- ИСПРАВЛЕНА СТРОКА НИЖЕ: добавлено (staff.social_url or '') -->
                     <input type="url" name="social_url" class="form-control" value="{{ (staff.social_url or '') if staff else '' }}" placeholder="https://instagram.com/...">
                     <div class="form-text">Оставьте пустым, если ссылки нет.</div>
                 </div>
 
-                <div class="col-md-12">
-                    <label class="form-label fw-bold">Фото (портрет)</label>
+                <!-- ФОТО -->
+                <div class="col-12">
+                    <label class="form-label fw-bold">Фото (портрет) {% if not staff %}*{% endif %}</label>
+
                     {% if staff and staff.photo_url %}
-                        <div class="mb-2"><img src="{{ staff.photo_url }}" style="max-height: 100px; border-radius: 8px;"></div>
+                        <div class="mb-3 d-flex align-items-center gap-3">
+                            <img src="{{ staff.photo_url }}" class="rounded border shadow-sm" style="max-height: 80px; object-fit: cover;">
+                            <span class="text-muted small">Текущее фото</span>
+                        </div>
                     {% endif %}
+
                     <input type="file" name="photo" class="form-control" accept="image/*" {% if not staff %}required{% endif %}>
                 </div>
 
-                <div class="col-md-12 mt-3">
-                    <div class="form-check form-switch fs-5">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="is_active" {% if not staff or staff.is_active %}checked{% endif %}>
-                        <label class="form-check-label fs-6 mt-1" for="is_active">Показывать на сайте</label>
+                <!-- СТАТУС -->
+                <div class="col-12 mt-4">
+                    <div class="form-check form-switch p-3 bg-light rounded border">
+                        <input class="form-check-input ms-0 me-2 fs-5" type="checkbox" name="is_active" id="is_active" {% if not staff or staff.is_active %}checked{% endif %}>
+                        <label class="form-check-label fw-bold ms-4 mt-1" for="is_active">Показывать на сайте</label>
                     </div>
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-primary fw-bold mt-4 px-4">Сохранить</button>
+            <!-- КНОПКА СОХРАНЕНИЯ -->
+            <div class="mt-4 pt-4 border-top d-flex flex-column flex-sm-row gap-2">
+                <button type="submit" class="btn btn-primary btn-lg fw-bold px-4 w-100 w-sm-auto shadow-sm">
+                    <i class="bi bi-check-lg me-1"></i> Сохранить
+                </button>
+                <a href="/admin/staff" class="btn btn-light btn-lg px-4 w-100 w-sm-auto border">Отмена</a>
+            </div>
         </form>
     </div>
 </div>
+
+<style>
+    /* Фикс для iOS Safari: убирает автозум и делает поля крупнее для пальцев */
+    .form-control, .form-select {
+        font-size: 16px !important;
+        padding: 12px 15px;
+    }
+
+    /* Кнопки на ПК не растягиваем на всю ширину */
+    @media (min-width: 576px) {
+        .w-sm-auto { width: auto !important; }
+    }
+</style>
 {% endblock %}

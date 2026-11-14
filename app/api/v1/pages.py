@@ -1689,7 +1689,7 @@ async def admin_teams_list(
         # Если фильтр включен, берем только тех, у кого флаг стал True
         stmt = stmt.where(Team.is_active == True)
 
-    stmt = stmt.order_by(Team.name)
+    stmt = stmt.order_by(Team.name).limit(100)
     teams = (await db.execute(stmt)).scalars().all()
 
     return await render_page(request, db, "admin_teams.html", context={
@@ -2521,6 +2521,7 @@ async def admin_players_list(request: Request, search: str = None, db: AsyncSess
                 Player.first_name.ilike(f"%{search}%")
             )
         )
+    stmt = stmt.limit(100)
 
     players = (await db.execute(stmt)).scalars().all()
 

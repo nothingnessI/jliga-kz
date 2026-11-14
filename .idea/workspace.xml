@@ -5,20 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7e289f6c-8968-49f0-ac18-b3bedd7dea2b" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_coaches.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_coaches.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_match_events.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_match_events.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_match_form.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_match_form.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_news.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_news.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_partners.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_partners.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_player_form.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_player_form.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_players.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_players.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_roster.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_roster.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_stadium_form.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_stadium_form.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_stadiums.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_stadiums.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_teams.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_teams.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_tournament_form.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_tournament_form.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/tournament_detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/tournament_detail.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/v1/pages.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/v1/pages.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/table_dump.html" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -59,61 +47,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.7055293422606583" />
-      <entry key="MS500" value="3.965893860673753" />
-      <entry key="S2" value="8.48242400686885" />
-      <entry key="S5" value="12.127811530524589" />
-      <entry key="S10" value="15.231257642260935" />
-      <entry key="S30" value="19.591165978445044" />
-      <entry key="S60" value="21.667636295488272" />
-      <entry key="M2" value="23.35405249843685" />
-      <entry key="M5" value="25.772269675617103" />
-      <entry key="M10" value="31.08936067166384" />
-      <entry key="M15" value="37.86590834858942" />
-      <entry key="M30" value="57.07355465857143" />
-      <entry key="H1" value="80.41207407542606" />
-      <entry key="H2" value="104.63580791327018" />
-      <entry key="H4" value="151.24405181608788" />
-      <entry key="D1" value="609.2889142652033" />
-      <entry key="W1" value="3141.359441392352" />
+      <entry key="MS100" value="1.6764677832854193E-8" />
+      <entry key="MS500" value="0.027901740185573412" />
+      <entry key="S2" value="0.491886108070086" />
+      <entry key="S5" value="1.0691719030714566" />
+      <entry key="S10" value="1.4444760717297955" />
+      <entry key="S30" value="1.8496447651906986" />
+      <entry key="S60" value="3.319228684860241" />
+      <entry key="M2" value="8.914998139701579" />
+      <entry key="M5" value="20.940258841929605" />
+      <entry key="M10" value="32.66232748770155" />
+      <entry key="M15" value="42.03801106101522" />
+      <entry key="M30" value="65.41071164801339" />
+      <entry key="H1" value="95.23078718156333" />
+      <entry key="H2" value="126.23461880854389" />
+      <entry key="H4" value="176.6934124304313" />
+      <entry key="D1" value="638.233251983162" />
+      <entry key="W1" value="3172.1816897691992" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="1.6963000707615964E-78" />
-      <entry key="S2" value="3.608906829075494E-20" />
-      <entry key="S5" value="1.6708992651455794E-8" />
-      <entry key="S10" value="1.2926326876361974E-4" />
-      <entry key="S30" value="0.0505620931812433" />
-      <entry key="S60" value="0.22486016361561992" />
-      <entry key="M2" value="0.4741942256250869" />
-      <entry key="M5" value="0.7419762421355802" />
-      <entry key="M10" value="0.8649513903386995" />
-      <entry key="M15" value="0.9286985675668198" />
-      <entry key="M30" value="1.1044290260042988" />
-      <entry key="H1" value="1.366581876642079" />
-      <entry key="H2" value="1.6210216638208712" />
-      <entry key="H4" value="1.9215692890958003" />
-      <entry key="D1" value="10.623342282328194" />
-      <entry key="W1" value="186.40285546386255" />
+      <entry key="MS100" value="1.0" />
+      <entry key="MS500" value="1.0" />
+      <entry key="S2" value="1.0" />
+      <entry key="S5" value="1.0" />
+      <entry key="S10" value="1.0" />
+      <entry key="S30" value="1.0000000000000002" />
+      <entry key="S60" value="1.0000000139757408" />
+      <entry key="M2" value="1.000118219037479" />
+      <entry key="M5" value="1.0268585438011504" />
+      <entry key="M10" value="1.1645651737645606" />
+      <entry key="M15" value="1.3072125336628941" />
+      <entry key="M30" value="1.6352137482913793" />
+      <entry key="H1" value="2.03639830845984" />
+      <entry key="H2" value="2.411673747147712" />
+      <entry key="H4" value="2.793200324491855" />
+      <entry key="D1" value="11.501628105556577" />
+      <entry key="W1" value="187.09625206750465" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.6511605331438048" />
-      <entry key="MS500" value="3.9393379545204645" />
-      <entry key="S2" value="8.466460639193269" />
-      <entry key="S5" value="12.11753470553743" />
-      <entry key="S10" value="15.223564776991964" />
-      <entry key="S30" value="19.62996293652184" />
-      <entry key="S60" value="21.871435676797443" />
-      <entry key="M2" value="23.806157004973873" />
-      <entry key="M5" value="26.50019163082562" />
-      <entry key="M10" value="31.946016710732582" />
-      <entry key="M15" value="38.788686821849296" />
-      <entry key="M30" value="58.17468832025471" />
-      <entry key="H1" value="81.77683591144731" />
-      <entry key="H2" value="106.2558396998847" />
-      <entry key="H4" value="153.1650502260237" />
-      <entry key="D1" value="619.911762395828" />
-      <entry key="W1" value="3327.760994089837" />
+      <entry key="MS100" value="1.9474266191058837E-6" />
+      <entry key="MS500" value="0.07561802007300239" />
+      <entry key="S2" value="0.8172439261581986" />
+      <entry key="S5" value="1.6518198568496827" />
+      <entry key="S10" value="2.1916752922894935" />
+      <entry key="S30" value="2.7522090856304815" />
+      <entry key="S60" value="4.268477129065238" />
+      <entry key="M2" value="9.888997265060384" />
+      <entry key="M5" value="21.95585051544403" />
+      <entry key="M10" value="33.81985681672235" />
+      <entry key="M15" value="43.339606406418426" />
+      <entry key="M30" value="67.04218953748035" />
+      <entry key="H1" value="97.26488197101709" />
+      <entry key="H2" value="128.6449681408149" />
+      <entry key="H4" value="179.48584863068973" />
+      <entry key="D1" value="649.7343530076823" />
+      <entry key="W1" value="3359.276635699511" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">

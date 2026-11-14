@@ -5,34 +5,34 @@
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- ШАПКА -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
     <h4 class="fw-bold m-0">
         <i class="bi bi-arrow-left-right me-2"></i>Объединение команд
     </h4>
-    <a href="/admin/teams" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left me-1"></i>Назад к командам
+    <a href="/admin/teams" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
+        <i class="bi bi-arrow-left me-1"></i> Назад к командам
     </a>
 </div>
 
 <div class="row g-4">
     <!-- Левая колонка: Форма и предпросмотр -->
-    <div class="col-lg-8">
+    <div class="col-12 col-lg-8">
         <div class="card border-0 shadow-sm">
-            <div class="card-body p-4">
+            <div class="card-body p-3 p-md-4">
 
-                <div class="alert alert-warning border-warning shadow-sm mb-4">
+                <div class="alert alert-warning border-warning shadow-sm mb-4 small">
                     <i class="bi bi-exclamation-triangle-fill me-2"></i>
                     <strong>Внимание!</strong> Операция необратима.
                     Команда-источник будет <u>удалена</u>, а все её данные
-                    (матчи, голы, карточки, трофеи, заявки, тренеры, новости)
-                    перейдут к целевой команде. Турнирные таблицы пересчитаются автоматически.
+                    (матчи, голы, заявки, тренеры, новости) перейдут к целевой команде.
                 </div>
 
                 <!-- Форма выбора команд (GET) -->
-                <form method="get" action="/admin/teams/merge" class="mb-5">
+                <form method="get" action="/admin/teams/merge" class="mb-4 mb-md-5">
                     <div class="row g-3 align-items-end">
-                        <div class="col-md-5">
-                            <label class="form-label fw-bold text-danger">Команда-источник (дубль)</label>
+                        <div class="col-12 col-md-5">
+                            <label class="form-label fw-bold text-danger small text-uppercase">Команда-источник (удалится)</label>
                             <select name="source_id" id="source_team" required>
                                 <option value="">— Начните вводить название —</option>
                                 {% for t in teams %}
@@ -43,12 +43,13 @@
                             </select>
                         </div>
 
+                        <!-- Стрелка (скрыта на мобилке) -->
                         <div class="col-md-2 text-center pb-2 d-none d-md-block">
                             <i class="bi bi-arrow-right fs-3 text-muted"></i>
                         </div>
 
-                        <div class="col-md-5">
-                            <label class="form-label fw-bold text-success">Целевая команда (останется)</label>
+                        <div class="col-12 col-md-5">
+                            <label class="form-label fw-bold text-success small text-uppercase">Целевая команда (останется)</label>
                             <select name="target_id" id="target_team" required>
                                 <option value="">— Начните вводить название —</option>
                                 {% for t in teams %}
@@ -59,9 +60,10 @@
                             </select>
                         </div>
                     </div>
+
                     <div class="mt-4">
-                        <button type="submit" class="btn btn-primary px-4 fw-bold">
-                            <i class="bi bi-search me-1"></i>Предпросмотр
+                        <button type="submit" class="btn btn-primary fw-bold px-4 w-100 w-md-auto">
+                            <i class="bi bi-search me-1"></i> Предпросмотр
                         </button>
                     </div>
                 </form>
@@ -72,23 +74,25 @@
                 <h5 class="fw-bold mb-3"><i class="bi bi-info-circle text-primary me-2"></i>Будет перенесено</h5>
 
                 <div class="card bg-light border-0 mb-4">
-                    <div class="card-body">
+                    <div class="card-body p-3 p-md-4">
+
+                        <!-- Статистика -->
                         <div class="row text-center g-3 mb-4">
-                            <div class="col-md-3 col-6">
+                            <div class="col-6 col-md-3">
                                 <div class="fs-3 fw-bold text-primary">{{ preview.matches }}</div>
                                 <div class="small text-muted text-uppercase fw-bold">Матчей</div>
                             </div>
-                            <div class="col-md-3 col-6">
+                            <div class="col-6 col-md-3">
                                 <div class="fs-3 fw-bold text-success">{{ preview.tournaments }}</div>
                                 <div class="small text-muted text-uppercase fw-bold">Турниров</div>
                             </div>
-                            <div class="col-md-3 col-6">
+                            <div class="col-6 col-md-3">
                                 <div class="fs-3 fw-bold text-warning">{{ preview.events }}</div>
-                                <div class="small text-muted text-uppercase fw-bold">Событий (голы/карточки)</div>
+                                <div class="small text-muted text-uppercase fw-bold">Событий</div>
                             </div>
-                            <div class="col-md-3 col-6">
+                            <div class="col-6 col-md-3">
                                 <div class="fs-3 fw-bold text-info">{{ preview.players }}</div>
-                                <div class="small text-muted text-uppercase fw-bold">Заявок игроков</div>
+                                <div class="small text-muted text-uppercase fw-bold">Заявок</div>
                             </div>
                         </div>
 
@@ -99,10 +103,17 @@
                         {% endif %}
 
                         <hr>
-                        <div class="d-flex justify-content-center align-items-center gap-3">
-                            <span class="badge bg-danger fs-6 py-2 px-3">{{ preview.source.name }}</span>
-                            <i class="bi bi-arrow-right fs-4 text-muted"></i>
-                            <span class="badge bg-success fs-6 py-2 px-3">{{ preview.target.name }}</span>
+
+                        <!-- Визуализация слияния (На мобилке в столбик) -->
+                        <div class="d-flex flex-column flex-md-row justify-content-center align-items-center gap-2 gap-md-3">
+                            <span class="badge bg-danger fs-6 py-2 px-3 w-100 text-truncate text-center" title="{{ preview.source.name }}">
+                                {{ preview.source.name }}
+                            </span>
+                            <i class="bi bi-arrow-down fs-4 text-muted d-md-none my-1"></i>
+                            <i class="bi bi-arrow-right fs-4 text-muted d-none d-md-block"></i>
+                            <span class="badge bg-success fs-6 py-2 px-3 w-100 text-truncate text-center" title="{{ preview.target.name }}">
+                                {{ preview.target.name }}
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -114,7 +125,7 @@
 
                     <!-- Кнопка, открывающая модальное окно -->
                     <div class="text-center mt-4">
-                        <button type="button" class="btn btn-danger btn-lg px-5" data-bs-toggle="modal" data-bs-target="#confirmMergeModal">
+                        <button type="button" class="btn btn-danger btn-lg px-5 w-100 w-md-auto shadow-sm" data-bs-toggle="modal" data-bs-target="#confirmMergeModal">
                             <i class="bi bi-arrow-left-right me-2"></i>Запустить объединение
                         </button>
                     </div>
@@ -126,26 +137,27 @@
                         <div class="modal-content border-0 shadow-lg">
                             <div class="modal-header bg-danger text-white border-0">
                                 <h5 class="modal-title fw-bold">
-                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Подтверждение слияния
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Подтверждение
                                 </h5>
                                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Закрыть"></button>
                             </div>
-                            <div class="modal-body p-5 text-center">
-                                <p class="fs-5 mb-4 text-dark">Вы уверены, что хотите объединить эти команды?</p>
+                            <div class="modal-body p-3 p-md-5 text-center">
+                                <p class="fs-6 fs-md-5 mb-4 text-dark">Вы уверены, что хотите объединить эти команды?</p>
 
-                                <div class="d-flex justify-content-center align-items-center gap-4 mb-4">
-                                    <span class="badge bg-danger fs-5 py-3 px-4 border border-danger shadow-sm">{{ preview.source.name }}</span>
-                                    <i class="bi bi-arrow-right fs-3 text-muted"></i>
-                                    <span class="badge bg-success fs-5 py-3 px-4 border border-success shadow-sm">{{ preview.target.name }}</span>
+                                <div class="d-flex flex-column flex-md-row justify-content-center align-items-center gap-2 gap-md-4 mb-4">
+                                    <span class="badge bg-danger fs-6 py-2 px-3 border border-danger w-100 text-truncate text-center">{{ preview.source.name }}</span>
+                                    <i class="bi bi-arrow-down fs-4 text-muted d-md-none"></i>
+                                    <i class="bi bi-arrow-right fs-3 text-muted d-none d-md-block"></i>
+                                    <span class="badge bg-success fs-6 py-2 px-3 border border-success w-100 text-truncate text-center">{{ preview.target.name }}</span>
                                 </div>
 
-                                <div class="alert alert-warning text-start mb-0">
-                                    <strong>Обратите внимание!</strong> Команда «{{ preview.source.name }}» будет <u>удалена из базы навсегда</u>. Все её матчи, голы, заявки игроков и новости перейдут к команде «{{ preview.target.name }}». Отменить это действие будет невозможно.
+                                <div class="alert alert-warning text-start mb-0 small">
+                                    <strong>Обратите внимание!</strong> Команда «{{ preview.source.name }}» будет <u>удалена из базы навсегда</u>. Все её данные перейдут к команде «{{ preview.target.name }}». Отменить это действие будет невозможно.
                                 </div>
                             </div>
-                            <div class="modal-footer border-0 justify-content-center pb-4 pt-0">
-                                <button type="button" class="btn btn-outline-secondary px-4 fw-bold" data-bs-dismiss="modal">Отмена</button>
-                                <button type="submit" form="mergeForm" class="btn btn-danger px-4 fw-bold">Да, объединить команды</button>
+                            <div class="modal-footer border-0 justify-content-center pb-3 pb-md-4 pt-0 gap-2 flex-column flex-sm-row">
+                                <button type="button" class="btn btn-outline-secondary px-4 fw-bold w-100 w-sm-auto" data-bs-dismiss="modal">Отмена</button>
+                                <button type="submit" form="mergeForm" class="btn btn-danger px-4 fw-bold w-100 w-sm-auto">Да, объединить</button>
                             </div>
                         </div>
                     </div>
@@ -157,11 +169,11 @@
     </div>
 
     <!-- Правая колонка: Справка -->
-    <div class="col-lg-4">
+    <div class="col-12 col-lg-4">
         <div class="card border-0 shadow-sm mb-4">
-            <div class="card-body">
+            <div class="card-body p-3 p-md-4">
                 <h6 class="fw-bold mb-3 text-uppercase text-muted">Что переносится</h6>
-                <ul class="list-unstyled mb-0">
+                <ul class="list-unstyled mb-0 small">
                     <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Матчи (домашние и гостевые)</li>
                     <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Голы, передачи, карточки</li>
                     <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Победы и очки (пересчёт таблиц)</li>
@@ -169,20 +181,34 @@
                     <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Заявки игроков (статистика суммируется)</li>
                     <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Дисквалификации</li>
                     <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Тренеров</li>
-                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Капитанов</li>
-                    <li><i class="bi bi-check-circle-fill text-success me-2"></i>Привязку новостей</li>
+                    <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i>Привязку новостей</li>
                 </ul>
             </div>
         </div>
 
-        <div class="alert alert-info border-info shadow-sm">
+        <div class="alert alert-info border-info shadow-sm small">
             <h6 class="fw-bold mb-2"><i class="bi bi-lightbulb me-2"></i>Совет</h6>
-            <p class="mb-0 small">
+            <p class="mb-0">
                 Перед объединением убедитесь, что у <strong>целевой</strong> команды (зеленая) заполнены логотип, город и тренер. Её данные останутся без изменений, а данные дубля просто добавятся к ней.
             </p>
         </div>
     </div>
 </div>
+
+<style>
+    /* Фикс для iOS Safari (чтобы при клике на поиск не было автозума) */
+    .ts-control, .ts-dropdown, .form-control {
+        font-size: 16px !important;
+    }
+
+    /* Кнопки на ПК не растягиваем */
+    @media (min-width: 768px) {
+        .w-md-auto { width: auto !important; }
+    }
+    @media (min-width: 576px) {
+        .w-sm-auto { width: auto !important; }
+    }
+</style>
 
 <!-- Инициализация Tom Select (поиск с подсказками) -->
 <script>
