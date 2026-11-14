@@ -163,7 +163,7 @@
 
                     <!-- Общие игроки -->
                     {% if common_players %}
-                    <div class="row mb-4 pt-3 border-top">
+                    <div class="row mb-2 pt-3 border-top">
                         <div class="col-12">
                             <h5 class="fw-bold border-bottom pb-2 mb-3 text-uppercase" style="color: #0f2537; font-size: 16px;">Выступали за обе команды</h5>
                             <div class="d-flex flex-wrap gap-2">
@@ -191,8 +191,8 @@
 
                     <hr class="my-4 d-none d-md-block">
 
-                    <!-- Форма команд -->
-                    <div class="row g-3 g-md-4 mt-1">
+                    <!-- ФОРМА КОМАНД (ИСПРАВЛЕНО) -->
+                    <div class="row g-3 g-md-4 mt-1 align-items-start">
                         <!-- Хозяева -->
                         <div class="col-12 col-md-6">
                             <h5 class="fw-bold border-bottom pb-2 mb-3 text-uppercase" style="color: #0f2537; font-size: 16px;">Форма: {{ match.home_team.name }}</h5>
@@ -222,7 +222,9 @@
                         </div>
 
                         <!-- Гости -->
-                        <div class="col-12 col-md-6 mt-3 mt-md-0">
+                        <!-- Убран mt-md-0, добавлен d-md-none для правильного отступа только на мобилке -->
+                        <div class="col-12 col-md-6 mt-3 d-md-none"></div>
+                        <div class="col-12 col-md-6">
                             <h5 class="fw-bold border-bottom pb-2 mb-3 text-uppercase" style="color: #0f2537; font-size: 16px;">Форма: {{ match.away_team.name }}</h5>
                             <div class="d-flex flex-column gap-2">
                                 {% for m in away_recent_matches %}
@@ -255,18 +257,13 @@
                     <!-- ============ ВКЛАДКА: СОБЫТИЯ ============ -->
                     {% if active_tab == 'events' %}
 
-                    <!-- ИСПРАВЛЕННАЯ ШАПКА ВКЛАДКИ (Одна строка) -->
+                    <!-- Шапка вкладки -->
                     <div class="d-flex justify-content-between align-items-center mb-4 px-2 gap-2">
-                        <!-- Хозяева -->
                         <div class="d-flex align-items-center gap-2 flex-grow-1 overflow-hidden">
                             <img src="{{ match.home_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" width="36" height="36" class="rounded-circle bg-white p-1 border shadow-sm flex-shrink-0" style="object-fit: contain;">
                             <h6 class="fw-bold m-0 text-uppercase text-truncate">{{ match.home_team.name }}</h6>
                         </div>
-
-                        <!-- Центр -->
                         <div class="text-muted fw-bold d-none d-md-block text-nowrap" style="color: #0f2537;">События матча</div>
-
-                        <!-- Гости -->
                         <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end overflow-hidden">
                             <h6 class="fw-bold m-0 text-uppercase text-truncate text-end">{{ match.away_team.name }}</h6>
                             <img src="{{ match.away_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" width="36" height="36" class="rounded-circle bg-white p-1 border shadow-sm flex-shrink-0" style="object-fit: contain;">
@@ -618,7 +615,7 @@
     .score-badge { background: #4a8bb5; color: white; padding: 4px 15px; font-weight: 700; font-size: 1.05rem; border-radius: 2px; clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); display: inline-block; text-align: center; min-width: 60px; }
     .score-placeholder { width: 60px; }
 
-    /* ================= МОБИЛЬНЫЙ ТАЙМЛАЙН (ИСПРАВЛЕН) ================= */
+    /* ================= МОБИЛЬНЫЙ ТАЙМЛАЙН ================= */
     @media (max-width: 767px) {
         .timeline-list::before { display: none; }
 
@@ -636,10 +633,9 @@
             gap: 8px;
         }
 
-        /* Магия: "разворачиваем" обертки, чтобы элементы выстроились в один ряд */
+        /* "Разворачиваем" обертки для единого шаблона */
         .event-side { display: contents; }
 
-        /* Задаем жесткий порядок элементов для всех карточек */
         .event-minute { order: 1; width: auto; margin: 0; flex-shrink: 0; }
         .event-minute span { font-size: 14px; font-weight: 700; color: #0d6efd; background: transparent; padding: 0; }
 
