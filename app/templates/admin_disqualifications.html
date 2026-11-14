@@ -1,7 +1,8 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- ШАПКА -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
     <h4 class="fw-bold m-0">Дисквалификации</h4>
     <a href="/admin/disqualifications/create" class="btn btn-primary fw-bold">
         <i class="bi bi-plus-lg"></i> Выдать дисквалификацию
@@ -12,14 +13,14 @@
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-3">
         <form method="GET" action="/admin/disqualifications" class="row g-2 align-items-center">
-            <div class="col-md-8">
+            <div class="col-12 col-md-8">
                 <div class="input-group">
                     <span class="input-group-text bg-white border-end-0"><i class="bi bi-search text-muted"></i></span>
-                    <input type="text" name="search" class="form-control border-start-0" placeholder="Поиск по фамилии или имени игрока..." value="{{ current_search }}">
+                    <input type="text" name="search" class="form-control border-start-0" placeholder="Поиск по фамилии или имени..." value="{{ current_search }}">
                 </div>
             </div>
-            <div class="col-md-4 d-flex gap-2">
-                <button type="submit" class="btn btn-primary fw-bold px-4">Найти</button>
+            <div class="col-12 col-md-4 d-flex gap-2">
+                <button type="submit" class="btn btn-primary fw-bold flex-grow-1">Найти</button>
                 {% if current_search %}
                     <a href="/admin/disqualifications" class="btn btn-outline-secondary">Сбросить</a>
                 {% endif %}
@@ -33,55 +34,63 @@
     <div class="card-header bg-danger text-white fw-bold py-3">
         <i class="bi bi-exclamation-triangle me-2"></i> Активные дисквалификации ({{ active_disqualifications|length }})
     </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="py-3 px-4">Игрок</th>
-                        <th>Команда</th>
-                        <th>Турнир</th>
-                        <th>Причина</th>
-                        <th class="text-center">Осталось матчей</th>
-                        <th class="text-end px-4">Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for disq in active_disqualifications %}
-                    <tr>
-                        <td class="px-4">
-                            <div class="fw-bold text-dark">{{ disq.player.last_name }} {{ disq.player.first_name }}</div>
-                            <div class="text-muted small">ID: {{ disq.player.id }}</div>
-                        </td>
-                        <td>{{ disq.team.name if disq.team else '—' }}</td>
-                        <td class="small">{{ disq.tournament.name if disq.tournament else '—' }}</td>
-                        <td><span class="badge bg-secondary">{{ disq.reason }}</span></td>
-                        <td class="text-center">
-                            <span class="badge bg-danger fs-6">{{ disq.matches_remaining }}</span>
-                        </td>
-                        <td class="text-end px-4">
-                            <form action="/admin/disqualifications/{{ disq.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Простить игрока и удалить дисквалификацию?');">
-                                <button type="submit" class="btn btn-sm btn-outline-success" title="Амнистия">
-                                    <i class="bi bi-check-circle"></i> Снять
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center py-4 text-success fw-bold">
-                            <i class="bi bi-shield-check fs-4 me-2"></i>
-                            {% if current_search %}
-                                По запросу «{{ current_search }}» активных дисквалификаций не найдено
-                            {% else %}
-                                Нет активных дисквалификаций
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="card-body p-3 bg-light">
+
+        {% for disq in active_disqualifications %}
+        <!-- КАРТОЧКА АКТИВНОЙ ДИСКВАЛИФИКАЦИИ -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body p-3">
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+
+                    <!-- Игрок и Команда -->
+                    <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width: 200px;">
+                        <div class="bg-danger bg-opacity-10 text-danger rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 45px; height: 45px;">
+                            <i class="bi bi-person-x fs-5"></i>
+                        </div>
+                        <div class="text-truncate">
+                            <div class="fw-bold text-dark fs-6 text-truncate">{{ disq.player.last_name }} {{ disq.player.first_name }}</div>
+                            <div class="text-muted small text-truncate">{{ disq.team.name if disq.team else '—' }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Турнир и Причина -->
+                    <div class="flex-grow-1 text-md-center" style="min-width: 200px;">
+                        <div class="small text-muted text-truncate mb-1" title="{{ disq.tournament.name if disq.tournament else '' }}">
+                            <i class="bi bi-trophy me-1"></i> {{ disq.tournament.name if disq.tournament else '—' }}
+                        </div>
+                        <span class="badge bg-secondary text-wrap">{{ disq.reason }}</span>
+                    </div>
+
+                    <!-- Остаток и Действие -->
+                    <div class="d-flex align-items-center justify-content-between justify-content-md-end gap-4 ms-md-auto flex-shrink-0">
+                        <div class="text-end">
+                            <div class="text-muted small text-uppercase fw-bold" style="font-size: 11px;">Осталось</div>
+                            <div class="fw-bold text-danger fs-5 lh-1">{{ disq.matches_remaining }} <span class="fs-6 fw-normal">матч.</span></div>
+                        </div>
+
+                        <form action="/admin/disqualifications/{{ disq.id }}/delete" method="post" onsubmit="return confirm('Простить игрока и удалить дисквалификацию?');">
+                            <button type="submit" class="btn btn-outline-success fw-bold" title="Амнистия">
+                                <i class="bi bi-check-circle me-1"></i> Снять
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
         </div>
+        {% else %}
+        <div class="alert alert-white text-center border mb-0 py-4 text-success shadow-sm">
+            <i class="bi bi-shield-check fs-2 d-block mb-2"></i>
+            <span class="fw-bold fs-5">
+                {% if current_search %}
+                    По запросу «{{ current_search }}» активных дисквалификаций не найдено
+                {% else %}
+                    Нет активных дисквалификаций
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+
     </div>
 </div>
 
@@ -90,56 +99,63 @@
     <div class="card-header bg-secondary text-white fw-bold py-3">
         <i class="bi bi-archive me-2"></i> Архив (Отбытые наказания)
     </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="py-3 px-4">Игрок</th>
-                        <th>Команда</th>
-                        <th>Турнир</th>
-                        <th>Причина</th>
-                        <th class="text-center">Всего матчей</th>
-                        <th class="text-center">Статус</th>
-                        <th class="text-end px-4">Действия</th>
-                    </tr>
-                </thead>
-                <tbody class="text-muted">
-                    {% for disq in completed_disqualifications %}
-                    <tr>
-                        <td class="px-4">
-                            <div class="fw-bold">{{ disq.player.last_name }} {{ disq.player.first_name }}</div>
-                            <div class="small">ID: {{ disq.player.id }}</div>
-                        </td>
-                        <td>{{ disq.team.name if disq.team else '—' }}</td>
-                        <td class="small">{{ disq.tournament.name if disq.tournament else '—' }}</td>
-                        <td><span class="badge bg-light text-dark border">{{ disq.reason }}</span></td>
-                        <td class="text-center fw-bold">{{ disq.matches_total or '—' }}</td>
-                        <td class="text-center">
-                            <span class="badge bg-success bg-opacity-25 text-success">Отбыта</span>
-                        </td>
-                        <td class="text-end px-4">
-                            <form action="/admin/disqualifications/{{ disq.id }}/delete" method="post" class="d-inline" onsubmit="return confirm('Удалить эту запись из архива?');">
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить из истории">
-                                    <i class="bi bi-trash"></i>
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="7" class="text-center py-4 text-muted">
-                            {% if current_search %}
-                                По запросу «{{ current_search }}» в архиве ничего не найдено
-                            {% else %}
-                                Архив пуст
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+    <div class="card-body p-3 bg-light">
+
+        {% for disq in completed_disqualifications %}
+        <!-- КАРТОЧКА ЗАВЕРШЕННОЙ ДИСКВАЛИФИКАЦИИ -->
+        <div class="card border-0 shadow-sm mb-2">
+            <div class="card-body p-3">
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3 text-muted">
+
+                    <!-- Игрок и Команда -->
+                    <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width: 200px;">
+                        <div class="bg-secondary bg-opacity-10 text-secondary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 40px; height: 40px;">
+                            <i class="bi bi-archive"></i>
+                        </div>
+                        <div class="text-truncate">
+                            <div class="fw-bold text-dark text-truncate">{{ disq.player.last_name }} {{ disq.player.first_name }}</div>
+                            <div class="small text-truncate">{{ disq.team.name if disq.team else '—' }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Турнир и Причина -->
+                    <div class="flex-grow-1 text-md-center" style="min-width: 200px;">
+                        <div class="small text-truncate mb-1" title="{{ disq.tournament.name if disq.tournament else '' }}">
+                            <i class="bi bi-trophy me-1"></i> {{ disq.tournament.name if disq.tournament else '—' }}
+                        </div>
+                        <span class="badge bg-light text-dark border">{{ disq.reason }}</span>
+                    </div>
+
+                    <!-- Всего матчей и Действие -->
+                    <div class="d-flex align-items-center justify-content-between justify-content-md-end gap-4 ms-md-auto flex-shrink-0">
+                        <div class="text-end">
+                            <div class="small fw-bold mb-1">Всего: {{ disq.matches_total or '—' }}</div>
+                            <span class="badge bg-success bg-opacity-25 text-success border border-success">Отбыта</span>
+                        </div>
+
+                        <form action="/admin/disqualifications/{{ disq.id }}/delete" method="post" onsubmit="return confirm('Удалить эту запись из архива?');">
+                            <button type="submit" class="btn btn-outline-danger" title="Удалить из истории">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </form>
+                    </div>
+
+                </div>
+            </div>
         </div>
+        {% else %}
+        <div class="alert alert-white text-center border mb-0 py-4 text-muted shadow-sm">
+            <i class="bi bi-inbox fs-2 d-block mb-2 text-secondary"></i>
+            <span class="fw-bold">
+                {% if current_search %}
+                    По запросу «{{ current_search }}» в архиве ничего не найдено
+                {% else %}
+                    Архив пуст
+                {% endif %}
+            </span>
+        </div>
+        {% endfor %}
+
     </div>
 </div>
 {% endblock %}
