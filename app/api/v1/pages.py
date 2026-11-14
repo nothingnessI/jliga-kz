@@ -2281,24 +2281,38 @@ async def admin_matches_list(
     if tournament_id and tournament_id.strip().isdigit():
         stmt = stmt.where(Match.tournament_id == int(tournament_id))
 
-    # 3. УМНАЯ СОРТИРОВКА ПО ДАТЕ
-    # Группируем матчи: 0 - будущие (дата >= сейчас), 1 - прошлые (дата < сейчас), 2 - без даты (TBA)
-    time_group = case(
-        (Match.match_date >= now, 0),
-        (Match.match_date < now, 1),
-        else_=2
+    # 3. УМНАЯ СОРТИРОВКА (Незавершенные и TBA — наверх)
+
+    # Шаг А: Группируем по статусу (0 - незавершенные, 1 - завершенные/отмененные)
+    status_group = case(
+        (Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE]), 0),
+        else_=1
     )
 
+    # Шаг Б: Группируем по наличию даты (0 - без даты (TBA), 1 - с датой)
+    date_group = case(
+        (Match.match_date.is_(None), 0),
+        else_=1
+    )
+
+    # Шаг В: Для незавершенных матчей с датой сортируем по возрастанию (ближайшие)
+    active_date_asc = case(
+        (Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE]), Match.match_date),
+        else_=None
+    ).asc().nullslast()
+
+    # Шаг Г: Для завершенных матчей с датой сортируем по убыванию (свежие сверху)
+    finished_date_desc = case(
+        (Match.match_date.isnot(None) & ~Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE]), Match.match_date),
+        else_=None
+    ).desc().nullslast()
+
+    # Применяем итоговую сортировку
     stmt = stmt.order_by(
-        # 1. Сначала все БУДУЩИЕ матчи (0), потом ПРОШЛЫЕ (1)
-        time_group,
-
-        # 2. Внутри будущих: от ближайшего к дальнему (ASC)
-        case((Match.match_date >= now, Match.match_date), else_=None).asc().nullslast(),
-
-        # 3. Внутри прошлых: от недавних к старым (DESC)
-        case((Match.match_date < now, Match.match_date), else_=None).desc().nullslast(),
-
+        status_group,
+        date_group,
+        active_date_asc,
+        finished_date_desc,
         Match.id.desc()
     )
 
