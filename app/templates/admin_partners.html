@@ -1,60 +1,108 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- ШАПКА -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
     <h4 class="fw-bold m-0">Партнеры</h4>
     <a href="/admin/partners/create" class="btn btn-primary fw-bold">
         <i class="bi bi-plus-lg"></i> Добавить партнера
     </a>
 </div>
 
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th class="py-3 px-4" style="width: 100px;">Логотип</th>
-                        <th>Название</th>
-                        <th>Ссылка</th>
-                        <th class="text-center">Порядок</th>
-                        <th class="text-center">Статус</th>
-                        <th class="text-end px-4">Действия</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in partners %}
-                    <tr>
-                        <td class="px-4">
-                            <img src="{{ p.logo_url }}" alt="logo" style="max-height: 40px; max-width: 80px; object-fit: contain;">
-                        </td>
-                        <td class="fw-bold">{{ p.name }}</td>
-                        <td><a href="{{ p.url or '#' }}" target="_blank" class="text-truncate d-inline-block" style="max-width: 200px;">{{ p.url or '—' }}</a></td>
-                        <td class="text-center">{{ p.sort_order }}</td>
-                        <td class="text-center">
+<!-- СПИСОК ПАРТНЕРОВ -->
+<div class="d-flex flex-column gap-2">
+    {% for p in partners %}
+    <div class="card border-0 shadow-sm partner-card">
+        <div class="card-body p-3">
+
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+
+                <!-- Левая часть: Логотип, Название, Ссылка -->
+                <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width: 0;">
+
+                    <!-- Логотип -->
+                    <div class="flex-shrink-0 bg-light border rounded p-1 d-flex justify-content-center align-items-center" style="height: 55px; width: 85px;">
+                        <img src="{{ p.logo_url }}" alt="logo" style="max-height: 100%; max-width: 100%; object-fit: contain;">
+                    </div>
+
+                    <!-- Инфо -->
+                    <div class="text-truncate">
+                        <div class="fw-bold text-dark fs-6 text-truncate">{{ p.name }}</div>
+                        <div class="text-muted small text-truncate mt-1">
+                            <a href="{{ p.url or '#' }}" target="_blank" class="text-decoration-none text-muted hover-link">
+                                <i class="bi bi-link-45deg"></i> {{ p.url or 'Ссылка не указана' }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Правая часть: Порядок, Статус, Кнопки -->
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between justify-content-md-end gap-3 flex-shrink-0 ms-md-auto mt-2 mt-md-0 border-top pt-3 pt-md-0 border-md-0">
+
+                    <!-- Порядок и Статус -->
+                    <div class="d-flex align-items-center justify-content-between justify-content-md-end gap-3">
+                        <div class="text-muted small fw-bold" title="Порядок сортировки">
+                            <i class="bi bi-sort-numeric-down"></i> {{ p.sort_order }}
+                        </div>
+                        <div>
                             {% if p.is_active %}
-                                <span class="badge bg-success">Активен</span>
+                                <span class="badge bg-success py-2 px-3">Активен</span>
                             {% else %}
-                                <span class="badge bg-secondary">Скрыт</span>
+                                <span class="badge bg-secondary py-2 px-3">Скрыт</span>
                             {% endif %}
-                        </td>
-                        <td class="text-end px-4">
-                            <div class="d-flex justify-content-end gap-2">
-                                <a href="/admin/partners/{{ p.id }}/edit" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
-                                <form action="/admin/partners/{{ p.id }}/delete" method="post" onsubmit="return confirm('Удалить партнера?');">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center py-5 text-muted">Партнеров пока нет</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                        </div>
+                    </div>
+
+                    <!-- Кнопки действий -->
+                    <div class="d-flex gap-2">
+                        <a href="/admin/partners/{{ p.id }}/edit" class="btn btn-sm btn-outline-primary fw-bold flex-grow-1 flex-md-grow-0">
+                            <i class="bi bi-pencil"></i> <span class="d-md-none ms-1">Изменить</span>
+                        </a>
+                        <form action="/admin/partners/{{ p.id }}/delete" method="post" class="flex-grow-1 flex-md-grow-0" onsubmit="return confirm('Удалить партнера?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger w-100 fw-bold">
+                                <i class="bi bi-trash"></i> <span class="d-md-none ms-1">Удалить</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+
         </div>
     </div>
+    {% else %}
+    <!-- Если партнеров нет -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-briefcase fs-1 d-block mb-3 text-secondary"></i>
+            <h5 class="fw-bold">Партнеров пока нет</h5>
+            <p>Нажмите «Добавить партнера», чтобы создать первого.</p>
+        </div>
+    </div>
+    {% endfor %}
 </div>
+
+<style>
+    .partner-card {
+        transition: all 0.2s ease;
+        border-left: 4px solid transparent !important;
+    }
+
+    .hover-link:hover {
+        color: #0d6efd !important;
+        text-decoration: underline !important;
+    }
+
+    /* Эффекты ховера и отмена верхней границы только для ПК */
+    @media (min-width: 768px) {
+        .partner-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.08)!important;
+            border-left-color: #0d6efd !important;
+        }
+        .border-md-0 {
+            border-top: none !important;
+        }
+    }
+</style>
 {% endblock %}

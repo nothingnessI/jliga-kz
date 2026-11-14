@@ -1,18 +1,21 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- ШАПКА -->
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
     <h4 class="fw-bold m-0">{{ 'Редактировать матч' if match else 'Новый матч' }}</h4>
-    <a href="/admin/matches" class="btn btn-outline-secondary">← Назад</a>
+    <a href="/admin/matches" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
+        <i class="bi bi-arrow-left me-1"></i> Назад
+    </a>
 </div>
 
 <div class="card border-0 shadow-sm">
-    <div class="card-body p-4">
+    <div class="card-body p-3 p-md-4">
         <form action="/admin/matches/{% if match %}{{ match.id }}/edit{% else %}create{% endif %}" method="post">
 
-            <div class="row g-4">
+            <div class="row g-3">
                 <!-- ================= ОСНОВНАЯ ИНФОРМАЦИЯ ================= -->
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <label class="form-label text-muted small fw-bold text-uppercase">Турнир *</label>
                     <select name="tournament_id" class="form-select" required>
                         <option value="">Выберите турнир...</option>
@@ -24,14 +27,14 @@
                     </select>
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <label class="form-label text-muted small fw-bold text-uppercase">Дата и время</label>
                     <input type="datetime-local" name="match_date" class="form-control"
                            value="{{ match.match_date.strftime('%Y-%m-%dT%H:%M') if match and match.match_date else '' }}">
                 </div>
 
                 <!-- ================= КОМАНДЫ ================= -->
-                <div class="col-md-5">
+                <div class="col-12 col-md-5">
                     <label class="form-label text-muted small fw-bold text-uppercase">Домашняя команда *</label>
                     <select name="home_team_id" class="form-select" required>
                         <option value="">Выберите команду...</option>
@@ -43,11 +46,12 @@
                     </select>
                 </div>
 
-                <div class="col-md-2 text-center d-flex align-items-end justify-content-center pb-2">
-                    <span class="fw-bold text-muted fs-5">VS</span>
+                <!-- Разделитель VS (адаптивный) -->
+                <div class="col-12 col-md-2 d-flex justify-content-center align-items-center py-2 py-md-0">
+                    <span class="badge bg-dark rounded-circle d-flex justify-content-center align-items-center shadow-sm" style="width: 45px; height: 45px; font-size: 14px;">VS</span>
                 </div>
 
-                <div class="col-md-5">
+                <div class="col-12 col-md-5">
                     <label class="form-label text-muted small fw-bold text-uppercase">Гостевая команда *</label>
                     <select name="away_team_id" class="form-select" required>
                         <option value="">Выберите команду...</option>
@@ -60,7 +64,7 @@
                 </div>
 
                 <!-- ================= МЕСТО И СТАТУС ================= -->
-                <div class="col-md-4">
+                <div class="col-12 col-md-4">
                     <label class="form-label text-muted small fw-bold text-uppercase">Стадион</label>
                     <select name="stadium" class="form-select">
                         <option value="">— Не выбран —</option>
@@ -69,21 +73,19 @@
                                 {{ s.name }} {% if s.city %}({{ s.city }}){% endif %}
                             </option>
                         {% endfor %}
-                        {# Если у матча записан стадион, которого нет в списке, оставляем его #}
                         {% if match and match.stadium and match.stadium not in stadiums|map(attribute='name')|list %}
                             <option value="{{ match.stadium }}" selected>{{ match.stadium }} (старый)</option>
                         {% endif %}
                     </select>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-12 col-md-4">
                     <label class="form-label text-muted small fw-bold text-uppercase">Тур (раунд)</label>
-                    <input type="number" name="round" class="form-control" placeholder="Например: 5"
+                    <input type="number" name="round" class="form-control" placeholder="Например: 5" inputmode="numeric"
                            value="{{ match.round if match and match.round else '' }}">
                 </div>
 
-                <!-- СТАТУС НА РУССКОМ -->
-                <div class="col-md-4">
+                <div class="col-12 col-md-4">
                     <label class="form-label text-muted small fw-bold text-uppercase">Статус матча *</label>
                     <select name="status" class="form-select" required id="match-status-select">
                         <option value="scheduled" {% if not match or (match and match.status.value == 'scheduled') %}selected{% endif %}>Запланирован (Скоро)</option>
@@ -91,14 +93,14 @@
                         <option value="finished" {% if match and match.status.value == 'finished' %}selected{% endif %}>Завершён</option>
                         <option value="cancelled" {% if match and match.status.value == 'cancelled' %}selected{% endif %}>Отменён</option>
                     </select>
-                    <div class="form-text text-primary"><i class="bi bi-info-circle"></i> Если ввести счет, статус сменится на «Завершён» сам.</div>
+                    <div class="form-text text-primary small mt-1"><i class="bi bi-info-circle"></i> Если ввести счет, статус сменится на «Завершён».</div>
                 </div>
 
                 <!-- ================= ПЛЕЙ-ОФФ И ГРУППЫ ================= -->
-                <div class="col-12 mt-4 pt-4 border-top">
+                <div class="col-12 mt-4 pt-3 border-top">
                     <h6 class="fw-bold text-primary mb-3"><i class="bi bi-diagram-3 me-2"></i> Стадия и Сетка</h6>
                     <div class="row g-3">
-                        <div class="col-md-4">
+                        <div class="col-12 col-md-4">
                             <label class="form-label text-muted small fw-bold text-uppercase">Тип стадии</label>
                             <select name="stage" class="form-select">
                                 <option value="">— Групповой этап / Чемпионат —</option>
@@ -106,12 +108,12 @@
                                 <option value="FINAL" {% if match and match.stage and match.stage.value == 'FINAL' %}selected{% endif %}>Финал</option>
                             </select>
                         </div>
-                        <div class="col-md-4">
-                            <label class="form-label text-muted small fw-bold text-uppercase">Название стадии (для сетки)</label>
+                        <div class="col-12 col-md-4">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Название стадии</label>
                             <input type="text" name="stage_name" class="form-control" placeholder="Например: 1/4 Финала"
                                    value="{{ match.stage_name if match and match.stage_name else '' }}">
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-12 col-md-4">
                             <label class="form-label text-muted small fw-bold text-uppercase">Группа (если есть)</label>
                             <input type="text" name="group_name" class="form-control" placeholder="Например: A"
                                    value="{{ match.group_name if match and match.group_name else '' }}">
@@ -121,32 +123,32 @@
 
                 <!-- ================= РЕЗУЛЬТАТЫ И ПЕНАЛЬТИ ================= -->
                 {% if match %}
-                <div class="col-12 mt-4 pt-4 border-top">
+                <div class="col-12 mt-4 pt-3 border-top">
                     <h6 class="fw-bold text-success mb-3"><i class="bi bi-stopwatch me-2"></i> Результаты матча</h6>
 
                     <div class="row g-3">
-                        <div class="col-md-3">
+                        <div class="col-6 col-md-3">
                             <label class="form-label text-muted small fw-bold text-uppercase">Голы хозяев</label>
-                            <input type="number" name="home_score" id="home-score" class="form-control" value="{{ match.home_score if match.home_score is not none else '' }}">
+                            <input type="number" name="home_score" id="home-score" class="form-control form-control-lg text-center fw-bold" inputmode="numeric" value="{{ match.home_score if match.home_score is not none else '' }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-6 col-md-3">
                             <label class="form-label text-muted small fw-bold text-uppercase">Голы гостей</label>
-                            <input type="number" name="away_score" id="away-score" class="form-control" value="{{ match.away_score if match.away_score is not none else '' }}">
+                            <input type="number" name="away_score" id="away-score" class="form-control form-control-lg text-center fw-bold" inputmode="numeric" value="{{ match.away_score if match.away_score is not none else '' }}">
                         </div>
 
-                        <div class="col-md-3">
-                            <label class="form-label text-muted small fw-bold text-uppercase">Пенальти (Хозяева)</label>
-                            <input type="number" name="home_penalty" class="form-control" placeholder="Если были" value="{{ match.home_penalty if match.home_penalty is not none else '' }}">
+                        <div class="col-6 col-md-3">
+                            <label class="form-label text-muted small fw-bold text-uppercase">Пенальти (Хоз)</label>
+                            <input type="number" name="home_penalty" class="form-control" placeholder="Если были" inputmode="numeric" value="{{ match.home_penalty if match.home_penalty is not none else '' }}">
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-6 col-md-3">
                             <label class="form-label text-muted small fw-bold text-uppercase">Пенальти (Гости)</label>
-                            <input type="number" name="away_penalty" class="form-control" placeholder="Если были" value="{{ match.away_penalty if match.away_penalty is not none else '' }}">
+                            <input type="number" name="away_penalty" class="form-control" placeholder="Если были" inputmode="numeric" value="{{ match.away_penalty if match.away_penalty is not none else '' }}">
                         </div>
 
-                        <div class="col-12 mt-2">
-                            <div class="form-check form-switch fs-5">
-                                <input class="form-check-input" type="checkbox" name="tech_loss" id="tech_loss" {% if match.tech_loss %}checked{% endif %}>
-                                <label class="form-check-label fs-6 mt-1" for="tech_loss">Техническое поражение (ТП)</label>
+                        <div class="col-12 mt-3">
+                            <div class="form-check form-switch p-3 bg-light rounded border">
+                                <input class="form-check-input ms-0 me-2 fs-5" type="checkbox" name="tech_loss" id="tech_loss" {% if match.tech_loss %}checked{% endif %}>
+                                <label class="form-check-label fw-bold text-danger ms-4" for="tech_loss" style="margin-top: 2px;">Техническое поражение (ТП)</label>
                             </div>
                         </div>
                     </div>
@@ -154,16 +156,33 @@
                 {% endif %}
             </div>
 
-            <!-- КНОПКИ СОХРАНЕНИЯ -->
-            <div class="mt-5 pt-3 border-top d-flex gap-2">
-                <button type="submit" class="btn btn-success fw-bold px-4">
-                    <i class="bi bi-check-lg me-1"></i> Сохранить матч
+            <!-- КНОПКИ СОХРАНЕНИЯ (Адаптивные) -->
+            <div class="mt-4 mt-md-5 pt-3 border-top d-flex flex-column flex-sm-row gap-2">
+                <button type="submit" class="btn btn-success btn-lg fw-bold px-4 w-100 w-sm-auto">
+                    <i class="bi bi-check-lg me-1"></i> Сохранить
                 </button>
-                <a href="/admin/matches" class="btn btn-light px-4">Отмена</a>
+                <a href="/admin/matches" class="btn btn-light btn-lg px-4 w-100 w-sm-auto border">Отмена</a>
             </div>
         </form>
     </div>
 </div>
+
+<style>
+    /* Фикс для iOS Safari: убирает автозум и делает поля крупнее для пальцев */
+    .form-control, .form-select {
+        font-size: 16px !important;
+        padding: 10px 12px;
+    }
+    .form-control-lg {
+        font-size: 24px !important;
+        padding: 15px;
+    }
+
+    /* Кнопки на ПК не растягиваем */
+    @media (min-width: 576px) {
+        .w-sm-auto { width: auto !important; }
+    }
+</style>
 
 <!-- СКРИПТ АВТОМАТИЧЕСКОГО ПЕРЕКЛЮЧЕНИЯ СТАТУСА -->
 <script>
@@ -177,18 +196,14 @@
                 const homeVal = homeScoreInput.value.trim();
                 const awayVal = awayScoreInput.value.trim();
 
-                // Если оба поля заполнены числами, ставим статус "Завершён"
                 if (homeVal !== '' && awayVal !== '') {
                     statusSelect.value = 'finished';
-                }
-                // Если счет стерли, возвращаем "Запланирован"
-                else if (homeVal === '' && awayVal === '') {
+                } else if (homeVal === '' && awayVal === '') {
                     statusSelect.value = 'scheduled';
                 }
             }
         }
 
-        // Слушаем ввод в поля счета
         if (homeScoreInput) homeScoreInput.addEventListener('input', checkScores);
         if (awayScoreInput) awayScoreInput.addEventListener('input', checkScores);
     });
