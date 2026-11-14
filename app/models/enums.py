@@ -27,10 +27,10 @@ class MatchStage(str, enum.Enum):
 
 
 class PlayerPosition(str, enum.Enum):
-    GOALKEEPER = "goalkeeper"
-    DEFENDER = "defender"
-    MIDFIELDER = "midfielder"
-    FORWARD = "forward"
+    GOALKEEPER = "Вратарь"
+    DEFENDER = "Защитник"
+    MIDFIELDER = "Полузащитник"
+    FORWARD = "Нападающий"
 
 
 class MatchEventType(str, enum.Enum):

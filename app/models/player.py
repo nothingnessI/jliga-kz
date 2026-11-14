@@ -16,7 +16,7 @@ class Player(TimestampMixin, Base):
     last_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     date_of_birth: Mapped[date | None] = mapped_column(Date)
     position: Mapped[PlayerPosition | None] = mapped_column(
-        Enum(PlayerPosition, name="player_position")
+        Enum(PlayerPosition, name="player_position", values_callable=lambda x: [e.value for e in x])
     )
     photo_url: Mapped[str | None] = mapped_column(String(500))
 

@@ -16,8 +16,7 @@
         border: 1px solid #e2e8f0;
     }
     .profile-photo {
-        width: 180px;
-        height: 180px;
+        width: 150px; height: 150px;
         object-fit: cover;
         border-radius: 50%;
         border: 5px solid #fff;
@@ -37,17 +36,17 @@
         background: #fff;
         border-radius: 12px;
         border: 1px solid #e2e8f0;
-        padding: 20px;
+        padding: 15px;
         text-align: center;
         transition: transform 0.2s;
+        height: 100%;
     }
-    .stat-box:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.05); }
-    .stat-icon { font-size: 28px; color: #94a3b8; margin-bottom: 10px; }
-    .stat-value { font-size: 28px; font-weight: 800; color: #0f2537; line-height: 1; margin-bottom: 5px; }
-    .stat-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+    .stat-icon { font-size: 24px; color: #94a3b8; margin-bottom: 5px; }
+    .stat-value { font-size: 24px; font-weight: 800; color: #0f2537; line-height: 1; margin-bottom: 5px; }
+    .stat-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; }
 
     /* Таблица истории */
-    .history-table { width: 100%; border-collapse: collapse; }
+    .history-table { width: 100%; border-collapse: collapse; min-width: 600px; }
     .history-table th {
         background: #f8fafc;
         color: #64748b;
@@ -56,15 +55,21 @@
         font-weight: 700;
         padding: 12px 15px;
         border-bottom: 2px solid #e2e8f0;
+        white-space: nowrap;
     }
-    .history-table td { padding: 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+    .history-table td { padding: 12px 15px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
 
     /* Строка турнира */
     .tournament-row { background: #e2e8f0; font-weight: 800; color: #0f2537; text-transform: uppercase; font-size: 14px; }
-    .tournament-row td { padding: 15px; border-bottom: none; }
+    .tournament-row td { padding: 12px 15px; border-bottom: none; }
 
     /* Строка матча */
-    .match-row:hover { background: #f8fafc; }
+    .match-row { transition: background 0.2s; }
+    .match-row:hover {
+        background: #f1f5f9;
+        cursor: pointer; /* Курсор-рука, показывая что это ссылка */
+    }
+    .match-row a { color: inherit; text-decoration: none; } /* Текст в ссылке не становится синим */
 
     /* Иконки событий */
     .event-icon { font-size: 16px; margin-right: 3px; }
@@ -80,30 +85,37 @@
     .res-d { background: #94a3b8; }
     .res-l { background: #ef4444; }
 
+    /* Мобильная адаптация */
+    @media (max-width: 768px) {
+        .profile-photo { width: 120px; height: 120px; margin-top: -30px; }
+        .profile-cover { height: 90px; }
+        .stat-value { font-size: 20px; }
+        .stat-icon { font-size: 20px; }
+    }
 </style>
 
-<div class="container py-4 mt-2">
+<div class="container py-3 py-md-4 mt-2">
 
     <!-- ================= ШАПКА ПРОФИЛЯ ================= -->
     <div class="profile-header mb-4">
         <div class="profile-cover"></div>
-        <div class="px-4 pb-4">
+        <div class="px-3 px-md-4 pb-4">
             <div class="row align-items-end">
-                <div class="col-md-3 text-center text-md-start">
+                <div class="col-12 col-md-3 text-center text-md-start">
                     {% if player.photo_url %}
                         <img src="{{ player.photo_url }}" class="profile-photo">
                     {% else %}
                         <div class="profile-photo bg-secondary d-inline-flex align-items-center justify-content-center">
-                            <i class="bi bi-person-fill text-white" style="font-size: 5rem;"></i>
+                            <i class="bi bi-person-fill text-white" style="font-size: 4rem;"></i>
                         </div>
                     {% endif %}
                 </div>
-                <div class="col-md-9 mt-3 mt-md-0 d-flex flex-column flex-md-row justify-content-between align-items-md-end">
+                <div class="col-12 col-md-9 mt-3 mt-md-0 d-flex flex-column flex-md-row justify-content-between align-items-md-end text-center text-md-start">
                     <div>
-                        <h1 class="fw-bold mb-1 text-uppercase text-dark-blue" style="font-size: 32px;">
+                        <h1 class="fw-bold mb-1 text-uppercase text-dark-blue" style="font-size: 26px; letter-spacing: 0.5px;">
                             {{ player.last_name }} {{ player.first_name }}
                         </h1>
-                        <div class="d-flex gap-3 text-muted fs-6 mb-2">
+                        <div class="d-flex gap-3 text-muted fs-6 mb-2 justify-content-center justify-content-md-start">
                             {% if player.position %}
                                 <span><i class="bi bi-hash"></i> {{ player.position.value }}</span>
                             {% endif %}
@@ -116,36 +128,36 @@
     </div>
 
     <!-- ================= БЛОК СТАТИСТИКИ ================= -->
-    <div class="row g-3 mb-4">
-        <div class="col-6 col-md-3 col-lg-2">
+    <div class="row g-2 g-md-3 mb-4">
+        <div class="col-4 col-md-2">
             <div class="stat-box">
                 <i class="bi bi-controller stat-icon"></i>
                 <div class="stat-value">{{ stats.games }}</div>
                 <div class="stat-label">Игры</div>
             </div>
         </div>
-        <div class="col-6 col-md-3 col-lg-2">
+        <div class="col-4 col-md-2">
             <div class="stat-box">
                 <i class="bi bi-dribbble stat-icon" style="color: #10b981;"></i>
                 <div class="stat-value text-success">{{ stats.goals }}</div>
                 <div class="stat-label">Голы</div>
             </div>
         </div>
-        <div class="col-6 col-md-3 col-lg-2">
+        <div class="col-4 col-md-2">
             <div class="stat-box">
                 <i class="bi bi-bullseye stat-icon" style="color: #3b82f6;"></i>
                 <div class="stat-value text-primary">{{ stats.assists }}</div>
                 <div class="stat-label">Передачи</div>
             </div>
         </div>
-        <div class="col-6 col-md-3 col-lg-2">
+        <div class="col-6 col-md-3 mt-2 mt-md-0">
             <div class="stat-box">
                 <i class="bi bi-square-fill stat-icon" style="color: #f59e0b;"></i>
                 <div class="stat-value text-warning">{{ stats.yellow_cards }}</div>
                 <div class="stat-label">Жёлтые</div>
             </div>
         </div>
-        <div class="col-6 col-md-3 col-lg-2">
+        <div class="col-6 col-md-3 mt-2 mt-md-0">
             <div class="stat-box">
                 <i class="bi bi-square-fill stat-icon" style="color: #ef4444;"></i>
                 <div class="stat-value text-danger">{{ stats.red_cards }}</div>
@@ -157,65 +169,64 @@
     <!-- ================= ТАБЛИЦА ИСТОРИИ ================= -->
     <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
         <div class="card-header bg-dark-blue text-white py-3">
-            <h5 class="m-0 fw-bold text-uppercase" style="letter-spacing: 1px;">Статистика по турнирам</h5>
+            <h5 class="m-0 fw-bold text-uppercase" style="letter-spacing: 1px;">История матчей</h5>
         </div>
 
         <div class="table-responsive">
             <table class="history-table">
                 <thead>
                     <tr>
-                        <th style="width: 25%;">Турнир</th>
-                        <th style="width: 35%;">Матч</th>
-                        <th style="width: 5%; text-align: center;">Рез</th>
-                        <th style="width: 5%; text-align: center;">Г</th>
-                        <th style="width: 5%; text-align: center;">П</th>
-                        <th style="width: 5%; text-align: center;">ЖК</th>
-                        <th style="width: 5%; text-align: center;">КК</th>
+                        <th class="d-none d-md-table-cell" style="width: 15%;">Этап</th>
+                        <th style="width: 45%;">Матч</th>
+                        <th style="width: 10%; text-align: center;">Рез</th>
+                        <th style="width: 10%; text-align: center;">Г</th>
+                        <th style="width: 10%; text-align: center;">П</th>
+                        <th style="width: 10%; text-align: center;">ЖК / КК</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for history in history_data %}
-                        <!-- Шапка турнира (например, BKS - CHAMPIONS LEAGUE) -->
+                        <!-- Шапка турнира -->
                         <tr class="tournament-row">
-                            <td colspan="2">
+                            <td colspan="6">
                                 <div class="d-flex align-items-center gap-2">
                                     {% if history.team and history.team.logo_url %}
-                                        <img src="{{ history.team.logo_url }}" width="24" height="24" style="object-fit: contain;">
+                                        <img src="{{ history.team.logo_url }}" width="20" height="20" style="object-fit: contain;">
                                     {% endif %}
                                     <span>{{ history.team.name if history.team else 'Клуб' }}</span>
-                                    <span class="text-muted mx-2">/</span>
-                                    <span class="text-secondary">{{ history.tournament.name }}</span>
+                                    <span class="text-muted mx-1 d-none d-sm-inline">/</span>
+                                    <span class="text-secondary d-none d-sm-inline">{{ history.tournament.name }}</span>
+                                    <span class="text-secondary d-sm-none" style="font-size: 12px;">{{ history.tournament.name }}</span>
                                 </div>
                             </td>
-                            <td class="text-center">{{ history.games }}</td>
-                            <td class="text-center">{{ history.goals }}</td>
-                            <td class="text-center">{{ history.assists }}</td>
-                            <td class="text-center">{{ history.yc }}</td>
-                            <td class="text-center">{{ history.rc }}</td>
                         </tr>
 
                         <!-- Матчи в этом турнире -->
                         {% for m_data in history.matches %}
-                        <tr class="match-row">
-                            <!-- Левая колонка: Этап турнира -->
-                            <td class="text-muted small ps-4">
-                                {{ m_data.match.stage_name or 'Групповой этап' }}
+                        <!-- Вся строка кликабельна и ведет на страницу матча -->
+                        <tr class="match-row" onclick="window.location.href='/matches/{{ m_data.match.id }}';">
+
+                            <!-- Этап (скрыт на мобилках) -->
+                            <td class="d-none d-md-table-cell text-muted small ps-4">
+                                {{ m_data.match.stage_name or 'Групповой' }}
                             </td>
 
-                            <!-- Центральная колонка: Дата, Команды, Счет -->
+                            <!-- Дата, Команды, Счет -->
                             <td>
-                                <div class="d-flex flex-column">
-                                    <div class="text-muted mb-1" style="font-size: 11px;">
-                                        {{ m_data.match.match_date.strftime('%d %b, %H:%M') if m_data.match.match_date else '' }}
+                                <a href="/matches/{{ m_data.match.id }}">
+                                    <div class="d-flex flex-column">
+                                        <div class="text-muted mb-1" style="font-size: 11px;">
+                                            <i class="bi bi-calendar3 me-1"></i>{{ m_data.match.match_date.strftime('%d %b, %H:%M') if m_data.match.match_date else '' }}
+                                        </div>
+                                        <div class="fw-bold text-dark" style="font-size: 13px;">
+                                            {% if m_data.is_home %}
+                                                {{ history.team.name }} <span class="text-muted mx-1">{{ m_data.score }}</span> {{ m_data.opponent.name }}
+                                            {% else %}
+                                                {{ m_data.opponent.name }} <span class="text-muted mx-1">{{ m_data.score }}</span> {{ history.team.name }}
+                                            {% endif %}
+                                        </div>
                                     </div>
-                                    <div class="fw-bold text-dark" style="font-size: 14px;">
-                                        {% if m_data.is_home %}
-                                            {{ history.team.name }} <span class="text-muted mx-1">{{ m_data.score }}</span> {{ m_data.opponent }}
-                                        {% else %}
-                                            {{ m_data.opponent }} <span class="text-muted mx-1">{{ m_data.score }}</span> {{ history.team.name }}
-                                        {% endif %}
-                                    </div>
-                                </div>
+                                </a>
                             </td>
 
                             <!-- Результат (В/Н/П) -->
@@ -225,43 +236,45 @@
                                 </span>
                             </td>
 
-                            <!-- События в матче (Голы, Пасы, Карточки) -->
+                            <!-- События: Голы -->
                             <td class="text-center">
                                 {% for e in m_data.events %}
-                                    {% if e.event_type.value in ['GOAL', 'PENALTY_GOAL'] %}
+                                    {% if e.event_type.value|lower in ['goal', 'penalty_goal', 'own_goal'] %}
                                         <i class="bi bi-dribbble event-icon goal" title="Гол"></i>
                                     {% endif %}
                                 {% endfor %}
                             </td>
+
+                            <!-- События: Пасы -->
                             <td class="text-center">
                                 {% for e in m_data.events %}
-                                    {% if e.event_type.value == 'ASSIST' %}
+                                    {% if e.event_type.value|lower == 'assist' %}
                                         <i class="bi bi-bullseye event-icon assist" title="Пас"></i>
                                     {% endif %}
                                 {% endfor %}
                             </td>
+
+                            <!-- События: Карточки -->
                             <td class="text-center">
-                                {% for e in m_data.events %}
-                                    {% if e.event_type.value == 'YELLOW_CARD' %}
-                                        <i class="bi bi-square-fill event-icon yellow" title="ЖК"></i>
-                                    {% endif %}
-                                {% endfor %}
-                            </td>
-                            <td class="text-center">
-                                {% for e in m_data.events %}
-                                    {% if e.event_type.value == 'RED_CARD' %}
-                                        <i class="bi bi-square-fill event-icon red" title="КК"></i>
-                                    {% endif %}
-                                {% endfor %}
+                                <div class="d-flex justify-content-center gap-1">
+                                    {% for e in m_data.events %}
+                                        {% if e.event_type.value|lower == 'yellow_card' %}
+                                            <i class="bi bi-square-fill event-icon yellow" title="ЖК"></i>
+                                        {% elif e.event_type.value|lower == 'red_card' %}
+                                            <i class="bi bi-square-fill event-icon red" title="КК"></i>
+                                        {% endif %}
+                                    {% endfor %}
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}
 
                     {% else %}
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
-                                <i class="bi bi-info-circle fs-1 d-block mb-3"></i>
-                                У игрока пока нет статистики в матчах.
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-info-circle fs-1 d-block mb-3 text-secondary"></i>
+                                <h5 class="fw-bold">История матчей пуста</h5>
+                                <p class="mb-0">Игрок еще не провел ни одного матча.</p>
                             </td>
                         </tr>
                     {% endfor %}

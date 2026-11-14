@@ -1,186 +1,126 @@
-import time
+import asyncio
 import re
-import psycopg2
+from curl_cffi.requests import AsyncSession
 from bs4 import BeautifulSoup
-from curl_cffi import requests
-from app.core.config import settings
+from sqlalchemy import select, delete
+from app.db.session import session_factory
+from app.models.match import Match
+from app.models.match_event import MatchEvent
+from app.models.player import Player
+from app.models.enums import MatchStatus, MatchEventType
+from app.services.stats_recalc import StatsRecalculator
+
+BASE_URL = "https://jliga.ru"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "ru-RU,ru;q=0.9,en;q=0.8",
+    "Referer": "https://jliga.ru/",
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+}
 
 
-def get_db_connection():
-    return psycopg2.connect(
-        dbname=settings.DB_NAME,
-        user=settings.DB_USER,
-        password=settings.DB_PASSWORD,
-        host=settings.DB_HOST,
-        port=settings.DB_PORT
-    )
-
-
-def safe_int(val):
-    if not val: return 0
-    val = val.strip()
-    if val == '-' or val == '': return 0
+async def fetch(session: AsyncSession, url: str):
     try:
-        return int(val)
-    except ValueError:
-        return 0
+        resp = await session.get(
+            url,
+            headers=HEADERS,
+            impersonate="chrome110",
+            timeout=30,
+            allow_redirects=True
+        )
+        print(f"🔗 {url} -> HTTP {resp.status_code} (размер: {len(resp.text)} символов)")
 
-
-def map_position(pos_text):
-    pos_text = pos_text.strip()
-    if "Вр" in pos_text: return "GOALKEEPER"
-    if "Зщ" in pos_text: return "DEFENDER"
-    if "Пз" in pos_text: return "MIDFIELDER"
-    if "Нп" in pos_text: return "FORWARD"
+        if resp.status_code == 200:
+            return resp.text
+        elif resp.status_code == 403:
+            print("  ⚠️ 403 Forbidden. Возможно, Cloudflare блокирует. Попробуйте 'chrome124'.")
+    except Exception as e:
+        print(f"❌ Ошибка сети {url}: {e}")
     return None
 
 
-def fetch_with_retry(http_session, url):
-    """5 попыток с таймаутом 60 секунд для слабого интернета."""
-    for attempt in range(5):
-        try:
-            resp = http_session.get(url, timeout=60, impersonate="chrome110")
-            if resp.status_code == 200:
-                return resp
-            print(f"  ⚠️ Попытка {attempt + 1}: Статус {resp.status_code}")
-        except Exception as e:
-            print(f"  ⚠️ Попытка {attempt + 1} (Ошибка сети): {e}")
-            time.sleep(5)
-    return None
+async def main():
+    print("🚀 Старт синхронизации матчей за сегодня...")
 
+    # Перебор нескольких вариантов impersonate, если один заблокирован
+    for impersonate_version in ["chrome110", "chrome120", "chrome124"]:
+        print(f"\n🔍 Пробуем с impersonate={impersonate_version}...")
+        async with AsyncSession() as session:
+            try:
+                resp = await session.get(
+                    f"{BASE_URL}/matches?date_range=today",
+                    headers=HEADERS,
+                    impersonate=impersonate_version,
+                    timeout=30,
+                    allow_redirects=True
+                )
+                print(f"   Статус: {resp.status_code}, Размер: {len(resp.text)} символов")
 
-def parse_application_page(http_session, t_jliga_id, team_jliga_id):
-    url = f"https://jliga.ru/tournament/{t_jliga_id}/teams/application?team_id={team_jliga_id}"
-    resp = fetch_with_retry(http_session, url)
+                if resp.status_code == 200 and len(resp.text) > 5000:
+                    print(f"   ✅ Успешно! Используем {impersonate_version}")
+                    html = resp.text
+                    break
+            except Exception as e:
+                print(f"   ❌ Ошибка: {e}")
+    else:
+        print("\n❌ Все варианты заблокированы. Сайт jliga.ru защищает контент.")
+        return
 
-    if not resp:
-        return None, None
+    # Парсим список матчей
+    soup = BeautifulSoup(html, "html.parser")
+    match_links = set()
+    for a in soup.find_all("a", href=re.compile(r'/match/\d+')):
+        m = re.search(r'/match/(\d+)', a['href'])
+        if m:
+            match_links.add(int(m.group(1)))
 
-    soup = BeautifulSoup(resp.text, "html.parser")
-    active_players = {}
-    inactive_players = {}
+    print(f"\n📅 Найдено матчей: {len(match_links)}")
+    if not match_links:
+        print("⚠️ На странице нет ссылок на матчи. Возможно, сегодня матчей нет или изменился HTML.")
+        return
 
-    # Активные (players-1)
-    pane_active = soup.find("div", id="players-1")
-    if pane_active:
-        for row in pane_active.find_all("tr", class_="blk-tteams__row"):
-            player_link = row.find("a", class_="blk-tteams__player")
-            if not player_link: continue
-            match = re.search(r"/player/(\d+)", player_link["href"])
-            if not match: continue
-            p_jliga_id = int(match.group(1))
-            pos_text = row.find("td", class_="blk-tteams__cell--amplua").text.strip()
-            stats_cells = row.find_all("td", class_="blk-tteams__cell--var")
-            stats = {
-                "games": safe_int(stats_cells[0].text) if len(stats_cells) > 0 else 0,
-                "goals": safe_int(stats_cells[1].text) if len(stats_cells) > 1 else 0,
-                "assists": safe_int(stats_cells[2].text) if len(stats_cells) > 2 else 0,
-                "yc": safe_int(stats_cells[3].text) if len(stats_cells) > 3 else 0,
-                "rc": safe_int(stats_cells[4].text) if len(stats_cells) > 4 else 0,
-            }
-            active_players[p_jliga_id] = {"position": map_position(pos_text), "stats": stats}
+    # Обработка каждого матча
+    async with AsyncSession() as session:
+        for mid in match_links:
+            print(f"\n🔄 Матч {mid}")
+            html_match = await fetch(session, f"{BASE_URL}/match/{mid}")
+            if not html_match:
+                continue
 
-    # Отзаявленные (players-2)
-    pane_inactive = soup.find("div", id="players-2")
-    if pane_inactive:
-        for row in pane_inactive.find_all("tr", class_="blk-tteams__row"):
-            player_link = row.find("a", class_="blk-tteams__player")
-            if not player_link: continue
-            match = re.search(r"/player/(\d+)", player_link["href"])
-            if not match: continue
-            p_jliga_id = int(match.group(1))
-            pos_text = row.find("td", class_="blk-tteams__cell--amplua").text.strip()
-            stats_cells = row.find_all("td", class_="blk-tteams__cell--var")
-            stats = {
-                "games": safe_int(stats_cells[0].text) if len(stats_cells) > 0 else 0,
-                "goals": safe_int(stats_cells[1].text) if len(stats_cells) > 1 else 0,
-                "assists": safe_int(stats_cells[2].text) if len(stats_cells) > 2 else 0,
-                "yc": safe_int(stats_cells[3].text) if len(stats_cells) > 3 else 0,
-                "rc": safe_int(stats_cells[4].text) if len(stats_cells) > 4 else 0,
-            }
-            inactive_players[p_jliga_id] = {"position": map_position(pos_text), "stats": stats}
+            soup_m = BeautifulSoup(html_match, "html.parser")
 
-    return active_players, inactive_players
+            # Ищем счет
+            score_text = None
+            for tag in soup_m.find_all(string=re.compile(r'^\s*\d+\s*:\s*\d+\s*$')):
+                score_text = tag.strip()
+                break
 
+            async with session_factory() as db:
+                match = await db.scalar(select(Match).where(Match.jliga_id == mid))
+                if not match:
+                    print(f"  ⚠️ Матч {mid} не в БД, пропускаем.")
+                    continue
 
-def main():
-    print("🏁 Старт исправления ТОЛЬКО 3-х команд...")
+                if score_text:
+                    try:
+                        h, a = map(int, score_text.split(':'))
+                        match.home_score = h
+                        match.away_score = a
+                        match.status = MatchStatus.FINISHED
+                        print(f"  ⚽ Счет: {h}:{a}")
+                    except ValueError:
+                        pass
 
-    # ТОЛЬКО ЭТИ ТРИ КОМАНДЫ
-    failed_teams = [
-        (1066252, 1511968),  # HAN TANIRI 2012 B
-        (1066252, 1511955),  # HAN TANIRI 2013 A
-        (1066252, 1511954),  # JEYRAN 2012 A
-    ]
+                await db.commit()
+                print(f"  ✅ Матч {mid} обновлен.")
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    http_session = requests.Session()
-
-    for t_jliga_id, team_jliga_id in failed_teams:
-        cursor.execute("SELECT id, name FROM tournaments WHERE jliga_id = %s", (t_jliga_id,))
-        t_row = cursor.fetchone()
-        cursor.execute("SELECT id, name FROM teams WHERE jliga_id = %s", (team_jliga_id,))
-        team_row = cursor.fetchone()
-
-        if not t_row or not team_row:
-            print(f"⚠️ Турнир {t_jliga_id} или Команда {team_jliga_id} не найдены в БД.")
-            continue
-
-        t_db_id, t_name = t_row
-        team_db_id, team_name = team_row
-
-        print(f"🔄 Пробуем: {team_name}...")
-
-        active_data, inactive_data = parse_application_page(http_session, t_jliga_id, team_jliga_id)
-
-        if active_data is None:
-            print("  ❌ Не удалось загрузить. Интернет не выдержал 5 попыток.")
-            continue
-
-        print(f"  ✅ УСПЕХ! В основе: {len(active_data)}, Отзаявлено: {len(inactive_data)}")
-
-        cursor.execute("""
-            SELECT tp.id, p.jliga_id
-            FROM team_players tp
-            JOIN players p ON p.id = tp.player_id
-            WHERE tp.tournament_id = %s AND tp.team_id = %s AND p.jliga_id IS NOT NULL
-        """, (t_db_id, team_db_id))
-        db_dict = {row[1]: row[0] for row in cursor.fetchall()}
-
-        changes = 0
-
-        # Обновляем активных
-        for p_jliga_id, p_data in active_data.items():
-            if p_data["position"]:
-                cursor.execute(
-                    "UPDATE players SET position = %s WHERE jliga_id = %s AND (position IS NULL OR position::text != %s)",
-                    (p_data["position"], p_jliga_id, p_data["position"]))
-
-            if p_jliga_id in db_dict:
-                tp_id = db_dict[p_jliga_id]
-                st = p_data["stats"]
-                cursor.execute("""
-                    UPDATE team_players SET is_active = TRUE, stats_games = %s, stats_goals = %s, stats_assists = %s, stats_yellow_cards = %s, stats_red_cards = %s 
-                    WHERE id = %s
-                """, (st["games"], st["goals"], st["assists"], st["yc"], st["rc"], tp_id))
-                changes += 1
-
-        # Обновляем отзаявленных
-        for p_jliga_id, p_data in inactive_data.items():
-            if p_jliga_id in db_dict:
-                tp_id = db_dict[p_jliga_id]
-                cursor.execute("UPDATE team_players SET is_active = FALSE WHERE id = %s", (tp_id,))
-                changes += 1
-
-        conn.commit()
-        print(f"  💾 Сохранено: {changes} записей.")
-        time.sleep(3)
-
-    cursor.close()
-    conn.close()
-    print("\n🎉 ГОТОВО! Все три команды синхронизированы.")
+                # Пересчет (только для завершенных)
+                if match.status == MatchStatus.FINISHED:
+                    await StatsRecalculator.recalculate_all(db, match.tournament_id)
+                    print(f"  📊 Таблица турнира {match.tournament_id} пересчитана.")
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

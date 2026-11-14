@@ -2,6 +2,11 @@
 
 {% block content %}
 <style>
+    /* Защита от съезжания страницы вправо */
+    body {
+        overflow-x: hidden;
+    }
+
     /* ================= ШАПКА ЗАЯВКИ ================= */
     .app-header {
         background: #1a365d; color: white; border-radius: 8px;
@@ -37,15 +42,15 @@
     }
 
     /* ================= ТАБЛИЦА ================= */
-    .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+    .roster-table {
+        width: 100%;
+        margin-bottom: 0;
     }
     .roster-table th {
         font-size: 11px; text-transform: uppercase; color: #64748b;
         font-weight: 600; border-top: none; vertical-align: middle; white-space: nowrap;
     }
-    .roster-table td { vertical-align: middle; font-size: 14px; white-space: nowrap; }
+    .roster-table td { vertical-align: middle; font-size: 14px; }
     .player-photo {
         width: 35px; height: 35px; border-radius: 50%; object-fit: cover;
         background: #e2e8f0; display: flex; justify-content: center; align-items: center;
@@ -54,6 +59,10 @@
     /* Стили для сортируемых колонок */
     .sortable-col { cursor: pointer; transition: background 0.2s; user-select: none; }
     .sortable-col:hover { background: #e2e8f0; border-radius: 4px; }
+
+    /* Ссылки на игроков */
+    .player-link { color: #1e293b; text-decoration: none; transition: color 0.2s; }
+    .player-link:hover { color: #0d6efd; }
 
     /* Мобильное меню (горизонтальный скролл) */
     .mobile-menu-scroll {
@@ -112,8 +121,8 @@
 
     <div class="row g-3 g-md-4">
 
-        <!-- ЛЕВАЯ ЧАСТЬ: Таблица заявки -->
-        <div class="col-12 col-xl-9">
+        <!-- ЛЕВАЯ ЧАСТЬ: Таблица заявки (Теперь на всю ширину) -->
+        <div class="col-12">
 
             <!-- МОБИЛЬНОЕ МЕНЮ ТУРНИРА (Только для телефонов) -->
             <div class="d-xl-none mobile-menu-scroll">
@@ -126,6 +135,12 @@
                 <a href="/tournaments/{{ tournament.id }}" class="btn btn-outline-dark">
                     <i class="bi bi-table me-1"></i> Таблицы
                 </a>
+                <a href="/tournaments/{{ tournament.id }}?view=stats" class="btn btn-outline-dark">
+                    <i class="bi bi-bar-chart me-1"></i> Статистика
+                </a>
+                <a href="/tournaments/{{ tournament.id }}?view=disq" class="btn btn-outline-dark">
+                    <i class="bi bi-card-list me-1"></i> Дисквал.
+                </a>
                 <a href="/tournaments/{{ tournament.id }}?view=teams" class="btn btn-dark active">
                     <i class="bi bi-people me-1"></i> Команды
                 </a>
@@ -134,7 +149,7 @@
                 </a>
             </div>
 
-            <div class="card border-0 shadow-sm">
+            <div class="card border-0 shadow-sm overflow-hidden">
                 <div class="card-body p-0">
 
                     <!-- Вкладки -->
@@ -151,14 +166,15 @@
                         <!-- Активные игроки -->
                         <div class="tab-pane fade show active" id="active" role="tabpanel">
                             <div class="table-responsive">
-                                <!-- min-width заставляет таблицу скроллиться на телефоне, а не сжиматься -->
-                                <table class="table table-hover roster-table mb-0 text-center" id="rosterTable" style="min-width: 650px;">
+                                <!-- Убрал min-width, таблица теперь помещается на экран -->
+                                <table class="table table-hover roster-table mb-0 text-center" id="rosterTable">
                                     <thead class="table-light">
                                         <tr>
                                             <th style="width: 40px;">#</th>
                                             <th class="text-start">Амплуа</th>
                                             <th class="text-start" colspan="2">Игрок</th>
-                                            <th class="text-start">Дата рождения</th>
+                                            <!-- Скрываем дату рождения на мобилках -->
+                                            <th class="text-start d-none d-md-table-cell">Дата рождения</th>
 
                                             <!-- Иконки статистики (интерактивная сортировка) -->
                                             <th class="sortable-col" onclick="sortTable(5)" title="Сортировать по играм"><i class="bi bi-check2-square fs-6"></i></th>
@@ -173,18 +189,27 @@
                                         <tr>
                                             <td class="fw-bold text-muted">{{ p.jersey_number or '-' }}</td>
                                             <td class="text-start text-muted small">{{ p.player.position.value if p.player.position else 'Игрок' }}</td>
+
+                                            <!-- ФОТО ИГРОКА (ССЫЛКА) -->
                                             <td style="width: 40px;">
-                                                {% if p.player.photo_url %}
-                                                    <img src="{{ p.player.photo_url }}" class="player-photo" alt="photo">
-                                                {% else %}
-                                                    <div class="player-photo"><i class="bi bi-person text-secondary"></i></div>
-                                                {% endif %}
+                                                <a href="/player/{{ p.player.id }}">
+                                                    {% if p.player.photo_url %}
+                                                        <img src="{{ p.player.photo_url }}" class="player-photo" alt="photo">
+                                                    {% else %}
+                                                        <div class="player-photo"><i class="bi bi-person text-secondary"></i></div>
+                                                    {% endif %}
+                                                </a>
                                             </td>
+
+                                            <!-- ИМЯ ИГРОКА (ССЫЛКА) -->
                                             <td class="text-start fw-bold" style="font-size: 13px;">
-                                                {{ p.player.last_name }} {{ p.player.first_name }}
+                                                <a href="/player/{{ p.player.id }}" class="player-link">
+                                                    {{ p.player.last_name }} {{ p.player.first_name }}
+                                                </a>
                                                 {% if p.is_captain %}<span class="badge bg-warning text-dark ms-1" style="font-size: 10px;">К</span>{% endif %}
                                             </td>
-                                            <td class="text-start text-muted small" style="font-size: 12px;">
+
+                                            <td class="text-start text-muted small d-none d-md-table-cell" style="font-size: 12px;">
                                                 {{ p.player.date_of_birth.strftime('%d.%m.%Y') if p.player.date_of_birth else '-' }}
                                             </td>
 
@@ -206,13 +231,13 @@
                         <!-- Отзаявленные игроки -->
                         <div class="tab-pane fade" id="released" role="tabpanel">
                             <div class="table-responsive">
-                                <table class="table table-hover roster-table mb-0 text-center" style="min-width: 500px;">
+                                <table class="table table-hover roster-table mb-0 text-center">
                                     <thead class="table-light">
                                         <tr>
                                             <th style="width: 40px;">#</th>
                                             <th class="text-start">Амплуа</th>
                                             <th class="text-start" colspan="2">Игрок</th>
-                                            <th class="text-start">Дата рождения</th>
+                                            <th class="text-start d-none d-md-table-cell">Дата рождения</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -220,17 +245,26 @@
                                         <tr class="text-muted">
                                             <td>{{ p.jersey_number or '-' }}</td>
                                             <td class="text-start small">{{ p.player.position.value if p.player.position else 'Игрок' }}</td>
+
+                                            <!-- ФОТО ИГРОКА (ССЫЛКА) -->
                                             <td style="width: 40px;">
-                                                {% if p.player.photo_url %}
-                                                    <img src="{{ p.player.photo_url }}" class="player-photo" style="filter: grayscale(100%);" alt="photo">
-                                                {% else %}
-                                                    <div class="player-photo"><i class="bi bi-person text-secondary"></i></div>
-                                                {% endif %}
+                                                <a href="/player/{{ p.player.id }}">
+                                                    {% if p.player.photo_url %}
+                                                        <img src="{{ p.player.photo_url }}" class="player-photo" style="filter: grayscale(100%);" alt="photo">
+                                                    {% else %}
+                                                        <div class="player-photo"><i class="bi bi-person text-secondary"></i></div>
+                                                    {% endif %}
+                                                </a>
                                             </td>
+
+                                            <!-- ИМЯ ИГРОКА (ССЫЛКА) -->
                                             <td class="text-start fw-bold" style="font-size: 13px;">
-                                                {{ p.player.last_name }} {{ p.player.first_name }}
+                                                <a href="/player/{{ p.player.id }}" class="player-link" style="color: #64748b;">
+                                                    {{ p.player.last_name }} {{ p.player.first_name }}
+                                                </a>
                                             </td>
-                                            <td class="text-start small" style="font-size: 12px;">
+
+                                            <td class="text-start small d-none d-md-table-cell" style="font-size: 12px;">
                                                 {{ p.player.date_of_birth.strftime('%d.%m.%Y') if p.player.date_of_birth else '-' }}
                                             </td>
                                         </tr>
@@ -246,32 +280,6 @@
             </div>
         </div>
 
-        <!-- ПРАВАЯ ЧАСТЬ: Меню турнира (Только для ПК) -->
-        <div class="col-xl-3 d-none d-xl-block">
-            <div class="list-group shadow-sm sidebar-menu border-0 rounded-0 sticky-top" style="top: 20px; z-index: 1;">
-                <a href="/tournaments/{{ tournament.id }}" class="list-group-item list-group-item-action">
-                    <i class="bi bi-chevron-right"></i> О турнире
-                </a>
-                <a href="/tournaments/{{ tournament.id }}?view=calendar" class="list-group-item list-group-item-action">
-                    <i class="bi bi-chevron-right"></i> Календарь
-                </a>
-                <a href="/tournaments/{{ tournament.id }}" class="list-group-item list-group-item-action">
-                    <i class="bi bi-chevron-right"></i> Таблицы и сетки
-                </a>
-                <a href="#" class="list-group-item list-group-item-action">
-                    <i class="bi bi-chevron-right"></i> Статистика
-                </a>
-                <a href="/disciplinary" class="list-group-item list-group-item-action">
-                    <i class="bi bi-chevron-right"></i> Дисквалификации
-                </a>
-                <a href="/tournaments/{{ tournament.id }}?view=teams" class="list-group-item list-group-item-action active">
-                    <i class="bi bi-chevron-right"></i> Команды
-                </a>
-                <a href="/news" class="list-group-item list-group-item-action">
-                    <i class="bi bi-chevron-right"></i> Новости
-                </a>
-            </div>
-        </div>
     </div>
 </div>
 
@@ -284,19 +292,14 @@
         const tbody = table.querySelector("tbody");
         const rows = Array.from(tbody.querySelectorAll("tr"));
 
-        // Если в таблице нет игроков, ничего не делаем
         if (rows.length === 0 || rows[0].children.length === 1) return;
 
-        // Определяем направление сортировки (по умолчанию по убыванию)
         sortDirections[columnIndex] = sortDirections[columnIndex] === 'desc' ? 'asc' : 'desc';
         const isDescending = sortDirections[columnIndex] === 'desc';
 
-        // Сортируем строки
         rows.sort((rowA, rowB) => {
             const cellA = rowA.children[columnIndex].innerText.trim();
             const cellB = rowB.children[columnIndex].innerText.trim();
-
-            // Преобразуем в числа для правильной сортировки (чтобы 10 было больше 2)
             const valA = parseInt(cellA) || 0;
             const valB = parseInt(cellB) || 0;
 
@@ -305,19 +308,16 @@
             return 0;
         });
 
-        // Очищаем таблицу и вставляем отсортированные строки
         tbody.innerHTML = "";
         rows.forEach(row => tbody.appendChild(row));
 
-        // Визуальный эффект: добавляем стрелочку к заголовку
         const headers = table.querySelectorAll("thead th");
         headers.forEach((th, idx) => {
-            // Убираем стрелки у всех остальных
             th.innerHTML = th.innerHTML.replace(/ [↑↓]/g, '');
             th.style.color = "";
             if (idx === columnIndex) {
                 th.innerHTML += isDescending ? ' ↓' : ' ↑';
-                th.style.color = "#0d6efd"; // Красим активную колонку в синий
+                th.style.color = "#0d6efd";
             }
         });
     }
