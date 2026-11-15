@@ -85,20 +85,13 @@
 
     /* ================= КРАСИВЫЕ ВИДЖЕТЫ СТАТИСТИКИ ================= */
     .stats-widget {
-        display: flex;
-        align-items: stretch;
-        background: var(--w-bg, #0f2537);
-        border-radius: 12px;
-        min-height: 130px; /* УВЕЛИЧИЛИ ВЫСОТУ */
-        transition: transform 0.2s, box-shadow 0.2s;
-        overflow: hidden;
-        position: relative;
-        text-decoration: none;
-        color: inherit;
+        display: flex; align-items: stretch; background: var(--w-bg, #0f2537);
+        border-radius: 12px; min-height: 130px; transition: transform 0.2s, box-shadow 0.2s;
+        overflow: hidden; position: relative; text-decoration: none; color: inherit;
     }
     .stats-widget:hover { transform: translateY(-3px); box-shadow: 0 10px 20px rgba(0,0,0,0.15) !important; opacity: 0.95; }
 
-    /* Цветовые темы (управляются админом) */
+    /* Цветовые темы */
     .stats-style-default { --w-bg: #0f2537; --w-accent: #ef4444; --w-text: #ffffff; }
     .stats-style-gold { --w-bg: #111111; --w-accent: #d4af37; --w-text: #ffd700; }
     .stats-style-emerald { --w-bg: #064e3b; --w-accent: #10b981; --w-text: #a7f3d0; }
@@ -422,49 +415,53 @@
                         <button type="button" class="btn btn-outline-dark fw-bold" id="btn-view-dates" onclick="toggleCalendarView('dates')">ПО ДАТАМ</button>
                     </div>
                     <div class="form-check mb-0 me-md-2 mt-2 mt-sm-0">
-                        <input class="form-check-input shadow-sm" type="checkbox" id="showPastMatches" {% if show_past %}checked{% endif %} onchange="togglePastMatches(this)">
+                        <input class="form-check-input shadow-sm" type="checkbox" id="showPastMatches" {% if show_past %}checked{% endif %}>
                         <label class="form-check-label fw-bold text-dark ms-1" for="showPastMatches" style="cursor: pointer; user-select: none;">Прошедшие матчи</label>
                     </div>
                 </div>
                 <div class="card-body p-2 p-md-0 bg-light">
                     <div id="calendar-view-rounds">
                         {% for round_name, round_matches in matches_by_round.items() %}
-                            <div class="bg-white p-2 px-3 border-bottom fw-bold text-uppercase text-secondary mt-2 mt-md-0 rounded-top" style="font-size: 13px;">{{ round_name }}</div>
-                            {% for m in round_matches %}
-                            <div class="calendar-grid-row match-popup-trigger" data-match-id="{{ m.id }}">
-                                <div class="cg-date">
-                                    <div class="cg-date-main">{% if m.match_date %}{{ m.match_date.strftime('%d %b, %a')|upper }}{% else %}<span class="text-muted">ДАТА TBA</span>{% endif %}</div>
-                                    <div class="cg-time">{% if m.match_date %}{{ m.match_date.strftime('%H:%M') }}{% endif %}</div>
-                                    <div class="cg-stadium text-truncate" title="{{ m.stadium }}"><i class="bi bi-geo-alt-fill text-danger"></i> {{ m.stadium or 'Стадион TBA' }}</div>
+                            <div class="calendar-round-block">
+                                <div class="bg-white p-2 px-3 border-bottom fw-bold text-uppercase text-secondary mt-2 mt-md-0 rounded-top" style="font-size: 13px;">{{ round_name }}</div>
+                                {% for m in round_matches %}
+                                <div class="calendar-grid-row match-popup-trigger" data-match-id="{{ m.id }}" data-timestamp="{{ m.match_date.timestamp() if m.match_date else 0 }}">
+                                    <div class="cg-date">
+                                        <div class="cg-date-main">{% if m.match_date %}{{ m.match_date.strftime('%d %b, %a')|upper }}{% else %}<span class="text-muted">ДАТА TBA</span>{% endif %}</div>
+                                        <div class="cg-time">{% if m.match_date %}{{ m.match_date.strftime('%H:%M') }}{% endif %}</div>
+                                        <div class="cg-stadium text-truncate" title="{{ m.stadium }}"><i class="bi bi-geo-alt-fill text-danger"></i> {{ m.stadium or 'Стадион TBA' }}</div>
+                                    </div>
+                                    <div class="cg-team cg-team-right">
+                                        <span class="text-truncate">{{ m.home_team.name }}</span>
+                                        <img src="{{ m.home_team.logo_url or 'https://ui-avatars.com/api/?name=' ~ m.home_team.name ~ '&background=0f2537&color=fff&size=24' }}" onerror="this.src='https://ui-avatars.com/api/?name={{ m.home_team.name }}&background=0f2537&color=fff&size=24'; this.onerror=null;" class="cg-logo">
+                                    </div>
+                                    <div class="cg-score-box"><div class="cg-score">{% if m.home_score is not none %}{{ m.home_score }} - {{ m.away_score }}{% else %}- : -{% endif %}</div></div>
+                                    <div class="cg-team cg-team-left">
+                                        <img src="{{ m.away_team.logo_url or 'https://ui-avatars.com/api/?name=' ~ m.away_team.name ~ '&background=0f2537&color=fff&size=24' }}" onerror="this.src='https://ui-avatars.com/api/?name={{ m.away_team.name }}&background=0f2537&color=fff&size=24'; this.onerror=null;" class="cg-logo">
+                                        <span class="text-truncate">{{ m.away_team.name }}</span>
+                                    </div>
+                                    <div class="cg-stage">{{ m.stage_name or 'Матч' }}</div>
                                 </div>
-                                <div class="cg-team cg-team-right">
-                                    <span class="text-truncate">{{ m.home_team.name }}</span>
-                                    <img src="{{ m.home_team.logo_url or 'https://ui-avatars.com/api/?name=' ~ m.home_team.name ~ '&background=0f2537&color=fff&size=24' }}" onerror="this.src='https://ui-avatars.com/api/?name={{ m.home_team.name }}&background=0f2537&color=fff&size=24'; this.onerror=null;" class="cg-logo">
-                                </div>
-                                <div class="cg-score-box"><div class="cg-score">{% if m.home_score is not none %}{{ m.home_score }} - {{ m.away_score }}{% else %}- : -{% endif %}</div></div>
-                                <div class="cg-team cg-team-left">
-                                    <img src="{{ m.away_team.logo_url or 'https://ui-avatars.com/api/?name=' ~ m.away_team.name ~ '&background=0f2537&color=fff&size=24' }}" onerror="this.src='https://ui-avatars.com/api/?name={{ m.away_team.name }}&background=0f2537&color=fff&size=24'; this.onerror=null;" class="cg-logo">
-                                    <span class="text-truncate">{{ m.away_team.name }}</span>
-                                </div>
-                                <div class="cg-stage">{{ m.stage_name or 'Матч' }}</div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
                         {% else %}
                             <div class="text-center py-5 text-muted"><i class="bi bi-calendar-x fs-1 d-block mb-3"></i><h5>Нет предстоящих матчей</h5><p class="mb-0">Поставьте галочку «Прошедшие матчи», чтобы увидеть результаты.</p></div>
                         {% endfor %}
                     </div>
                     <div id="calendar-view-dates" style="display: none;">
                         {% for date_str, date_matches in matches_by_date.items() %}
-                            <div class="bg-white p-2 px-3 border-bottom fw-bold text-uppercase text-secondary mt-2 mt-md-0 rounded-top" style="font-size: 13px;">{{ date_str }}</div>
-                            {% for m in date_matches %}
-                            <div class="calendar-grid-row match-popup-trigger" data-match-id="{{ m.id }}">
-                                <div class="cg-date"><div class="cg-date-main">{% if m.match_date %}{{ m.match_date.strftime('%H:%M') }}{% else %}TBA{% endif %}</div><div class="cg-stadium text-truncate"><i class="bi bi-geo-alt-fill text-danger"></i> {{ m.stadium or 'Стадион TBA' }}</div></div>
-                                <div class="cg-team cg-team-right"><span class="text-truncate">{{ m.home_team.name }}</span><img src="{{ m.home_team.logo_url or 'https://ui-avatars.com/api/?name=' ~ m.home_team.name ~ '&background=0f2537&color=fff&size=24' }}" onerror="this.src='https://ui-avatars.com/api/?name={{ m.home_team.name }}&background=0f2537&color=fff&size=24'; this.onerror=null;" class="cg-logo"></div>
-                                <div class="cg-score-box"><div class="cg-score">{% if m.home_score is not none %}{{ m.home_score }} - {{ m.away_score }}{% else %}- : -{% endif %}</div></div>
-                                <div class="cg-team cg-team-left"><img src="{{ m.away_team.logo_url or 'https://ui-avatars.com/api/?name=' ~ m.away_team.name ~ '&background=0f2537&color=fff&size=24' }}" onerror="this.src='https://ui-avatars.com/api/?name={{ m.away_team.name }}&background=0f2537&color=fff&size=24'; this.onerror=null;" class="cg-logo"><span class="text-truncate">{{ m.away_team.name }}</span></div>
-                                <div class="cg-stage">{{ m.stage_name or '' }}</div>
+                            <div class="calendar-date-block">
+                                <div class="bg-white p-2 px-3 border-bottom fw-bold text-uppercase text-secondary mt-2 mt-md-0 rounded-top" style="font-size: 13px;">{{ date_str }}</div>
+                                {% for m in date_matches %}
+                                <div class="calendar-grid-row match-popup-trigger" data-match-id="{{ m.id }}" data-timestamp="{{ m.match_date.timestamp() if m.match_date else 0 }}">
+                                    <div class="cg-date"><div class="cg-date-main">{% if m.match_date %}{{ m.match_date.strftime('%H:%M') }}{% else %}TBA{% endif %}</div><div class="cg-stadium text-truncate"><i class="bi bi-geo-alt-fill text-danger"></i> {{ m.stadium or 'Стадион TBA' }}</div></div>
+                                    <div class="cg-team cg-team-right"><span class="text-truncate">{{ m.home_team.name }}</span><img src="{{ m.home_team.logo_url or 'https://ui-avatars.com/api/?name=' ~ m.home_team.name ~ '&background=0f2537&color=fff&size=24' }}" onerror="this.src='https://ui-avatars.com/api/?name={{ m.home_team.name }}&background=0f2537&color=fff&size=24'; this.onerror=null;" class="cg-logo"></div>
+                                    <div class="cg-score-box"><div class="cg-score">{% if m.home_score is not none %}{{ m.home_score }} - {{ m.away_score }}{% else %}- : -{% endif %}</div></div>
+                                    <div class="cg-team cg-team-left"><img src="{{ m.away_team.logo_url or 'https://ui-avatars.com/api/?name=' ~ m.away_team.name ~ '&background=0f2537&color=fff&size=24' }}" onerror="this.src='https://ui-avatars.com/api/?name={{ m.away_team.name }}&background=0f2537&color=fff&size=24'; this.onerror=null;" class="cg-logo"><span class="text-truncate">{{ m.away_team.name }}</span></div>
+                                    <div class="cg-stage">{{ m.stage_name or '' }}</div>
+                                </div>
+                                {% endfor %}
                             </div>
-                            {% endfor %}
                         {% endfor %}
                     </div>
                 </div>
@@ -527,9 +524,11 @@
             </div>
         </div>
 
-        <!-- ================= БЛОК 5: СТАТИСТИКА (ВИДЖЕТЫ) ================= -->
+        <!-- ================= БЛОК 5: СТАТИСТИКА ================= -->
         <div id="view-stats" style="display: none;">
             <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+
+                <!-- Вкладки -->
                 <div class="card-header bg-white p-0 border-bottom">
                     <ul class="nav nav-tabs nav-fill border-0" id="statsTabs" role="tablist">
                         <li class="nav-item">
@@ -620,14 +619,14 @@
 
                             {% if tournament_stats_cards|length > 5 %}
                             <div class="mt-4">
-                                <a href="/participants/players?tournament_id={{ tournament.id }}" class="btn btn-lg w-100 fw-bold text-uppercase shadow-sm" style="background: var(--w-accent); color: white; border-radius: 8px; font-size: 14px; letter-spacing: 1px;">
-                                    Все игроки
+                                <a href="/tournaments/{{ tournament.id }}/stats" class="btn btn-lg w-100 fw-bold text-uppercase shadow-sm" style="background: var(--w-accent); color: white; border-radius: 8px; font-size: 14px; letter-spacing: 1px;">
+                                    Вся статистика турнира
                                 </a>
                             </div>
                             {% endif %}
                         </div>
 
-                        <!-- КОМАНДЫ (ВСЕ) -->
+                        <!-- КОМАНДЫ -->
                         <div class="tab-pane fade" id="stats-teams" role="tabpanel">
                             <div class="d-flex flex-column gap-3">
                                 {% for s in standings %}
@@ -762,43 +761,10 @@
 <!-- КОНТЕЙНЕР ДЛЯ ВСПЛЫВАЮЩЕГО ОКНА (МИНИ-КАРТОЧКА) -->
 <div id="hover-card"></div>
 
-<!-- МОДАЛЬНОЕ ОКНО (Попап) -->
-<div class="modal fade" id="matchModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden position-relative">
-      <div class="modal-header bg-light border-0 text-center d-block pb-2 position-relative">
-        <h6 class="modal-title w-100 text-dark fw-bold mb-1" id="modalDate" style="font-size: 14px;"></h6>
-        <small class="text-muted" id="modalStadium" style="font-size: 12px;"></small>
-        <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body p-3 p-md-4">
-        <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; margin-bottom: 1rem;">
-            <div class="text-end" style="word-wrap: break-word;">
-                <div class="fw-bold fs-6" id="modalHomeName"></div>
-            </div>
-            <div class="text-center">
-                <div class="fs-4 fw-bold bg-dark text-white rounded px-2 py-1 shadow-sm d-inline-block" style="white-space: nowrap;" id="modalScore"></div>
-                <div class="text-danger fw-bold mt-1 d-none" id="modalPenalties" style="font-size: 11px;"></div>
-                <div class="badge bg-danger mt-1 d-none" id="modalTechLoss" style="font-size: 10px;">Тех. поражение</div>
-            </div>
-            <div class="text-start" style="word-wrap: break-word;">
-                <div class="fw-bold fs-6" id="modalAwayName"></div>
-            </div>
-        </div>
-        <div class="row g-0 border-top pt-2" id="modalEventsRow"></div>
-      </div>
-      <div class="modal-footer border-0 bg-light p-2 p-md-3">
-        <a href="#" id="modalProtocolLink" class="btn btn-dark w-100 fw-bold py-2 rounded-3" style="font-size: 14px;">Перейти к протоколу</a>
-      </div>
-    </div>
-  </div>
-</div>
-
 <script>
     const matchData = {{ matches_dict | tojson }};
-    let matchModal;
 
-    // --- ЛОГИКА HOVER-КАРТОЧКИ (УМНОЕ ПОЗИЦИОНИРОВАНИЕ) ---
+    // --- ЛОГИКА HOVER-КАРТОЧКИ ---
     let hoverTimeout;
     const hoverCard = document.getElementById('hover-card');
 
@@ -881,9 +847,8 @@
         });
 
         el.addEventListener('click', function(e) {
-            e.preventDefault();
             const id = this.getAttribute('data-match-id');
-            openModal(id);
+            window.location.href = `/matches/${id}`;
         });
     });
 
@@ -939,98 +904,42 @@
         }
     }
 
-    function togglePastMatches(checkbox) {
-        const url = new URL(window.location.href);
-        if (checkbox.checked) {
-            url.searchParams.set('show_past', 'true');
-        } else {
-            url.searchParams.delete('show_past');
-        }
-        url.searchParams.set('view', 'calendar');
-        window.location.href = url.toString();
-    }
+    // --- ЧИСТАЯ JS-ФИЛЬТРАЦИЯ ПО ВРЕМЕНИ (БЕЗ ПЕРЕЗАГРУЗКИ) ---
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkbox = document.getElementById('showPastMatches');
+        const nowTimestamp = Math.floor(Date.now() / 1000);
 
-    function openModal(matchId) {
-        const data = matchData[matchId];
-        if (!data) return;
+        function applyFilter() {
+            const showPast = checkbox ? checkbox.checked : false;
 
-        document.getElementById('modalDate').textContent = data.date;
-        document.getElementById('modalStadium').innerHTML = `<i class="bi bi-geo-alt-fill text-danger"></i> ${data.stadium}`;
+            // Проходим по всем строкам матчей в календаре
+            document.querySelectorAll('.calendar-grid-row').forEach(row => {
+                const matchTimestamp = parseInt(row.getAttribute('data-timestamp'));
+                // Матч прошедший, если timestamp > 0 и меньше текущего времени
+                const isPast = matchTimestamp > 0 && matchTimestamp < nowTimestamp;
 
-        document.getElementById('modalHomeName').textContent = data.home_name;
-        document.getElementById('modalAwayName').textContent = data.away_name;
-        document.getElementById('modalScore').textContent = `${data.home_score} : ${data.away_score}`;
-        document.getElementById('modalProtocolLink').href = `/matches/${data.id}`;
-
-        const penDiv = document.getElementById('modalPenalties');
-        if (data.home_penalty !== null && data.home_penalty !== undefined) {
-            penDiv.textContent = `Пен: ${data.home_penalty} : ${data.away_penalty}`;
-            penDiv.classList.remove('d-none');
-        } else {
-            penDiv.classList.add('d-none');
-        }
-
-        const tpDiv = document.getElementById('modalTechLoss');
-        if (data.tech_loss) { tpDiv.classList.remove('d-none'); } else { tpDiv.classList.add('d-none'); }
-
-        const eventsRow = document.getElementById('modalEventsRow');
-
-        if (data.events && data.events.length > 0) {
-            eventsRow.innerHTML = `
-                <div class="col-6 pe-2 border-end" id="modalHomeCol">
-                    <div class="text-end text-muted fw-bold small mb-2 text-uppercase" style="font-size: 10px;">Хозяева</div>
-                    <div id="modalHomeEvents" class="d-flex flex-column align-items-end"></div>
-                </div>
-                <div class="col-6 ps-2" id="modalAwayCol">
-                    <div class="text-start text-muted fw-bold small mb-2 text-uppercase" style="font-size: 10px;">Гости</div>
-                    <div id="modalAwayEvents" class="d-flex flex-column align-items-start"></div>
-                </div>
-            `;
-
-            const hContainer = document.getElementById('modalHomeEvents');
-            const aContainer = document.getElementById('modalAwayEvents');
-
-            data.events.forEach(e => {
-                let icon = '⚽';
-                if (e.type === 'PENALTY') icon = '⚽ <small class="text-muted">(П)</small>';
-                else if (e.type === 'OWN_GOAL') icon = '⚽ <small class="text-muted">(А)</small>';
-                else if (e.type === 'YELLOW') icon = '<div class="bg-warning rounded d-inline-block align-middle" style="width: 10px; height: 14px;"></div>';
-                else if (e.type === 'RED') icon = '<div class="bg-danger rounded d-inline-block align-middle" style="width: 10px; height: 14px;"></div>';
-
-                if (e.team_id === data.home_team_id) {
-                    hContainer.innerHTML += `
-                        <div class="mb-2 d-flex align-items-center justify-content-end w-100" style="font-size: 12px;">
-                            <span class="text-truncate me-1" style="max-width: 90px;" title="${e.player}">${e.player}</span>
-                            ${icon}
-                            <span class="badge bg-dark ms-1" style="font-size: 10px;">${e.minute}'</span>
-                        </div>`;
+                if (isPast) {
+                    row.style.display = showPast ? '' : 'none';
                 } else {
-                    aContainer.innerHTML += `
-                        <div class="mb-2 d-flex align-items-center justify-content-start w-100" style="font-size: 12px;">
-                            <span class="badge bg-dark me-1" style="font-size: 10px;">${e.minute}'</span>
-                            ${icon}
-                            <span class="text-truncate ms-1" style="max-width: 90px;" title="${e.player}">${e.player}</span>
-                        </div>`;
+                    row.style.display = '';
                 }
             });
-        } else {
-            eventsRow.innerHTML = `
-                <div class="col-12 text-center py-3">
-                    <div class="bg-light rounded p-2 border text-muted" style="font-size: 13px;">
-                        <i class="bi bi-info-circle d-block mb-1"></i> События не найдены
-                    </div>
-                </div>
-            `;
-        }
-        matchModal.show();
-    }
 
-    document.addEventListener("DOMContentLoaded", function() {
-        const matchModalEl = document.getElementById('matchModal');
-        if (matchModalEl && typeof bootstrap !== 'undefined') {
-            matchModal = new bootstrap.Modal(matchModalEl);
+            // Скрываем заголовки туров/дат, если внутри нет видимых матчей
+            document.querySelectorAll('.calendar-round-block, .calendar-date-block').forEach(block => {
+                const visibleRows = Array.from(block.querySelectorAll('.calendar-grid-row')).filter(
+                    row => row.style.display !== 'none'
+                );
+                block.style.display = visibleRows.length > 0 ? '' : 'none';
+            });
         }
 
+        if (checkbox) {
+            checkbox.addEventListener('change', applyFilter);
+            applyFilter(); // Применяем при загрузке
+        }
+
+        // Восстановление вкладки из URL
         const urlParams = new URLSearchParams(window.location.search);
         const viewParam = urlParams.get('view');
         if (viewParam) {
@@ -1038,6 +947,7 @@
             if (targetBtn) switchMainView(viewParam, targetBtn);
         }
 
+        // Сортировка таблиц
         document.querySelectorAll('.sortable-table').forEach(table => {
             const headers = table.querySelectorAll('.sortable-th');
             headers.forEach(header => {

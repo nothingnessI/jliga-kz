@@ -48,6 +48,26 @@ router = APIRouter()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
+
+def to_local_time(dt):
+    """Конвертирует UTC время в часовой пояс Алматы (UTC+5)"""
+    if not dt:
+        return None
+    from datetime import timezone, timedelta
+    from zoneinfo import ZoneInfo
+
+    try:
+        local_tz = ZoneInfo("Asia/Almaty")
+    except Exception:
+        local_tz = timezone(timedelta(hours=5))
+
+    if dt.tzinfo is None:
+        # Если время пришло без пояса, считаем, что оно в UTC
+        dt = dt.replace(tzinfo=timezone.utc)
+
+    return dt.astimezone(local_tz)
+
+
 from datetime import datetime, timezone
 from sqlalchemy import update
 from app.models.enums import TournamentStatus
@@ -182,18 +202,19 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     from app.models.enums import MatchStatus, MatchEventType
     from app.models.match_event import MatchEvent
 
+    # Определяем часовой пояс
     try:
         from zoneinfo import ZoneInfo
         local_tz = ZoneInfo("Asia/Almaty")
     except Exception:
         local_tz = timezone(timedelta(hours=5))
 
-    # 1. ПОЛУЧАЕМ ПОСЛЕДНИЙ СЕЗОН
+    # 1. ПОСЛЕДНИЙ СЕЗОН
     latest_season = await db.scalar(select(Tournament.season).order_by(Tournament.season.desc()).limit(1))
     if not latest_season:
         latest_season = str(datetime.now().year)
 
-    # 2. ФИЛЬТРУЕМ ТУРНИРЫ И СОРТИРУЕМ
+    # 2. ТУРНИРЫ
     keywords = ["примера", "сегунда", "терсера", "региональ", "junior", "primera", "segunda", "tersera", "regional"]
     conditions = [Tournament.name.ilike(f"%{kw}%") for kw in keywords]
 
@@ -206,15 +227,14 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     )
     tournaments = (await db.execute(stmt_tournaments)).scalars().all()
 
-    # 3. ОПРЕДЕЛЯЕМ АКТИВНЫЙ ТУРНИР
+    # 3. АКТИВНЫЙ ТУРНИР
     active_tournament = None
     if tournament_id:
         active_tournament = next((t for t in tournaments if t.id == tournament_id), None)
-
     if not active_tournament and tournaments:
         active_tournament = tournaments[0]
 
-    # 4. МАТЧИ НА СЕГОДНЯ (С ЗАГРУЗКОЙ СОБЫТИЙ ДЛЯ МИНИ-ОКОН)
+    # 4. МАТЧИ СЕГОДНЯ (Строго с 00:00 до 23:59 по Алматы)
     now_local = datetime.now(local_tz)
     start_of_day = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_day = start_of_day + timedelta(days=1)
@@ -227,14 +247,22 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
         selectinload(Match.home_team),
         selectinload(Match.away_team),
         selectinload(Match.tournament),
-        selectinload(Match.events).selectinload(MatchEvent.player) # Для мини-окон
+        selectinload(Match.events).selectinload(MatchEvent.player)
     ).order_by(
         Match.match_date.asc().nullslast()
     )
 
     today_matches = (await db.execute(stmt_today)).scalars().all()
 
-    # 5. ТАБЛИЦА, БОМБАРДИРЫ И ДИСКВАЛИФИКАЦИИ
+    for m in today_matches:
+        m.match_date = to_local_time(m.match_date)
+
+    # --- ИСПРАВЛЕНИЕ: Конвертируем время в Алматы для корректного отображения ---
+    for m in today_matches:
+        if m.match_date:
+            m.match_date = m.match_date.astimezone(local_tz)
+
+    # 5. ТАБЛИЦА, БОМБАРДИРЫ, ДИСКВАЛИФИКАЦИИ
     standings = []
     top_scorers = []
     active_disqualifications = []
@@ -279,7 +307,7 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
         )
         active_disqualifications = (await db.execute(stmt_disq)).scalars().all()
 
-    # 6. ПОСЛЕДНИЕ НОВОСТИ
+    # 6. НОВОСТИ
     stmt_news = select(News).where(News.is_published == True).order_by(
         News.sort_order.asc(),
         News.published_at.desc(),
@@ -320,7 +348,6 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
             "stadium": m.stadium or 'Стадион TBA', "events": events_list,
         }
 
-    # 8. РЕНДЕР
     return await render_page(request, db, "index.html", context={
         "tournaments": tournaments,
         "today_matches": today_matches,
@@ -344,11 +371,16 @@ async def matches_page(
         date_filter: str = None,
         db: AsyncSession = Depends(get_db)
 ):
-    from datetime import datetime, timezone
+    from datetime import datetime, timezone, timedelta
     from sqlalchemy import case, func
     from sqlalchemy.orm import selectinload
-    from app.models.enums import MatchEventType
     from app.models.match_event import MatchEvent
+
+    try:
+        from zoneinfo import ZoneInfo
+        local_tz = ZoneInfo("Asia/Almaty")
+    except Exception:
+        local_tz = timezone(timedelta(hours=5))
 
     limit = 20
     skip = (page - 1) * limit
@@ -368,7 +400,6 @@ async def matches_page(
     # 3. БЕЗОПАСНЫЙ ПАРСИНГ ФИЛЬТРОВ
     t_id = int(tournament_id) if tournament_id and tournament_id.strip().isdigit() else None
 
-    # Парсим дату (исправление ошибки asyncpg)
     parsed_date = None
     d_filter_str = date_filter.strip() if date_filter and date_filter.strip() else None
     if d_filter_str:
@@ -379,12 +410,12 @@ async def matches_page(
 
     y_filter = year.strip() if year and year.strip() else None
 
-    # 4. Базовый запрос (с загрузкой событий для мини-окон)
+    # 4. Базовый запрос
     stmt = select(Match).join(Tournament).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
         selectinload(Match.tournament),
-        selectinload(Match.events).selectinload(MatchEvent.player)  # Для мини-окон
+        selectinload(Match.events).selectinload(MatchEvent.player)
     )
     count_stmt = select(func.count()).select_from(Match).join(Tournament)
 
@@ -421,6 +452,14 @@ async def matches_page(
     total_matches = await db.scalar(count_stmt) or 0
     stmt = stmt.offset(skip).limit(limit)
     matches = (await db.execute(stmt)).scalars().all()
+
+    for m in matches:
+        m.match_date = to_local_time(m.match_date)
+
+    # --- ИСПРАВЛЕНИЕ: Конвертируем время в Алматы ---
+    for m in matches:
+        if m.match_date:
+            m.match_date = m.match_date.astimezone(local_tz)
 
     total_pages = (total_matches + limit - 1) // limit if total_matches > 0 else 1
 
@@ -473,8 +512,9 @@ async def matches_page(
         "selected_year": year,
         "selected_tournament_id": t_id,
         "date_filter": d_filter_str or "",
-        "matches_dict": matches_dict  # <--- ПЕРЕДАЕМ В ШАБЛОН
+        "matches_dict": matches_dict
     })
+
 
 @router.get("/about")
 async def about_page(request: Request, db: AsyncSession = Depends(get_db)):
@@ -584,6 +624,9 @@ async def tournament_page(
         selectinload(Match.events).selectinload(MatchEvent.player)
     )
     matches_raw = (await db.execute(stmt_matches)).scalars().all()
+
+    for m in matches_raw:
+        m.match_date = to_local_time(m.match_date)
 
     fallback_date = datetime.min.replace(tzinfo=timezone.utc)
     matches = sorted(
@@ -822,6 +865,7 @@ async def tournament_page(
         "completed_disq": completed_disq,
         "tournament_news": tournament_news,
         "show_past": show_past,
+        "now": datetime.now(timezone.utc)
     })
 
 
@@ -2516,6 +2560,11 @@ async def admin_matches_list(
     stmt = stmt.limit(100)
 
     matches = (await db.execute(stmt)).unique().scalars().all()
+
+    for m in matches:
+        m.match_date = to_local_time(m.match_date)
+
+
     tournaments = (await db.execute(select(Tournament).order_by(Tournament.name))).scalars().all()
 
     return await render_page(request, db, "admin_matches.html", context={
@@ -2547,7 +2596,7 @@ async def admin_match_create(
         request: Request, tournament_id: int = Form(...), home_team_id: int = Form(...),
         away_team_id: int = Form(...), match_date: str = Form(None), stadium: str = Form(None),
         status: MatchStatus = Form(...), round: int = Form(None), group_name: str = Form(None),
-        stage: str = Form(None), stage_name: str = Form(None), # <--- ДОБАВИЛИ
+        stage: str = Form(None), stage_name: str = Form(None),
         db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
@@ -2556,18 +2605,21 @@ async def admin_match_create(
     if home_team_id == away_team_id:
         raise HTTPException(status_code=400, detail="Команда не может играть сама с собой")
 
+    # --- ИСПРАВЛЕНИЕ ВРЕМЕНИ ---
     from zoneinfo import ZoneInfo
+    from datetime import datetime, timezone, timedelta
 
     try:
         local_tz = ZoneInfo("Asia/Almaty")
     except Exception:
-        from datetime import timezone, timedelta
         local_tz = timezone(timedelta(hours=5))
 
     if match_date:
+        # Берем время из формы и жестко прикрепляем к нему пояс Алматы
         parsed_date = datetime.fromisoformat(match_date).replace(tzinfo=local_tz)
     else:
         parsed_date = None
+    # ---------------------------
 
     # Парсим стадию
     match_stage = None
@@ -2581,7 +2633,7 @@ async def admin_match_create(
     match_in = MatchCreate(
         tournament_id=tournament_id, home_team_id=home_team_id, away_team_id=away_team_id,
         match_date=parsed_date, stadium=stadium, status=status, round=round,
-        group_name=group_name, stage=match_stage, stage_name=stage_name # <--- ПЕРЕДАЕМ
+        group_name=group_name, stage=match_stage, stage_name=stage_name
     )
     await crud_match.create(db, obj_in=match_in)
 
@@ -2599,6 +2651,8 @@ async def admin_match_edit_form(match_id: int, request: Request, db: AsyncSessio
 
     match = await crud_match.get(db, match_id)
     if not match: return RedirectResponse(url="/admin/matches", status_code=303)
+
+    match.match_date = to_local_time(match.match_date)
 
     tournaments = (await db.execute(select(Tournament).order_by(Tournament.name))).scalars().all()
     teams = (await db.execute(select(Team).order_by(Team.name))).scalars().all()
@@ -2634,7 +2688,6 @@ async def admin_match_edit(
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # 1. Получаем матч
     match = await crud_match.get(db, match_id)
     if not match:
         return RedirectResponse(url="/admin/matches", status_code=303)
@@ -2642,25 +2695,24 @@ async def admin_match_edit(
     if home_team_id == away_team_id:
         raise HTTPException(status_code=400, detail="Команда не может играть сама с собой")
 
-    # 2. Запоминаем старый статус
     old_status = match.status
 
-    # 3. Парсим дату с учетом часового пояса Алматы
+    # --- ИСПРАВЛЕНИЕ ВРЕМЕНИ ---
     from zoneinfo import ZoneInfo
     from datetime import datetime, timezone, timedelta
 
     try:
         local_tz = ZoneInfo("Asia/Almaty")
     except Exception:
-        # Фоллбек, если на сервере нет tzdata
         local_tz = timezone(timedelta(hours=5))
 
     if match_date:
+        # Берем время из формы и прикрепляем пояс Алматы
         parsed_date = datetime.fromisoformat(match_date).replace(tzinfo=local_tz)
     else:
         parsed_date = None
+    # ---------------------------
 
-    # 4. Парсим стадию
     match_stage = None
     if stage:
         from app.models.enums import MatchStage
@@ -2669,7 +2721,6 @@ async def admin_match_edit(
         except ValueError:
             pass
 
-    # 5. Обновляем данные матча в БД
     match_in = MatchUpdate(
         tournament_id=tournament_id, home_team_id=home_team_id, away_team_id=away_team_id,
         match_date=parsed_date, stadium=stadium, home_score=home_score, away_score=away_score,
@@ -2679,36 +2730,25 @@ async def admin_match_edit(
     )
     await crud_match.update(db, db_obj=match, obj_in=match_in)
 
-    # =========================================================================
-    # 6. УМНАЯ ЛОГИКА ПЕРЕСЧЕТА
-    # =========================================================================
+    # УМНАЯ ЛОГИКА ПЕРЕСЧЕТА (как была)
     from app.services.stats_recalc import StatsRecalculator
     from app.services.disqualifications import DisqualificationService
 
-    # Проверяем, есть ли счет или админ сменил статус на Завершен
     is_finished_now = (status == MatchStatus.FINISHED) or (home_score is not None and away_score is not None)
 
     if is_finished_now:
-        # Если счет ввели, но статус забыли сменить — принудительно ставим FINISHED
         if match.status != MatchStatus.FINISHED:
             match.status = MatchStatus.FINISHED
             db.add(match)
             await db.commit()
             await db.refresh(match)
 
-        # Если матч ТОЛЬКО ЧТО перешел в статус "Завершен"
         if old_status != MatchStatus.FINISHED:
-            # А) Списываем отбытые матчи у дисквалификаций
             await DisqualificationService.process_match_finished(db, match)
-            # Б) Автоматически выдаем новые за красные или желтые
             await DisqualificationService.auto_suspend_by_cards(db, match)
 
-        # В) Пересчитываем всю таблицу и статистику
         await StatsRecalculator.recalculate_all(db, tournament_id)
-
-    # Если матч был завершен, а его вернули в статус "Запланирован"
     elif old_status == MatchStatus.FINISHED and not is_finished_now:
-        # Пересчитываем таблицу, чтобы отнять очки
         await StatsRecalculator.recalculate_all(db, tournament_id)
 
     return RedirectResponse(url="/admin/matches", status_code=303)
