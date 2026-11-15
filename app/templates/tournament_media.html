@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    .sidebar-menu .list-group-item { background-color: #3b5265; color: #ffffff; border: none; border-bottom: 1px solid #4a6274; font-weight: 600; text-transform: uppercase; transition: 0.2s; padding: 15px 20px; display: flex; align-items: center; border-radius: 0; cursor: pointer; text-align: left; width: 100%; text-decoration: none; }
+    .sidebar-menu .list-group-item:hover { background-color: #4a6274; color: #fff; }
+    .sidebar-menu .list-group-item.active { background-color: #c7122f; color: #ffffff; border-left: 5px solid #fff; padding-left: 15px; }
+    .sidebar-menu i { font-size: 12px; margin-right: 10px; opacity: 0.7; }
+    
+    .album-card { transition: 0.2s; border-radius: 12px; overflow: hidden; background: #fff; text-decoration: none; display: block; }
+    .album-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; }
+    .album-cover { height: 200px; background: #e2e8f0; position: relative; overflow: hidden; }
+    .album-cover img { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
+    .album-card:hover .album-cover img { transform: scale(1.05); }
+    .album-count { position: absolute; bottom: 10px; right: 10px; background: rgba(15, 37, 55, 0.85); color: white; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 700; backdrop-filter: blur(4px); }
+</style>
+
+<!-- ШАПКА ТУРНИРА -->
+<div class="card border-0 shadow-sm mb-4 bg-dark text-white">
+    <div class="card-body p-3 p-md-4 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div class="d-flex flex-column flex-md-row align-items-center gap-3 gap-md-4 text-center text-md-start">
+            {% if tournament.logo_url %}
+                <img src="{{ tournament.logo_url }}" alt="logo" style="height: 90px; width: 90px; object-fit: contain; filter: drop-shadow(0px 4px 10px rgba(0,0,0,0.5));">
+            {% endif %}
+            <div>
+                <h3 class="fw-bold text-uppercase m-0">{{ tournament.name }}</h3>
+                <div class="d-flex flex-column flex-md-row gap-2 gap-md-4 mt-2 text-light opacity-75 small justify-content-center justify-content-md-start">
+                    <span><i class="bi bi-calendar-event me-1"></i> {{ tournament.start_at.strftime('%d.%m.%Y') if tournament.start_at else 'TBA' }} - {{ tournament.end_at.strftime('%d.%m.%Y') if tournament.end_at else 'TBA' }}</span>
+                    <span><i class="bi bi-people-fill me-1"></i> {{ tournament.max_teams }} команд</span>
+                </div>
+            </div>
+        </div>
+        <div class="d-grid d-md-block mt-3 mt-md-0">
+            <a href="/tournaments/{{ tournament.id }}" class="btn btn-outline-light fw-bold px-4">
+                <i class="bi bi-arrow-left me-1"></i> Назад к турниру
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- ЛЕВАЯ ЧАСТЬ (Контент) -->
+    <div class="col-12 col-xl-9 mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white p-3 border-bottom">
+                <h5 class="fw-bold text-uppercase m-0" style="color: #0f2537;">
+                    {% if media_type == 'photos' %}Фотоальбомы{% else %}Видео{% endif %} турнира
+                </h5>
+            </div>
+            <div class="card-body p-3 p-md-4 bg-light">
+                <div class="row g-3 g-md-4">
+                    {% for album in albums %}
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <a href="/media/{{ album.id }}" class="album-card border-0 shadow-sm">
+                            <div class="album-cover">
+                                {% if album.items and album.items[0].file_url %}
+                                    <img src="{{ album.items[0].file_url }}" alt="{{ album.title }}">
+                                {% else %}
+                                    <div class="d-flex align-items-center justify-content-center h-100 text-muted">
+                                        <i class="bi bi-images fs-1"></i>
+                                    </div>
+                                {% endif %}
+                                {% if album.items %}
+                                    <div class="album-count">
+                                        <i class="bi bi-camera me-1"></i> {{ album.items|length }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="card-body p-3">
+                                <h6 class="fw-bold text-dark mb-1 text-truncate" title="{{ album.title }}">{{ album.title }}</h6>
+                                <div class="text-muted" style="font-size: 11px;">
+                                    <i class="bi bi-calendar3 me-1"></i> {{ album.created_at.strftime('%d.%m.%Y') if album.created_at else '' }}
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="col-12 text-center py-5">
+                        <i class="bi bi-image text-secondary fs-1 d-block mb-3"></i>
+                        <h5 class="fw-bold text-dark">Список альбомов пуст</h5>
+                        <p class="text-muted mb-0">Материалы появятся здесь позже.</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ПРАВАЯ ЧАСТЬ (Меню навигации) -->
+    <div class="col-xl-3 d-none d-xl-block mb-4">
+        <div class="list-group shadow-sm sidebar-menu mb-4 border-0 rounded-0" id="sidebar-menu">
+            <a href="/tournaments/{{ tournament.id }}" class="list-group-item"><i class="bi bi-chevron-right"></i> ТАБЛИЦЫ И СЕТКИ</a>
+            <a href="/tournaments/{{ tournament.id }}?view=calendar" class="list-group-item"><i class="bi bi-chevron-right"></i> КАЛЕНДАРЬ</a>
+            <a href="/tournaments/{{ tournament.id }}?view=stats" class="list-group-item"><i class="bi bi-chevron-right"></i> СТАТИСТИКА</a>
+            <a href="/tournaments/{{ tournament.id }}?view=disq" class="list-group-item"><i class="bi bi-chevron-right"></i> ДИСКВАЛИФИКАЦИИ</a>
+            <a href="/tournaments/{{ tournament.id }}?view=teams" class="list-group-item"><i class="bi bi-chevron-right"></i> КОМАНДЫ</a>
+            <a href="/tournaments/{{ tournament.id }}?view=news" class="list-group-item"><i class="bi bi-chevron-right"></i> НОВОСТИ</a>
+            
+            <!-- АКТИВНЫЕ ССЫЛКИ НА МЕДИА -->
+            <a href="/tournaments/{{ tournament.id }}/photos" class="list-group-item {% if media_type == 'photos' %}active{% endif %}"><i class="bi bi-chevron-right"></i> ФОТО</a>
+            <a href="/tournaments/{{ tournament.id }}/videos" class="list-group-item {% if media_type == 'videos' %}active{% endif %}"><i class="bi bi-chevron-right"></i> ВИДЕО</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

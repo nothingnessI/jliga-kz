@@ -31,6 +31,23 @@
         position: relative;
     }
 
+    /* Стили для инфо-строк (Дата, Клуб) */
+    .info-row {
+        display: flex;
+        margin-bottom: 8px;
+        font-size: 15px;
+    }
+    .info-label {
+        font-weight: 700;
+        color: #1e293b;
+        min-width: 140px;
+        display: inline-block;
+    }
+    .info-value {
+        color: #475569;
+        font-weight: 500;
+    }
+
     /* Статистические плитки */
     .stat-box {
         background: #fff;
@@ -67,9 +84,9 @@
     .match-row { transition: background 0.2s; }
     .match-row:hover {
         background: #f1f5f9;
-        cursor: pointer; /* Курсор-рука, показывая что это ссылка */
+        cursor: pointer;
     }
-    .match-row a { color: inherit; text-decoration: none; } /* Текст в ссылке не становится синим */
+    .match-row a { color: inherit; text-decoration: none; }
 
     /* Иконки событий */
     .event-icon { font-size: 16px; margin-right: 3px; }
@@ -91,6 +108,8 @@
         .profile-cover { height: 90px; }
         .stat-value { font-size: 20px; }
         .stat-icon { font-size: 20px; }
+        .info-row { flex-direction: column; }
+        .info-label { min-width: 100%; margin-bottom: 2px; }
     }
 </style>
 
@@ -110,18 +129,36 @@
                         </div>
                     {% endif %}
                 </div>
-                <div class="col-12 col-md-9 mt-3 mt-md-0 d-flex flex-column flex-md-row justify-content-between align-items-md-end text-center text-md-start">
-                    <div>
-                        <h1 class="fw-bold mb-1 text-uppercase text-dark-blue" style="font-size: 26px; letter-spacing: 0.5px;">
-                            {{ player.last_name }} {{ player.first_name }}
-                        </h1>
-                        <div class="d-flex gap-3 text-muted fs-6 mb-2 justify-content-center justify-content-md-start">
-                            {% if player.position %}
-                                <span><i class="bi bi-hash"></i> {{ player.position.value }}</span>
-                            {% endif %}
-                            <span><i class="bi bi-calendar3"></i> {{ player.date_of_birth.strftime('%d.%m.%Y') if player.date_of_birth else 'Дата рождения не указана' }}</span>
+                <div class="col-12 col-md-9 mt-3 mt-md-0 text-center text-md-start">
+                    <h1 class="fw-bold mb-3 text-uppercase text-dark-blue" style="font-size: 26px; letter-spacing: 0.5px;">
+                        {{ player.last_name }} {{ player.first_name }}
+                    </h1>
+
+                    <!-- БЛОК С ИНФОРМАЦИЕЙ (КАК НА J-LIGA.RU) -->
+                    <div class="mb-3">
+                        <!-- Дата рождения -->
+                        <div class="info-row">
+                            <span class="info-label">Дата рождения:</span>
+                            <span class="info-value">{{ player.date_of_birth.strftime('%d.%m.%Y') if player.date_of_birth else 'Не указана' }}</span>
                         </div>
+
+                        <!-- Амплуа (если есть) -->
+                        {% if player.position %}
+                        <div class="info-row">
+                            <span class="info-label">Амплуа:</span>
+                            <span class="info-value"># {{ player.position.value }}</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- КЛУБЫ (СПИСОК ЧЕРЕЗ ЗАПЯТУЮ) -->
+                        {% if player_teams %}
+                        <div class="info-row">
+                            <span class="info-label">Клуб:</span>
+                            <span class="info-value">{{ player_teams | map(attribute='name') | join(', ') }}</span>
+                        </div>
+                        {% endif %}
                     </div>
+
                 </div>
             </div>
         </div>
@@ -203,15 +240,10 @@
 
                         <!-- Матчи в этом турнире -->
                         {% for m_data in history.matches %}
-                        <!-- Вся строка кликабельна и ведет на страницу матча -->
                         <tr class="match-row" onclick="window.location.href='/matches/{{ m_data.match.id }}';">
-
-                            <!-- Этап (скрыт на мобилках) -->
                             <td class="d-none d-md-table-cell text-muted small ps-4">
                                 {{ m_data.match.stage_name or 'Групповой' }}
                             </td>
-
-                            <!-- Дата, Команды, Счет -->
                             <td>
                                 <a href="/matches/{{ m_data.match.id }}">
                                     <div class="d-flex flex-column">
@@ -228,15 +260,11 @@
                                     </div>
                                 </a>
                             </td>
-
-                            <!-- Результат (В/Н/П) -->
                             <td class="text-center">
                                 <span class="result-badge {% if m_data.result == 'В' %}res-w{% elif m_data.result == 'Н' %}res-d{% else %}res-l{% endif %}">
                                     {{ m_data.result }}
                                 </span>
                             </td>
-
-                            <!-- События: Голы -->
                             <td class="text-center">
                                 {% for e in m_data.events %}
                                     {% if e.event_type.value|lower in ['goal', 'penalty_goal', 'own_goal'] %}
@@ -244,8 +272,6 @@
                                     {% endif %}
                                 {% endfor %}
                             </td>
-
-                            <!-- События: Пасы -->
                             <td class="text-center">
                                 {% for e in m_data.events %}
                                     {% if e.event_type.value|lower == 'assist' %}
@@ -253,8 +279,6 @@
                                     {% endif %}
                                 {% endfor %}
                             </td>
-
-                            <!-- События: Карточки -->
                             <td class="text-center">
                                 <div class="d-flex justify-content-center gap-1">
                                     {% for e in m_data.events %}

@@ -23,6 +23,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 TEMPLATES_DIR = BASE_DIR / "templates"
 UPLOAD_DIR = BASE_DIR / "static" / "uploads" / "champions"
 
+# Базовый URL вашего сервера (нужен, чтобы Playwright подгружал картинки)
+SERVER_URL = "http://localhost:8000"
+
+
+def make_absolute_url(url: str | None, team_name: str = "") -> str:
+    """Превращает относительный путь в абсолютный и добавляет заглушку, если пусто"""
+    if not url:
+        # Если логотипа нет, генерируем красивую текстовую заглушку
+        return f"https://ui-avatars.com/api/?name={team_name}&background=0f2537&color=fff&size=128&rounded=true"
+
+    if url.startswith("http"):
+        return url
+
+    return f"{SERVER_URL}{url}"
+
 
 async def generate_champion_card(
     db: AsyncSession,
@@ -53,10 +68,20 @@ async def generate_champion_card(
     if not standings:
         raise ValueError("В турнире нет таблицы — нечего рендерить")
 
+    # =========================================================================
+    # ИСПРАВЛЕНИЕ: Превращаем все логотипы в абсолютные ссылки для Playwright
+    # =========================================================================
+    for s in standings:
+        if s.team:
+            s.team.logo_url = make_absolute_url(s.team.logo_url, s.team.name)
+
+    champion = standings[0].team
+    # =========================================================================
+
     # 2. AI-фон (кешируется внутри)
     background_url = await get_ai_background(prompt_index)
     # Делаем абсолютный URL, чтобы Playwright подтянул его при set_content
-    background_abs = f"http://localhost:8000{background_url}"
+    background_abs = make_absolute_url(background_url)
 
     # 3. Топ-бомбардир
     scorers = await StatsService.get_top_scorers(db, tournament_id, limit=1)
@@ -65,10 +90,12 @@ async def generate_champion_card(
     # 4. Рендер HTML
     env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
     template = env.get_template("champion_card.html")
+
+    # Передаем данные в шаблон
     html = template.render(
         tournament=tournament,
         standings=standings,
-        champion=standings[0].team,
+        champion=champion,
         top_scorer=top_scorer,
         background_url=background_abs,  # абсолютный для Playwright
     )
@@ -83,7 +110,7 @@ async def generate_champion_card(
         page = await browser.new_page(viewport={"width": 1400, "height": 1000})
         await page.set_content(html, wait_until="networkidle")
         # Дать шрифтам/фоновой картинке догрузиться
-        await page.wait_for_timeout(1500)
+        await page.wait_for_timeout(2000) # Увеличил до 2 секунд для надежности
         await page.locator(".card").screenshot(path=str(file_path))
         await browser.close()
 

@@ -100,7 +100,9 @@
             </div>
             <div class="flex-grow-1 w-100 mb-3 mb-md-0">
                 <h2 class="fw-bold mb-1 text-uppercase text-break">{{ team.name }}</h2>
-                <a href="/teams/{{ team.id }}" class="text-white-50 text-decoration-none small hover-opacity">
+
+                <!-- ССЫЛКА НА ПРОФИЛЬ КОМАНДЫ -->
+                <a href="/teams/{{ team.id }}" class="text-white-50 text-decoration-none small" style="transition: color 0.2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#cbd5e1'">
                     <i class="bi bi-box-arrow-up-right me-1"></i> Смотреть профиль команды
                 </a>
             </div>
@@ -121,10 +123,10 @@
 
     <div class="row g-3 g-md-4">
 
-        <!-- ЛЕВАЯ ЧАСТЬ: Таблица заявки (Теперь на всю ширину) -->
+        <!-- ЛЕВАЯ ЧАСТЬ: Таблица заявки -->
         <div class="col-12">
 
-            <!-- МОБИЛЬНОЕ МЕНЮ ТУРНИРА (Только для телефонов) -->
+            <!-- МОБИЛЬНОЕ МЕНЮ ТУРНИРА -->
             <div class="d-xl-none mobile-menu-scroll">
                 <a href="/tournaments/{{ tournament.id }}" class="btn btn-outline-dark">
                     <i class="bi bi-info-circle me-1"></i> О турнире
@@ -166,17 +168,14 @@
                         <!-- Активные игроки -->
                         <div class="tab-pane fade show active" id="active" role="tabpanel">
                             <div class="table-responsive">
-                                <!-- Убрал min-width, таблица теперь помещается на экран -->
                                 <table class="table table-hover roster-table mb-0 text-center" id="rosterTable">
                                     <thead class="table-light">
                                         <tr>
                                             <th style="width: 40px;">#</th>
                                             <th class="text-start">Амплуа</th>
                                             <th class="text-start" colspan="2">Игрок</th>
-                                            <!-- Скрываем дату рождения на мобилках -->
                                             <th class="text-start d-none d-md-table-cell">Дата рождения</th>
 
-                                            <!-- Иконки статистики (интерактивная сортировка) -->
                                             <th class="sortable-col" onclick="sortTable(5)" title="Сортировать по играм"><i class="bi bi-check2-square fs-6"></i></th>
                                             <th class="sortable-col" onclick="sortTable(6)" title="Сортировать по голам"><i class="bi bi-circle-fill text-dark" style="font-size: 10px;"></i></th>
                                             <th class="sortable-col" onclick="sortTable(7)" title="Сортировать по передачам"><i class="bi bi-hand-thumbs-up-fill text-primary" style="font-size: 12px;"></i></th>
@@ -190,7 +189,6 @@
                                             <td class="fw-bold text-muted">{{ p.jersey_number or '-' }}</td>
                                             <td class="text-start text-muted small">{{ p.player.position.value if p.player.position else 'Игрок' }}</td>
 
-                                            <!-- ФОТО ИГРОКА (ССЫЛКА) -->
                                             <td style="width: 40px;">
                                                 <a href="/player/{{ p.player.id }}">
                                                     {% if p.player.photo_url %}
@@ -201,7 +199,6 @@
                                                 </a>
                                             </td>
 
-                                            <!-- ИМЯ ИГРОКА (ССЫЛКА) -->
                                             <td class="text-start fw-bold" style="font-size: 13px;">
                                                 <a href="/player/{{ p.player.id }}" class="player-link">
                                                     {{ p.player.last_name }} {{ p.player.first_name }}
@@ -213,7 +210,6 @@
                                                 {{ p.player.date_of_birth.strftime('%d.%m.%Y') if p.player.date_of_birth else '-' }}
                                             </td>
 
-                                            <!-- Статистика -->
                                             <td class="fw-bold">{{ p.stats_games or 0 }}</td>
                                             <td class="fw-bold">{{ p.stats_goals or 0 }}</td>
                                             <td class="text-primary fw-bold">{{ p.stats_assists or 0 }}</td>
@@ -242,29 +238,30 @@
                                     </thead>
                                     <tbody>
                                         {% for p in released_players %}
-                                        <tr class="text-muted">
-                                            <td>{{ p.jersey_number or '-' }}</td>
-                                            <td class="text-start small">{{ p.player.position.value if p.player.position else 'Игрок' }}</td>
+                                        <!-- УБРАЛИ text-muted, чтобы текст был обычного цвета -->
+                                        <tr>
+                                            <td class="text-muted">{{ p.jersey_number or '-' }}</td>
+                                            <td class="text-start text-muted small">{{ p.player.position.value if p.player.position else 'Игрок' }}</td>
 
-                                            <!-- ФОТО ИГРОКА (ССЫЛКА) -->
+                                            <!-- УБРАЛИ filter: grayscale(100%), чтобы фото было цветным -->
                                             <td style="width: 40px;">
                                                 <a href="/player/{{ p.player.id }}">
                                                     {% if p.player.photo_url %}
-                                                        <img src="{{ p.player.photo_url }}" class="player-photo" style="filter: grayscale(100%);" alt="photo">
+                                                        <img src="{{ p.player.photo_url }}" class="player-photo" alt="photo">
                                                     {% else %}
                                                         <div class="player-photo"><i class="bi bi-person text-secondary"></i></div>
                                                     {% endif %}
                                                 </a>
                                             </td>
 
-                                            <!-- ИМЯ ИГРОКА (ССЫЛКА) -->
+                                            <!-- УБРАЛИ style="color: #64748b;", чтобы имя было черным/обычным -->
                                             <td class="text-start fw-bold" style="font-size: 13px;">
-                                                <a href="/player/{{ p.player.id }}" class="player-link" style="color: #64748b;">
+                                                <a href="/player/{{ p.player.id }}" class="player-link">
                                                     {{ p.player.last_name }} {{ p.player.first_name }}
                                                 </a>
                                             </td>
 
-                                            <td class="text-start small d-none d-md-table-cell" style="font-size: 12px;">
+                                            <td class="text-start text-muted small d-none d-md-table-cell" style="font-size: 12px;">
                                                 {{ p.player.date_of_birth.strftime('%d.%m.%Y') if p.player.date_of_birth else '-' }}
                                             </td>
                                         </tr>

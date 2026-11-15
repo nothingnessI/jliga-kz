@@ -120,7 +120,7 @@
 
             <!-- РАНЖИРОВАНИЕ (Drag and Drop) -->
             <div class="card border-0 shadow-sm">
-                <div class="card-header bg-white fw-bold border-bottom">Ранжирование при равенстве очков</div>
+                <div class="card-header bg-white fw-bold border-bottom">Ранжирование команд в случае равенства очков</div>
                 <div class="card-body p-3 p-md-4">
                     <input type="hidden" name="tie_breakers" id="tie_breakers_input" value='{{ tournament.tie_breakers | tojson if tournament.tie_breakers else "[]" }}'>
 
@@ -132,7 +132,7 @@
                         <!-- Список генерируется JS -->
                     </ul>
 
-                    <div class="d-flex flex-column flex-sm-row gap-2">
+                    <div class="d-flex flex-column flex-sm-row gap-2 mb-4">
                         <select id="available-tie-breakers" class="form-select" style="font-size: 16px;">
                             <option value="h2h_points">Очки в личных встречах</option>
                             <option value="h2h_wins">Победы в личных встречах</option>
@@ -144,6 +144,15 @@
                         </select>
                         <button type="button" class="btn btn-primary fw-bold px-4" onclick="addTieBreaker()">Добавить</button>
                     </div>
+
+                    <!-- ГАЛОЧКА (КАК НА СКРИНШОТЕ) -->
+                    <div class="form-check mt-2 mb-2">
+                        <input class="form-check-input" type="checkbox" name="h2h_always" id="h2h_always" value="true" {% if tournament.h2h_always %}checked{% endif %}>
+                        <label class="form-check-label fw-bold" for="h2h_always" style="font-size: 15px;">
+                            Учитывать личные встречи всегда
+                        </label>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -242,7 +251,6 @@
         onEnd: function (evt) {
             const newOrder = [];
             document.querySelectorAll('#tie-breaker-list li').forEach(li => {
-                // ИСПРАВЛЕНО: было newRules.push, теперь newOrder.push
                 if (li.dataset.id) newOrder.push(li.dataset.id);
             });
             currentRules = newOrder;

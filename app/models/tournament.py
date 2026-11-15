@@ -76,7 +76,7 @@ class Tournament(Base, TimestampMixin):
     short_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     show_in_menu: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
     menu_category: Mapped[str | None] = mapped_column(String(100), nullable=True)
-
+    h2h_always: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     # =========================================================================
     # СВЯЗИ (RELATIONSHIPS)
     # =========================================================================

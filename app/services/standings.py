@@ -13,7 +13,7 @@ class StandingsService:
     async def recalculate_standings(db: AsyncSession, tournament_id: int):
         tournament = await db.get(Tournament, tournament_id)
         if not tournament:
-            return
+            return []
 
         # =====================================================================
         # 1. ПОЛУЧАЕМ КОМАНДЫ И ИНИЦИАЛИЗИРУЕМ/ОБНОВЛЯЕМ ТАБЛИЦУ
@@ -64,7 +64,6 @@ class StandingsService:
         )
         matches = (await db.execute(stmt_matches)).scalars().all()
 
-        # Берем правила из регламента турнира (или дефолтные)
         p_win = tournament.points_win if tournament.points_win is not None else 3
         p_draw = tournament.points_draw if tournament.points_draw is not None else 1
         p_loss = tournament.points_loss if tournament.points_loss is not None else 0
@@ -79,11 +78,9 @@ class StandingsService:
 
             # Логика технического поражения
             if m.tech_loss:
-                # Обычно ТП = 3:0
                 h_goals = 3 if (m.home_score or 0) > (m.away_score or 0) else 0
                 a_goals = 3 if (m.away_score or 0) > (m.home_score or 0) else 0
 
-                # Если в регламенте указано не учитывать голы при ТП
                 if not tournament.tech_loss_goals:
                     h_goals = 0
                     a_goals = 0
@@ -91,17 +88,14 @@ class StandingsService:
                 h_goals = m.home_score or 0
                 a_goals = m.away_score or 0
 
-            # Начисляем забитые/пропущенные
             home.goals_for += h_goals
             home.goals_against += a_goals
             away.goals_for += a_goals
             away.goals_against += h_goals
 
-            # "Сухие" матчи (clean sheets)
             if a_goals == 0: home.clean_sheets += 1
             if h_goals == 0: away.clean_sheets += 1
 
-            # Начисление очков по регламенту
             if h_goals > a_goals:
                 home.wins += 1
                 home.points += p_win
@@ -118,7 +112,6 @@ class StandingsService:
                 home.points += p_draw
                 away.points += p_draw
 
-                # Бонус за победу по пенальти (если они есть в матче)
                 if m.home_penalty is not None and m.away_penalty is not None:
                     if m.home_penalty > m.away_penalty:
                         home.points += 1
@@ -126,19 +119,16 @@ class StandingsService:
                         away.points += 1
 
         # =====================================================================
-        # 4. СЧИТАЕМ КАРТОЧКИ (ОПТИМИЗИРОВАННЫЙ ЗАПРОС БЕЗ N+1)
+        # 4. СЧИТАЕМ КАРТОЧКИ
         # =====================================================================
         if matches:
             match_ids = [m.id for m in matches]
-
-            # Запрашиваем все события типа "карточка" для всех матчей турнира
             stmt_cards = select(MatchEvent).where(
                 MatchEvent.match_id.in_(match_ids),
                 MatchEvent.event_type.in_([MatchEventType.YELLOW_CARD, MatchEventType.RED_CARD])
             )
             card_events = (await db.execute(stmt_cards)).scalars().all()
 
-            # Распределяем по командам
             for event in card_events:
                 team_standing = standings_dict.get(event.team_id)
                 if team_standing:
@@ -147,31 +137,99 @@ class StandingsService:
                     elif event.event_type == MatchEventType.RED_CARD:
                         team_standing.red_cards += 1
 
-        # Сохраняем изменения в базу
         await db.commit()
 
+        # Возвращаем отсортированный список для отображения
+        return StandingsService.sort_standings(list(standings_dict.values()), matches, tournament)
+
     # =========================================================================
-    # ХЕЛПЕР: СОРТИРОВКА ТАБЛИЦЫ С УЧЕТОМ ЛИЧНЫХ ВСТРЕЧ (tie_breakers)
+    # ХЕЛПЕР: СОРТИРОВКА ТАБЛИЦЫ С УЧЕТОМ ЛИЧНЫХ ВСТРЕЧ (H2H)
     # =========================================================================
     @staticmethod
-    def sort_standings(standings: list, tie_breakers: list | None) -> list:
+    def sort_standings(standings: list, matches: list, tournament) -> list:
         """
-        Сортирует таблицу на основе правил из регламента (tie_breakers).
-        Если tie_breakers нет, сортирует по стандарту: Очки -> Разница -> Забитые.
+        Сортирует таблицу на основе правил из регламента.
+        Если включен h2h_always, применяет мини-таблицу для команд с равными очками.
         """
-        if not tie_breakers:
-            return sorted(standings, key=lambda x: (-x.points, -(x.goals_for - x.goals_against), -x.goals_for))
+        # 1. Разбиваем команды по группам (если это групповой этап)
+        groups = {}
+        for s in standings:
+            g_name = s.group_name or "Общая таблица"
+            if g_name not in groups:
+                groups[g_name] = []
+            groups[g_name].append(s)
 
-        # Базовая сортировка всегда по очкам (по убыванию)
-        # Для полной реализации личных встреч нужен сложный контекст матчей,
-        # поэтому здесь реализован базовый вариант, который можно расширять.
+        sorted_result = []
 
-        return sorted(
-            standings,
-            key=lambda x: (
-                -x.points,
-                -(x.goals_for - x.goals_against),
-                -x.goals_for,
-                -x.wins
-            )
-        )
+        # Проверяем, включена ли галочка "Учитывать личные встречи всегда"
+        use_h2h = getattr(tournament, 'h2h_always', False)
+
+        for g_name, teams in groups.items():
+            # Сначала базовая сортировка (Очки -> Разница -> Забитые -> Победы)
+            teams.sort(key=lambda x: (
+                x.points,
+                x.goals_for - x.goals_against,
+                x.goals_for,
+                x.wins
+            ), reverse=True)
+
+            if use_h2h:
+                i = 0
+                while i < len(teams):
+                    j = i + 1
+                    # Ищем, сколько команд имеют столько же очков
+                    while j < len(teams) and teams[j].points == teams[i].points:
+                        j += 1
+
+                    # Если больше одной команды с одинаковыми очками - считаем H2H
+                    if j - i > 1:
+                        tied_teams = teams[i:j]
+                        tied_team_ids = [t.team_id for t in tied_teams]
+
+                        # Берем ТОЛЬКО матчи между этими командами
+                        h2h_matches = [
+                            m for m in matches
+                            if m.home_team_id in tied_team_ids and m.away_team_id in tied_team_ids
+                        ]
+
+                        if h2h_matches:
+                            # Считаем очки и голы в личных встречах
+                            h2h_stats = {tid: {'points': 0, 'gf': 0, 'ga': 0} for tid in tied_team_ids}
+
+                            for m in h2h_matches:
+                                h, a = m.home_team_id, m.away_team_id
+                                hs, aw = m.home_score or 0, m.away_score or 0
+
+                                if hs > aw:
+                                    h2h_stats[h]['points'] += tournament.points_win
+                                    h2h_stats[a]['points'] += tournament.points_loss
+                                elif hs < aw:
+                                    h2h_stats[a]['points'] += tournament.points_win
+                                    h2h_stats[h]['points'] += tournament.points_loss
+                                else:
+                                    h2h_stats[h]['points'] += tournament.points_draw
+                                    h2h_stats[a]['points'] += tournament.points_draw
+
+                                h2h_stats[h]['gf'] += hs
+                                h2h_stats[h]['ga'] += aw
+                                h2h_stats[a]['gf'] += aw
+                                h2h_stats[a]['ga'] += hs
+
+                            # Пересортировываем только "связанную" группу
+                            tied_teams.sort(key=lambda x: (
+                                h2h_stats[x.team_id]['points'],
+                                h2h_stats[x.team_id]['gf'] - h2h_stats[x.team_id]['ga'],
+                                h2h_stats[x.team_id]['gf'],
+                                # Если в личных встречах всё равно ничья, откатываемся к общим показателям
+                                x.goals_for - x.goals_against,
+                                x.goals_for
+                            ), reverse=True)
+
+                            # Возвращаем отсортированные команды на их места
+                            teams[i:j] = tied_teams
+
+                    i = j
+
+            sorted_result.extend(teams)
+
+        return sorted_result

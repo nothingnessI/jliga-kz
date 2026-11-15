@@ -18,32 +18,62 @@
         position: relative;
     }
 
-    .match-date-box { width: 130px; border-right: 1px solid #e9ecef; padding-right: 15px; text-align: center; }
-    .match-date-day { font-size: 18px; font-weight: 800; color: #0f2537; line-height: 1; margin-bottom: 3px; }
-    .match-date-month { font-size: 11px; text-transform: uppercase; font-weight: 700; color: #6c757d; }
-    .match-time { font-size: 13px; font-weight: 700; color: #3092b8; margin-top: 5px; }
-
     .team-name { font-size: 15px; font-weight: 700; color: #212529; }
     .team-name.winner { color: #198754; }
     .team-logo { width: 32px; height: 32px; object-fit: contain; flex-shrink: 0; }
 
-    .score-badge { background: #212529; color: white; font-size: 16px; font-weight: bold; padding: 6px 14px; border-radius: 6px; min-width: 70px; text-align: center; }
+    .score-badge { background: #212529; color: white; font-size: 16px; font-weight: bold; padding: 6px 14px; border-radius: 6px; min-width: 70px; text-align: center; display: inline-block; }
     .score-badge.empty { background: #f8f9fa; color: #adb5bd; border: 1px solid #dee2e6; }
 
     .tournament-tag { font-size: 11px; color: #6c757d; text-transform: uppercase; font-weight: 600; }
 
-    /* Фикс для iOS Safari (чтобы не было зума при клике на фильтры) */
-    .form-control, .form-select {
-        font-size: 16px !important;
+    /* Фикс для iOS Safari */
+    .form-control, .form-select { font-size: 16px !important; }
+
+    /* ================= СЕТКА ДЛЯ МАТЧА ================= */
+    .match-layout {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
     }
 
-    /* Утилиты для ПК */
+    /* На ПК включаем Grid */
     @media (min-width: 768px) {
-        .w-md-130px { width: 130px !important; }
-        .w-md-200px { width: 200px !important; }
-        .w-md-auto { width: auto !important; }
-        .border-md-end { border-right: 1px solid #e9ecef !important; border-bottom: none !important; }
-        .border-md-0 { border: none !important; }
+        .match-layout {
+            display: grid;
+            /* 1fr — левая колонка, auto — центр, 1fr — правая */
+            /* Это гарантирует, что центр всегда будет ровно посередине */
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .match-col-date {
+            justify-self: start;
+            border-right: 1px solid #e9ecef;
+            padding-right: 20px;
+            width: 100%; /* Для рамки */
+            max-width: 140px;
+        }
+
+        .match-col-center {
+            display: grid;
+            /* Внутри центра тоже 3 колонки: команда - счет - команда */
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 15px;
+            justify-self: center;
+            width: 100%;
+            max-width: 600px; /* Ограничитель, чтобы названия не растягивались на весь экран */
+        }
+
+        .match-col-tournament {
+            justify-self: end;
+            border-left: 1px solid #e9ecef;
+            padding-left: 20px;
+            width: 100%;
+            max-width: 220px;
+        }
     }
 </style>
 
@@ -56,16 +86,13 @@
             <p class="text-muted m-0 small">Найдено: {{ total_matches }}</p>
         </div>
 
-        <!-- Фильтры (на мобилке в столбик) -->
         <form method="get" action="/matches" class="d-flex flex-column flex-sm-row gap-2 shadow-sm p-2 bg-white rounded border w-100 w-md-auto">
-            <!-- Сезон -->
             <select name="year" class="form-select form-select-sm fw-bold flex-grow-1" onchange="this.form.submit()">
                 {% for y in available_years %}
-                    <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>Сезон {{ y }}</option>
+                    <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>Сезон {{ y }}</option>
                 {% endfor %}
             </select>
 
-            <!-- Турнир -->
             <select name="tournament_id" class="form-select form-select-sm fw-bold flex-grow-1" style="max-width: 100%;" onchange="this.form.submit()">
                 <option value="">Все турниры</option>
                 {% for t in tournaments %}
@@ -74,12 +101,9 @@
             </select>
 
             <div class="d-flex gap-2">
-                <!-- Дата -->
                 <input type="date" name="date_filter" class="form-control form-control-sm fw-bold flex-grow-1" value="{{ date_filter or '' }}" onchange="this.form.submit()">
-
-                <!-- Кнопка сброса -->
                 {% if date_filter or selected_tournament_id %}
-                    <a href="/matches?year={{ current_year }}" class="btn btn-sm btn-outline-danger fw-bold d-flex align-items-center justify-content-center px-3">Сброс</a>
+                    <a href="/matches?year={{ selected_year }}" class="btn btn-sm btn-outline-danger fw-bold d-flex align-items-center justify-content-center px-3">Сброс</a>
                 {% endif %}
             </div>
         </form>
@@ -91,13 +115,12 @@
             {% for m in matches %}
             <a href="/matches/{{ m.id }}" class="match-row p-3">
 
-                <div class="d-flex flex-column flex-md-row align-items-md-center gap-2">
+                <!-- СЕТКА МАТЧА -->
+                <div class="match-layout">
 
-                    <!-- 1. ДАТА (ПК: слева с рамкой / Моб: сверху слева) + СТАТУС (Моб: сверху справа) -->
-                    <div class="match-date-box d-flex flex-row flex-md-column justify-content-between justify-content-md-center align-items-center w-100 w-md-130px border-bottom border-md-end pb-2 pb-md-0 mb-2 mb-md-0">
-
-                        <!-- Дата и время -->
-                        <div class="text-start text-md-center">
+                    <!-- 1. ЛЕВАЯ КОЛОНКА (ДАТА) -->
+                    <div class="match-col-date d-flex flex-row flex-md-column justify-content-between justify-content-md-center align-items-center pb-2 pb-md-0 mb-2 mb-md-0">
+                        <div class="text-start text-md-center w-100">
                             {% if m.match_date %}
                                 <div class="text-dark fw-bold" style="font-size: 15px;">{{ m.match_date.strftime('%d.%m.%Y') }}</div>
                                 <div class="text-muted small fw-bold"><i class="bi bi-clock"></i> {{ m.match_date.strftime('%H:%M') }}</div>
@@ -106,8 +129,6 @@
                                 <div class="text-muted fw-bold fs-6">TBA</div>
                             {% endif %}
                         </div>
-
-                        <!-- Статус (показываем ТОЛЬКО на мобилке) -->
                         <div class="d-md-none">
                             {% if m.status.value|lower == 'finished' or m.home_score is not none %}
                                 <span class="badge bg-light text-secondary border px-3 py-2">Завершен</span>
@@ -117,37 +138,33 @@
                         </div>
                     </div>
 
-                    <!-- 2. КОМАНДЫ И СЧЕТ (Главный блок) -->
-                    <div class="flex-grow-1 px-0 px-md-4 w-100">
-                        <div class="d-flex justify-content-between align-items-center">
+                    <!-- 2. ЦЕНТР (КОМАНДЫ И СЧЕТ) -->
+                    <div class="match-col-center">
 
-                            <!-- Хозяева -->
-                            <div class="d-flex align-items-center gap-2 w-50 pe-2">
-                                <img src="{{ m.home_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" class="team-logo">
-                                <span class="team-name text-truncate {% if m.home_score is not none and m.home_score > m.away_score %}winner{% endif %}">{{ m.home_team.name }}</span>
-                            </div>
-
-                            <!-- Счет -->
-                            <div class="text-center px-2 flex-shrink-0">
-                                <div class="score-badge {% if m.home_score is none %}empty{% endif %}">
-                                    {% if m.home_score is not none %}{{ m.home_score }} : {{ m.away_score }}{% else %}- : -{% endif %}
-                                </div>
-                            </div>
-
-                            <!-- Гости -->
-                            <div class="d-flex align-items-center justify-content-end gap-2 w-50 ps-2 text-end">
-                                <span class="team-name text-truncate {% if m.away_score is not none and m.away_score > m.home_score %}winner{% endif %}">{{ m.away_team.name }}</span>
-                                <img src="{{ m.away_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" class="team-logo">
-                            </div>
-
+                        <!-- Домашняя команда -->
+                        <div class="d-flex align-items-center justify-content-end gap-2 text-end" style="min-width: 0;">
+                            <img src="{{ m.home_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" class="team-logo">
+                            <span class="team-name text-truncate {% if m.home_score is not none and m.home_score > m.away_score %}winner{% endif %}">{{ m.home_team.name }}</span>
                         </div>
+
+                        <!-- Счет -->
+                        <div class="text-center flex-shrink-0">
+                            <div class="score-badge {% if m.home_score is none %}empty{% endif %}">
+                                {% if m.home_score is not none %}{{ m.home_score }} : {{ m.away_score }}{% else %}- : -{% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Гостевая команда -->
+                        <div class="d-flex align-items-center justify-content-start gap-2 text-start" style="min-width: 0;">
+                            <span class="team-name text-truncate {% if m.away_score is not none and m.away_score > m.home_score %}winner{% endif %}">{{ m.away_team.name }}</span>
+                            <img src="{{ m.away_team.logo_url or 'https://cdn-icons-png.flaticon.com/512/53/53283.png' }}" class="team-logo">
+                        </div>
+
                     </div>
 
-                    <!-- 3. ТУРНИР (ПК: справа / Моб: снизу по центру) -->
-                    <div class="w-100 w-md-200px text-center text-md-end mt-2 mt-md-0">
+                    <!-- 3. ПРАВАЯ КОЛОНКА (ТУРНИР) -->
+                    <div class="match-col-tournament text-center text-md-end mt-2 mt-md-0">
                         <div class="tournament-tag text-truncate" title="{{ m.tournament.name }}">{{ m.tournament.name }}</div>
-
-                        <!-- Статус (показываем ТОЛЬКО на ПК) -->
                         <small class="d-none d-md-block mt-1">
                             {% if m.status.value|lower == 'finished' or m.home_score is not none %}
                                 <span class="badge bg-light text-secondary border">Завершен</span>
@@ -173,17 +190,17 @@
     <nav class="mt-4">
         <ul class="pagination justify-content-center shadow-sm flex-wrap">
             <li class="page-item {% if page == 1 %}disabled{% endif %}">
-                <a class="page-link text-dark" href="?page={{ page - 1 }}&year={{ current_year }}&tournament_id={{ selected_tournament_id or '' }}&date_filter={{ date_filter or '' }}">Назад</a>
+                <a class="page-link text-dark" href="?page={{ page - 1 }}&year={{ selected_year }}&tournament_id={{ selected_tournament_id or '' }}&date_filter={{ date_filter or '' }}">Назад</a>
             </li>
             {% for p in range(1, total_pages + 1) %}
                 {% if p == page %}
                     <li class="page-item active"><span class="page-link bg-dark border-dark">{{ p }}</span></li>
                 {% elif p >= page - 2 and p <= page + 2 %}
-                    <li class="page-item"><a class="page-link text-dark" href="?page={{ p }}&year={{ current_year }}&tournament_id={{ selected_tournament_id or '' }}&date_filter={{ date_filter or '' }}">{{ p }}</a></li>
+                    <li class="page-item"><a class="page-link text-dark" href="?page={{ p }}&year={{ selected_year }}&tournament_id={{ selected_tournament_id or '' }}&date_filter={{ date_filter or '' }}">{{ p }}</a></li>
                 {% endif %}
             {% endfor %}
             <li class="page-item {% if page == total_pages %}disabled{% endif %}">
-                <a class="page-link text-dark" href="?page={{ page + 1 }}&year={{ current_year }}&tournament_id={{ selected_tournament_id or '' }}&date_filter={{ date_filter or '' }}">Вперед</a>
+                <a class="page-link text-dark" href="?page={{ page + 1 }}&year={{ selected_year }}&tournament_id={{ selected_tournament_id or '' }}&date_filter={{ date_filter or '' }}">Вперед</a>
             </li>
         </ul>
     </nav>

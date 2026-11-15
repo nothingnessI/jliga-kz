@@ -1,5 +1,122 @@
 {% extends "base.html" %}
+
 {% block content %}
-<h3 class="text-uppercase fw-bold mb-4 border-bottom pb-2">Решения дисциплинарного комитета</h3>
-<div class="alert alert-info">Раздел находится в разработке.</div>
+<style>
+    .disq-header {
+        background: #0f2537;
+        color: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .disq-table th {
+        font-size: 12px;
+        text-transform: uppercase;
+        color: #64748b;
+        font-weight: 700;
+        background: #f8fafc;
+    }
+    .disq-table td {
+        vertical-align: middle;
+        font-size: 14px;
+    }
+    .player-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #e2e8f0;
+        background: #f1f5f9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+
+<div class="container py-4" style="max-width: 1200px;">
+
+    <!-- ШАПКА -->
+    <div class="disq-header shadow-sm">
+        <h3 class="fw-bold text-uppercase m-0"><i class="bi bi-shield-exclamation me-2"></i> Решения дисциплинарного комитета</h3>
+        <p class="m-0 mt-2 text-white-50">Список игроков, отбывающих дисквалификацию в текущих турнирах.</p>
+    </div>
+
+    <!-- ТАБЛИЦА -->
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+        <div class="card-body p-0 table-responsive">
+            <table class="table table-hover disq-table mb-0">
+                <thead>
+                    <tr>
+                        <th class="ps-4 py-3" style="width: 30%;">Игрок</th>
+                        <th class="py-3">Команда</th>
+                        <th class="py-3">Турнир</th>
+                        <th class="py-3">Основание (Причина)</th>
+                        <th class="text-center py-3" style="width: 120px;">Осталось</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in active_disq %}
+                    <tr>
+                        <!-- Игрок -->
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center gap-3">
+                                {% if d.player.photo_url %}
+                                    <img src="{{ d.player.photo_url }}" class="player-avatar">
+                                {% else %}
+                                    <div class="player-avatar"><i class="bi bi-person text-muted fs-5"></i></div>
+                                {% endif %}
+                                <div>
+                                    <a href="/player/{{ d.player.id }}" class="fw-bold text-dark text-decoration-none">
+                                        {{ d.player.last_name }} {{ d.player.first_name }}
+                                    </a>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- Команда -->
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                {% if d.team.logo_url %}
+                                    <img src="{{ d.team.logo_url }}" style="width: 24px; height: 24px; object-fit: contain;">
+                                {% endif %}
+                                <a href="/teams/{{ d.team.id }}" class="text-secondary text-decoration-none fw-bold" style="font-size: 13px;">
+                                    {{ d.team.name }}
+                                </a>
+                            </div>
+                        </td>
+
+                        <!-- Турнир -->
+                        <td>
+                            <a href="/tournaments/{{ d.tournament.id }}" class="text-primary text-decoration-none fw-bold" style="font-size: 13px;">
+                                {{ d.tournament.name }}
+                            </a>
+                        </td>
+
+                        <!-- Причина -->
+                        <td class="text-dark fw-bold" style="font-size: 13px;">
+                            {{ d.reason }}
+                        </td>
+
+                        <!-- Осталось матчей -->
+                        <td class="text-center">
+                            <span class="badge bg-danger rounded-pill px-3 py-2 fs-6 shadow-sm">
+                                {{ d.matches_remaining }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-emoji-smile fs-1 d-block mb-3 text-success"></i>
+                            <h5 class="fw-bold">Активных дисквалификаций нет</h5>
+                            <p class="mb-0">Все игроки допущены к матчам. Нарушений не зафиксировано.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
 {% endblock %}
