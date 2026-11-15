@@ -314,6 +314,7 @@ async def matches_page(
 ):
     from datetime import datetime, timezone
     from sqlalchemy import case, func
+    from sqlalchemy.orm import selectinload
 
     limit = 20
     skip = (page - 1) * limit
@@ -332,7 +333,16 @@ async def matches_page(
 
     # 3. БЕЗОПАСНЫЙ ПАРСИНГ ФИЛЬТРОВ
     t_id = int(tournament_id) if tournament_id and tournament_id.strip().isdigit() else None
-    d_filter = date_filter.strip() if date_filter and date_filter.strip() else None
+
+    # ИСПРАВЛЕНИЕ: Превращаем строку в объект date
+    parsed_date = None
+    d_filter_str = date_filter.strip() if date_filter and date_filter.strip() else None
+    if d_filter_str:
+        try:
+            parsed_date = datetime.strptime(d_filter_str, "%Y-%m-%d").date()
+        except ValueError:
+            parsed_date = None
+
     y_filter = year.strip() if year and year.strip() else None
 
     # 4. Базовый запрос
@@ -347,35 +357,28 @@ async def matches_page(
     if y_filter:
         stmt = stmt.where(Tournament.season == y_filter)
         count_stmt = count_stmt.where(Tournament.season == y_filter)
+
     if t_id is not None:
         stmt = stmt.where(Match.tournament_id == t_id)
         count_stmt = count_stmt.where(Match.tournament_id == t_id)
-    if d_filter:
-        stmt = stmt.where(func.date(Match.match_date) == d_filter)
-        count_stmt = count_stmt.where(func.date(Match.match_date) == d_filter)
 
-    # =========================================================================
-    # 6. УМНАЯ СОРТИРОВКА: TBA (без даты) -> Будущие -> Прошедшие
-    # =========================================================================
+    if parsed_date:
+        stmt = stmt.where(func.date(Match.match_date) == parsed_date)
+        count_stmt = count_stmt.where(func.date(Match.match_date) == parsed_date)
+
+    # 6. УМНАЯ СОРТИРОВКА ПО ДАТЕ
     now = datetime.now(timezone.utc)
 
-    # Группируем: 0 - TBA (без даты), 1 - будущие (дата >= сейчас), 2 - прошлые (дата < сейчас)
     time_group = case(
-        (Match.match_date.is_(None), 0),  # Сначала TBA
-        (Match.match_date >= now, 1),     # Потом будущие
-        else_=2                           # В конце прошедшие
+        (Match.match_date >= now, 0),
+        (Match.match_date < now, 1),
+        else_=2
     )
 
     stmt = stmt.order_by(
-        # 1. Сначала группа
         time_group,
-
-        # 2. Внутри TBA и будущих: от ближайшего к дальнему (ASC)
         case((Match.match_date >= now, Match.match_date), else_=None).asc().nullslast(),
-
-        # 3. Внутри прошлых: от недавних к старым (DESC)
         case((Match.match_date < now, Match.match_date), else_=None).desc().nullslast(),
-
         Match.id.desc()
     )
 
@@ -386,7 +389,7 @@ async def matches_page(
 
     total_pages = (total_matches + limit - 1) // limit if total_matches > 0 else 1
 
-    # 8. Рендер
+    # 8. Рендер страницы
     return await render_page(request, db, "matches.html", context={
         "matches": matches,
         "page": page,
@@ -396,9 +399,8 @@ async def matches_page(
         "tournaments": tournaments,
         "selected_year": year,
         "selected_tournament_id": t_id,
-        "date_filter": d_filter or ""
+        "date_filter": d_filter_str or ""
     })
-
 
 @router.get("/about")
 async def about_page(request: Request, db: AsyncSession = Depends(get_db)):
