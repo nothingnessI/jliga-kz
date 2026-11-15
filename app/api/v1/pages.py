@@ -177,14 +177,15 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     await check_and_finish_expired_tournaments(db)
 
     from datetime import datetime, timezone, timedelta
-    from sqlalchemy import func
+    from sqlalchemy import func, select, or_
+    from sqlalchemy.orm import selectinload
+    from app.models.enums import MatchStatus, MatchEventType
+    from app.models.match_event import MatchEvent
 
-    # Безопасное получение часового пояса (защита от падения на Windows без tzdata)
     try:
         from zoneinfo import ZoneInfo
         local_tz = ZoneInfo("Asia/Almaty")
     except Exception:
-        # Фоллбек: жестко задаем UTC+5 (Алматы)
         local_tz = timezone(timedelta(hours=5))
 
     # 1. ПОЛУЧАЕМ ПОСЛЕДНИЙ СЕЗОН
@@ -192,7 +193,7 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     if not latest_season:
         latest_season = str(datetime.now().year)
 
-    # 2. ФИЛЬТРУЕМ ТУРНИРЫ И СОРТИРУЕМ (СТРОГО ПО РЕОРДЕРУ)
+    # 2. ФИЛЬТРУЕМ ТУРНИРЫ И СОРТИРУЕМ
     keywords = ["примера", "сегунда", "терсера", "региональ", "junior", "primera", "segunda", "tersera", "regional"]
     conditions = [Tournament.name.ilike(f"%{kw}%") for kw in keywords]
 
@@ -205,7 +206,7 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     )
     tournaments = (await db.execute(stmt_tournaments)).scalars().all()
 
-    # 3. ОПРЕДЕЛЯЕМ АКТИВНЫЙ ТУРНИР (для правой колонки)
+    # 3. ОПРЕДЕЛЯЕМ АКТИВНЫЙ ТУРНИР
     active_tournament = None
     if tournament_id:
         active_tournament = next((t for t in tournaments if t.id == tournament_id), None)
@@ -213,12 +214,11 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     if not active_tournament and tournaments:
         active_tournament = tournaments[0]
 
-    # 4. МАТЧИ НА СЕГОДНЯ (С УЧЕТОМ ЧАСОВОГО ПОЯСА)
+    # 4. МАТЧИ НА СЕГОДНЯ (С ЗАГРУЗКОЙ СОБЫТИЙ ДЛЯ МИНИ-ОКОН)
     now_local = datetime.now(local_tz)
     start_of_day = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_day = start_of_day + timedelta(days=1)
 
-    # ИСПРАВЛЕНИЕ: Добавлен фильтр по статусу (только SCHEDULED и LIVE)
     stmt_today = select(Match).where(
         Match.match_date >= start_of_day,
         Match.match_date < end_of_day,
@@ -226,7 +226,8 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     ).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
-        selectinload(Match.tournament)
+        selectinload(Match.tournament),
+        selectinload(Match.events).selectinload(MatchEvent.player) # Для мини-окон
     ).order_by(
         Match.match_date.asc().nullslast()
     )
@@ -239,7 +240,6 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     active_disqualifications = []
 
     if active_tournament:
-        # А) Таблица
         stmt_standings = select(TournamentStanding).where(
             TournamentStanding.tournament_id == active_tournament.id
         ).options(selectinload(TournamentStanding.team)).order_by(
@@ -248,7 +248,6 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
         )
         standings = (await db.execute(stmt_standings)).scalars().all()
 
-        # Б) Бомбардиры
         stmt_scorers = select(TeamPlayer).join(Player).join(Team).where(
             TeamPlayer.tournament_id == active_tournament.id,
             TeamPlayer.stats_goals > 0
@@ -269,7 +268,6 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
                 "goals": ts.stats_goals
             })
 
-        # В) Активные дисквалификации (matches_remaining > 0)
         stmt_disq = select(Disqualification).where(
             Disqualification.tournament_id == active_tournament.id,
             Disqualification.matches_remaining > 0
@@ -289,7 +287,40 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     ).limit(4)
     latest_news = (await db.execute(stmt_news)).scalars().all()
 
-    # 7. РЕНДЕР
+    # 7. СБОРКА СЛОВАРЯ ДЛЯ МИНИ-ОКОН
+    matches_dict = {}
+    for m in today_matches:
+        events_list = []
+        if m.events:
+            sorted_events = sorted(m.events, key=lambda x: x.minute)
+            for e in sorted_events:
+                event_str = str(e.event_type).upper()
+                if "YELLOW" in event_str: etype = "YELLOW"
+                elif "RED" in event_str: etype = "RED"
+                elif "OWN" in event_str: etype = "OWN_GOAL"
+                elif "PENALTY" in event_str: etype = "PENALTY"
+                else: etype = "GOAL"
+
+                events_list.append({
+                    "minute": e.minute, "team_id": e.team_id,
+                    "player": f"{e.player.last_name} {e.player.first_name[0]}." if e.player else "Игрок",
+                    "type": etype
+                })
+
+        matches_dict[m.id] = {
+            "id": m.id, "home_name": m.home_team.name, "away_name": m.away_team.name,
+            "home_team_id": m.home_team_id, "away_team_id": m.away_team_id,
+            "home_score": m.home_score if m.home_score is not None else 0,
+            "away_score": m.away_score if m.away_score is not None else 0,
+            "home_logo": m.home_team.logo_url or f"https://ui-avatars.com/api/?name={m.home_team.name}&background=0f2537&color=fff&size=64&rounded=true",
+            "away_logo": m.away_team.logo_url or f"https://ui-avatars.com/api/?name={m.away_team.name}&background=0f2537&color=fff&size=64&rounded=true",
+            "home_penalty": m.home_penalty, "away_penalty": m.away_penalty,
+            "stage_name": m.stage_name, "tech_loss": m.tech_loss,
+            "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
+            "stadium": m.stadium or 'Стадион TBA', "events": events_list,
+        }
+
+    # 8. РЕНДЕР
     return await render_page(request, db, "index.html", context={
         "tournaments": tournaments,
         "today_matches": today_matches,
@@ -299,7 +330,8 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
         "active_disqualifications": active_disqualifications,
         "active_tournament": active_tournament,
         "selected_tournament_id": active_tournament.id if active_tournament else None,
-        "latest_season": latest_season
+        "latest_season": latest_season,
+        "matches_dict": matches_dict
     })
 
 
@@ -315,6 +347,8 @@ async def matches_page(
     from datetime import datetime, timezone
     from sqlalchemy import case, func
     from sqlalchemy.orm import selectinload
+    from app.models.enums import MatchEventType
+    from app.models.match_event import MatchEvent
 
     limit = 20
     skip = (page - 1) * limit
@@ -334,7 +368,7 @@ async def matches_page(
     # 3. БЕЗОПАСНЫЙ ПАРСИНГ ФИЛЬТРОВ
     t_id = int(tournament_id) if tournament_id and tournament_id.strip().isdigit() else None
 
-    # ИСПРАВЛЕНИЕ: Превращаем строку в объект date
+    # Парсим дату (исправление ошибки asyncpg)
     parsed_date = None
     d_filter_str = date_filter.strip() if date_filter and date_filter.strip() else None
     if d_filter_str:
@@ -345,11 +379,12 @@ async def matches_page(
 
     y_filter = year.strip() if year and year.strip() else None
 
-    # 4. Базовый запрос
+    # 4. Базовый запрос (с загрузкой событий для мини-окон)
     stmt = select(Match).join(Tournament).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
-        selectinload(Match.tournament)
+        selectinload(Match.tournament),
+        selectinload(Match.events).selectinload(MatchEvent.player)  # Для мини-окон
     )
     count_stmt = select(func.count()).select_from(Match).join(Tournament)
 
@@ -389,7 +424,45 @@ async def matches_page(
 
     total_pages = (total_matches + limit - 1) // limit if total_matches > 0 else 1
 
-    # 8. Рендер страницы
+    # 8. СБОРКА СЛОВАРЯ ДЛЯ МИНИ-ОКОН
+    matches_dict = {}
+    for m in matches:
+        events_list = []
+        if m.events:
+            sorted_events = sorted(m.events, key=lambda x: x.minute)
+            for e in sorted_events:
+                event_str = str(e.event_type).upper()
+                if "YELLOW" in event_str:
+                    etype = "YELLOW"
+                elif "RED" in event_str:
+                    etype = "RED"
+                elif "OWN" in event_str:
+                    etype = "OWN_GOAL"
+                elif "PENALTY" in event_str:
+                    etype = "PENALTY"
+                else:
+                    etype = "GOAL"
+
+                events_list.append({
+                    "minute": e.minute, "team_id": e.team_id,
+                    "player": f"{e.player.last_name} {e.player.first_name[0]}." if e.player else "Игрок",
+                    "type": etype
+                })
+
+        matches_dict[m.id] = {
+            "id": m.id, "home_name": m.home_team.name, "away_name": m.away_team.name,
+            "home_team_id": m.home_team_id, "away_team_id": m.away_team_id,
+            "home_score": m.home_score if m.home_score is not None else 0,
+            "away_score": m.away_score if m.away_score is not None else 0,
+            "home_logo": m.home_team.logo_url or f"https://ui-avatars.com/api/?name={m.home_team.name}&background=0f2537&color=fff&size=64&rounded=true",
+            "away_logo": m.away_team.logo_url or f"https://ui-avatars.com/api/?name={m.away_team.name}&background=0f2537&color=fff&size=64&rounded=true",
+            "home_penalty": m.home_penalty, "away_penalty": m.away_penalty,
+            "stage_name": m.stage_name, "tech_loss": m.tech_loss,
+            "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
+            "stadium": m.stadium or 'Стадион TBA', "events": events_list,
+        }
+
+    # 9. Рендер страницы
     return await render_page(request, db, "matches.html", context={
         "matches": matches,
         "page": page,
@@ -399,7 +472,8 @@ async def matches_page(
         "tournaments": tournaments,
         "selected_year": year,
         "selected_tournament_id": t_id,
-        "date_filter": d_filter_str or ""
+        "date_filter": d_filter_str or "",
+        "matches_dict": matches_dict  # <--- ПЕРЕДАЕМ В ШАБЛОН
     })
 
 @router.get("/about")
@@ -4259,3 +4333,39 @@ async def tournament_videos_page(tournament_id: int, request: Request, db: Async
         "albums": albums,
         "media_type": "videos"
     })
+
+def build_matches_dict(matches):
+    """Хелпер для создания словаря с данными для всплывающих окон"""
+    from app.models.enums import MatchEventType
+    matches_dict = {}
+    for m in matches:
+        events_list = []
+        if m.events:
+            sorted_events = sorted(m.events, key=lambda x: x.minute)
+            for e in sorted_events:
+                event_str = str(e.event_type).upper()
+                if "YELLOW" in event_str: etype = "YELLOW"
+                elif "RED" in event_str: etype = "RED"
+                elif "OWN" in event_str: etype = "OWN_GOAL"
+                elif "PENALTY" in event_str: etype = "PENALTY"
+                else: etype = "GOAL"
+
+                events_list.append({
+                    "minute": e.minute, "team_id": e.team_id,
+                    "player": f"{e.player.last_name} {e.player.first_name[0]}." if e.player else "Игрок",
+                    "type": etype
+                })
+
+        matches_dict[m.id] = {
+            "id": m.id, "home_name": m.home_team.name, "away_name": m.away_team.name,
+            "home_team_id": m.home_team_id, "away_team_id": m.away_team_id,
+            "home_score": m.home_score if m.home_score is not None else 0,
+            "away_score": m.away_score if m.away_score is not None else 0,
+            "home_logo": m.home_team.logo_url or f"https://ui-avatars.com/api/?name={m.home_team.name}&background=0f2537&color=fff&size=64&rounded=true",
+            "away_logo": m.away_team.logo_url or f"https://ui-avatars.com/api/?name={m.away_team.name}&background=0f2537&color=fff&size=64&rounded=true",
+            "home_penalty": m.home_penalty, "away_penalty": m.away_penalty,
+            "stage_name": m.stage_name, "tech_loss": m.tech_loss,
+            "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
+            "stadium": m.stadium or 'Стадион TBA', "events": events_list,
+        }
+    return matches_dict

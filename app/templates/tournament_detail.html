@@ -143,25 +143,38 @@
     .sortable-th.sort-asc::after { content: '↑'; opacity: 1; color: #0d6efd; }
     .sortable-th.sort-desc::after { content: '↓'; opacity: 1; color: #0d6efd; }
 
-    /* ================= НОВЫЙ ДИЗАЙН HOVER-КАРТОЧКИ ================= */
+    /* ================= ДИЗАЙН HOVER-КАРТОЧКИ ================= */
     #hover-card {
         position: fixed;
         z-index: 9999;
         width: 340px;
         background: #ffffff;
         border-radius: 16px;
-        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2), 0 0 0 1px rgba(0,0,0,0.05);
+        box-shadow: 0 10px 40px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0,0,0,0.05);
         overflow: hidden;
+
+        /* Плавное появление */
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(10px) scale(0.95);
         transition: opacity 0.2s ease, transform 0.2s ease;
         pointer-events: none;
         font-family: 'Segoe UI', Roboto, Arial, sans-serif;
     }
     #hover-card.show {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
         pointer-events: auto;
+    }
+
+    /* Невидимый мостик, чтобы мышка не проскакивала в пустоту */
+    #hover-card::before {
+        content: '';
+        position: absolute;
+        top: -20px;
+        left: 0;
+        width: 100%;
+        height: 20px;
+        background: transparent;
     }
 
     .hc-header {
@@ -183,12 +196,11 @@
         z-index: 2;
         letter-spacing: 1px;
         flex-shrink: 0;
-        white-space: nowrap; /* Запрещаем перенос строки (0 - 1) */
+        white-space: nowrap;
     }
     .hc-team {
         display: flex; flex-direction: column; align-items: center; gap: 8px;
-        flex: 1; /* Растягиваем на доступное место */
-        min-width: 0; /* Позволяем сжиматься, если не хватает места */
+        flex: 1; min-width: 0;
     }
     .hc-team img {
         width: 48px; height: 48px; object-fit: contain;
@@ -904,7 +916,7 @@
     const matchData = {{ matches_dict | tojson }};
     let matchModal;
 
-    // --- ЛОГИКА HOVER-КАРТОЧКИ ---
+    // --- ЛОГИКА HOVER-КАРТОЧКИ (УМНОЕ ПОЗИЦИОНИРОВАНИЕ) ---
     let hoverTimeout;
     const hoverCard = document.getElementById('hover-card');
 
@@ -915,7 +927,7 @@
             const data = matchData[matchId];
             if (!data) return;
 
-            // Собираем голы для левой и правой команды
+            // Собираем голы
             let homeGoals = '';
             let awayGoals = '';
             if (data.events) {
@@ -930,7 +942,7 @@
                 });
             }
 
-            // Генерируем дефолтные ссылки-заглушки
+            // Заглушки для логотипов
             const defaultHomeLogo = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.home_name)}&background=0f2537&color=fff&size=64&rounded=true`;
             const defaultAwayLogo = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.away_name)}&background=0f2537&color=fff&size=64&rounded=true`;
             const homeLogoUrl = data.home_logo ? data.home_logo : defaultHomeLogo;
@@ -966,23 +978,23 @@
                 </div>
             `;
 
-            // ПОЗИЦИОНИРОВАНИЕ СТРОГО СВЕРХУ ИЛИ СНИЗУ
+            // ПОЗИЦИОНИРОВАНИЕ ОТНОСИТЕЛЬНО ЯЧЕЙКИ
             const rect = this.getBoundingClientRect();
             const cardWidth = 340;
-            const cardHeight = 280; // Примерная высота карточки
+            const cardHeight = 320; // Примерная высота карточки
 
-            // Вычисляем координаты для центрирования по горизонтали
+            // Центрируем по горизонтали относительно ячейки
             let left = rect.left + (rect.width / 2) - (cardWidth / 2);
 
-            // По умолчанию ставим вниз
-            let top = rect.bottom + 10;
+            // По умолчанию ставим вниз (максимально близко)
+            let top = rect.bottom - 1;
 
             // Если снизу нет места, показываем сверху
             if (rect.bottom + cardHeight > window.innerHeight) {
-                top = rect.top - cardHeight - 10;
+                top = rect.top - cardHeight + 1;
             }
 
-            // Проверка, чтобы окно не улетало за левый/правый край
+            // Защита от вылета за левый/правый край экрана
             if (left < 10) {
                 left = 10;
             }
@@ -992,13 +1004,16 @@
 
             hoverCard.style.left = `${left}px`;
             hoverCard.style.top = `${top}px`;
+
+            // Плавно показываем
             hoverCard.classList.add('show');
         });
 
         el.addEventListener('mouseleave', function() {
+            // Увеличили задержку до 400мс, чтобы вы гарантированно успели перевести мышку на карточку
             hoverTimeout = setTimeout(() => {
                 hoverCard.classList.remove('show');
-            }, 200); // Задержка, чтобы можно было перевести мышку на карточку
+            }, 400);
         });
 
         // По клику открываем модалку

@@ -3,66 +3,70 @@
 {% block content %}
 <style>
     /* ================= ОБЩИЕ СТИЛИ ================= */
-    .hover-card {
-        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
-    }
-
-    /* На мобилках отключаем ховер, чтобы не было залипаний при скролле */
-    @media (min-width: 768px) {
-        .hover-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
-        }
-    }
-
+    .hover-card { transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease; }
+    @media (min-width: 768px) { .hover-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important; } }
     .object-fit-cover { object-fit: cover; }
 
-    /* Плашки для счета в матчах */
-    .score-box {
-        background: #0f2537; color: #fff; font-weight: 800;
-        padding: 4px 10px; border-radius: 6px; font-size: 15px;
-        min-width: 35px; text-align: center;
-    }
+    .score-box { background: #0f2537; color: #fff; font-weight: 800; padding: 4px 10px; border-radius: 6px; font-size: 15px; min-width: 35px; text-align: center; }
     .score-box.winner { background: #198754; }
     .score-box.draw { background: #fd7e14; }
 
-    /* Медальки для турнирной таблицы */
-    .medal {
-        display: inline-flex; align-items: center; justify-content: center;
-        width: 22px; height: 22px; border-radius: 50%;
-        font-size: 11px; font-weight: bold; color: #fff;
-    }
+    .medal { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; font-size: 11px; font-weight: bold; color: #fff; }
     .medal-1 { background: #ffc107; box-shadow: 0 2px 4px rgba(255,193,7,0.4); }
     .medal-2 { background: #adb5bd; box-shadow: 0 2px 4px rgba(173,181,189,0.4); }
     .medal-3 { background: #cd7f32; box-shadow: 0 2px 4px rgba(205,127,50,0.4); }
     .medal-default { background: #e9ecef; color: #6c757d; }
 
-    /* Скролл для таблицы */
-    .table-scroll-container {
-        max-height: 450px; overflow-y: auto; overflow-x: auto; position: relative;
-        -webkit-overflow-scrolling: touch;
-    }
+    .table-scroll-container { max-height: 450px; overflow-y: auto; overflow-x: auto; position: relative; -webkit-overflow-scrolling: touch; }
     .table-scroll-container::-webkit-scrollbar { width: 6px; height: 6px; }
     .table-scroll-container::-webkit-scrollbar-track { background: #f1f5f9; }
     .table-scroll-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-    .table-scroll-container thead th {
-        position: sticky; top: 0; z-index: 10; background-color: #3092b8 !important;
-    }
+    .table-scroll-container thead th { position: sticky; top: 0; z-index: 10; background-color: #3092b8 !important; }
 
-    /* Фикс для iOS Safari (чтобы не было зума при клике на селект) */
     .form-select { font-size: 16px !important; }
+
+    /* ================= ДИЗАЙН HOVER-КАРТОЧКИ ================= */
+    #hover-card {
+        position: fixed; z-index: 9999; width: 340px; background: #ffffff;
+        border-radius: 16px; box-shadow: 0 10px 40px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0,0,0,0.05);
+        overflow: hidden; opacity: 0; transform: translateY(10px) scale(0.95);
+        transition: opacity 0.2s ease, transform 0.2s ease; pointer-events: none;
+        font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+    #hover-card.show { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+    #hover-card::before { content: ''; position: absolute; top: -20px; left: 0; width: 100%; height: 20px; background: transparent; }
+
+    .hc-header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 16px; display: flex; justify-content: space-between; align-items: center; position: relative; }
+    .hc-score { background: #ffd700; color: #0f172a; font-size: 20px; font-weight: 900; padding: 6px 16px; border-radius: 8px; box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3); z-index: 2; letter-spacing: 1px; flex-shrink: 0; white-space: nowrap; }
+    .hc-team { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+    .hc-team img { width: 48px; height: 48px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); flex-shrink: 0; }
+    .hc-team span { font-size: 12px; font-weight: 700; color: #ffffff; text-align: center; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+
+    .hc-body { padding: 16px; text-align: center; background: #f8fafc; }
+    .hc-tournament { font-size: 11px; font-weight: 800; color: #3b82f6; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+    .hc-date { font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    .hc-stadium { font-size: 12px; color: #64748b; margin-bottom: 12px; }
+
+    .hc-events { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+    .hc-events-left { text-align: right; width: 48%; display: flex; flex-direction: column; gap: 4px; }
+    .hc-events-right { text-align: left; width: 48%; display: flex; flex-direction: column; gap: 4px; }
+    .hc-goal-item { background: #fff; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .hc-goal-item span { font-size: 11px; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hc-goal-item b { color: #0f172a; font-size: 11px; }
+
+    .hc-footer { display: flex; background: #ffffff; border-top: 1px solid #e2e8f0; }
+    .hc-footer a { flex: 1; text-align: center; padding: 12px 0; color: #64748b; font-size: 11px; font-weight: 800; text-decoration: none; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .hc-footer a:hover { background: #f1f5f9; color: #0d6efd; }
+    .hc-footer a:not(:last-child) { border-right: 1px solid #e2e8f0; }
+    .hc-footer i { font-size: 16px; }
 </style>
 
 <div class="container-fluid py-3 py-md-4" style="max-width: 1400px; margin: 0 auto; background-color: #f4f6f9; min-height: 100vh;">
-
     <div class="row g-3 g-md-4">
 
-        <!-- ========================================== -->
-        <!-- ЛЕВАЯ КОЛОНКА (Матчи сегодня и Новости) -->
-        <!-- ========================================== -->
+        <!-- ЛЕВАЯ КОЛОНКА -->
         <div class="col-12 col-lg-8">
 
-            <!-- МАТЧИ СЕГОДНЯ -->
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px; font-size: 18px;">
                     <i class="bi bi-calendar-event me-2" style="color: #3092b8;"></i> Матчи сегодня
@@ -72,14 +76,12 @@
                 </a>
             </div>
 
-            <!-- Сетка карточек матчей -->
             <div class="row g-2 g-md-3 mb-4 mb-md-5">
                 {% for match in today_matches %}
                 <div class="col-12 col-md-6">
-                    <a href="/matches/{{ match.id }}" class="text-decoration-none">
+                    <!-- Добавлены класс match-popup-trigger и data-match-id -->
+                    <a href="/matches/{{ match.id }}" class="text-decoration-none match-popup-trigger" data-match-id="{{ match.id }}">
                         <div class="card border-0 shadow-sm h-100 hover-card">
-
-                            <!-- Шапка карточки -->
                             <div class="card-header bg-white border-bottom border-light py-2 px-3 d-flex justify-content-between text-muted small">
                                 <span class="text-truncate fw-bold" style="max-width: 65%;">{{ match.tournament.name }}</span>
                                 <span class="text-danger fw-bold">
@@ -87,10 +89,7 @@
                                     {% if match.match_date %}{{ match.match_date.strftime('%H:%M') }}{% else %}TBA{% endif %}
                                 </span>
                             </div>
-
-                            <!-- Тело карточки -->
                             <div class="card-body p-0">
-                                <!-- Хозяева -->
                                 <div class="d-flex justify-content-between align-items-center p-2 px-3 border-bottom border-light">
                                     <div class="d-flex align-items-center gap-2 w-75">
                                         <img src="{{ match.home_team.logo_url or '/static/default_team.png' }}" width="24" height="24" style="object-fit: contain;">
@@ -100,8 +99,6 @@
                                         {{ match.home_score if match.home_score is not none else '-' }}
                                     </span>
                                 </div>
-
-                                <!-- Гости -->
                                 <div class="d-flex justify-content-between align-items-center p-2 px-3">
                                     <div class="d-flex align-items-center gap-2 w-75">
                                         <img src="{{ match.away_team.logo_url or '/static/default_team.png' }}" width="24" height="24" style="object-fit: contain;">
@@ -125,7 +122,8 @@
                 {% endfor %}
             </div>
 
-            <!-- НОВОСТИ ЛИГИ -->
+            <!-- НОВОСТИ -->
+            <!-- (Оставляем без изменений) -->
             <div class="d-flex justify-content-between align-items-center mb-3 mt-4 mt-md-5">
                 <h5 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px; font-size: 18px;">
                     <i class="bi bi-newspaper me-2" style="color: #3092b8;"></i> Новости
@@ -134,15 +132,11 @@
                     Все новости <i class="bi bi-arrow-right ms-1"></i>
                 </a>
             </div>
-
-            <!-- Сетка новостей -->
             <div class="row g-2 g-md-3 mb-4">
                 {% for news in latest_news %}
                 <div class="col-12 col-md-6">
                     <a href="/news/{{ news.id }}" class="text-decoration-none h-100 d-flex flex-column">
                         <div class="card border-0 shadow-sm hover-card h-100" style="border-radius: 8px; overflow: hidden;">
-
-                            <!-- Картинка новости -->
                             <div style="height: 160px; background-color: #e9ecef; overflow: hidden;">
                                 {% if news.image_url %}
                                     <img src="{{ news.image_url }}" class="w-100 h-100 object-fit-cover" alt="{{ news.title }}">
@@ -152,17 +146,13 @@
                                     </div>
                                 {% endif %}
                             </div>
-
-                            <!-- Текст новости -->
                             <div class="card-body p-3 d-flex flex-column">
                                 <div class="text-danger fw-bold mb-1" style="font-size: 11px;">
                                     <i class="bi bi-calendar-event me-1"></i> {{ news.published_at.strftime('%d.%m.%Y') if news.published_at else '' }}
                                 </div>
-
                                 <h6 class="fw-bold text-dark mb-2" style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; font-size: 14px;" title="{{ news.title }}">
                                     {{ news.title }}
                                 </h6>
-
                                 <div class="mt-auto text-decoration-none small fw-bold" style="color: #3092b8; font-size: 12px;">
                                     Читать <i class="bi bi-chevron-right" style="font-size: 10px;"></i>
                                 </div>
@@ -171,66 +161,44 @@
                     </a>
                 </div>
                 {% else %}
-                <div class="col-12">
-                    <div class="alert alert-light border text-center py-4 text-muted">Новостей пока нет.</div>
-                </div>
+                <div class="col-12"><div class="alert alert-light border text-center py-4 text-muted">Новостей пока нет.</div></div>
                 {% endfor %}
             </div>
 
         </div>
 
-        <!-- ========================================== -->
-        <!-- ПРАВАЯ КОЛОНКА (Турнир, Таблица, Бомбардиры, Дисквалификации) -->
-        <!-- ========================================== -->
+        <!-- ПРАВАЯ КОЛОНКА -->
         <div class="col-12 col-lg-4">
-
             {% if tournaments %}
-            <!-- ВЫПАДАЮЩИЙ СПИСОК ТУРНИРОВ -->
+            <!-- Таблица, Бомбардиры, Дисквалификации (Оставляем без изменений) -->
             <div class="mb-3 mb-md-4 shadow-sm" style="border-radius: 8px; overflow: hidden;">
                 <form method="GET" action="/">
-                    <select name="tournament_id" class="form-select border-0 fw-bold text-white"
-                            style="background-color: #3092b8; cursor: pointer; padding: 12px; box-shadow: none;"
-                            onchange="this.form.submit()">
+                    <select name="tournament_id" class="form-select border-0 fw-bold text-white" style="background-color: #3092b8; cursor: pointer; padding: 12px; box-shadow: none;" onchange="this.form.submit()">
                         <option disabled>Выберите турнир...</option>
                         {% for t in tournaments %}
-                            <option value="{{ t.id }}" {% if t.id == selected_tournament_id %}selected{% endif %}
-                                    style="background-color: white; color: #212529; font-weight: 600;">
-                                {{ t.name }}
-                            </option>
+                            <option value="{{ t.id }}" {% if t.id == selected_tournament_id %}selected{% endif %} style="background-color: white; color: #212529; font-weight: 600;">{{ t.name }}</option>
                         {% endfor %}
                     </select>
                 </form>
             </div>
 
-            <!-- ТАБЛИЦА ВЫБРАННОГО ТУРНИРА -->
             <div class="card border-0 shadow-sm mb-3 mb-md-4" style="border-radius: 8px; overflow: hidden;">
-                <div class="card-header bg-dark text-white fw-bold text-uppercase text-center py-2" style="background-color: #0f2537 !important; font-size: 14px;">
-                    Турнирная таблица
-                </div>
-
+                <div class="card-header bg-dark text-white fw-bold text-uppercase text-center py-2" style="background-color: #0f2537 !important; font-size: 14px;">Турнирная таблица</div>
                 <div class="card-body p-0 table-scroll-container">
                     <table class="table table-sm table-hover text-center mb-0 align-middle" style="min-width: 100%;">
                         <thead>
                             <tr style="background-color: #3092b8; color: white;">
-                                <th class="py-2 border-0" style="width: 40px;">#</th>
-                                <th class="py-2 text-start border-0">Команда</th>
-                                <th class="py-2 border-0" style="width: 40px;">И</th>
-                                <th class="py-2 border-0" style="width: 40px;">О</th>
+                                <th class="py-2 border-0" style="width: 40px;">#</th><th class="py-2 text-start border-0">Команда</th><th class="py-2 border-0" style="width: 40px;">И</th><th class="py-2 border-0" style="width: 40px;">О</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for s in standings %}
                             <tr>
                                 <td>
-                                    {% if loop.index == 1 %}
-                                        <span class="medal medal-1">1</span>
-                                    {% elif loop.index == 2 %}
-                                        <span class="medal medal-2">2</span>
-                                    {% elif loop.index == 3 %}
-                                        <span class="medal medal-3">3</span>
-                                    {% else %}
-                                        <span class="medal medal-default">{{ loop.index }}</span>
-                                    {% endif %}
+                                    {% if loop.index == 1 %}<span class="medal medal-1">1</span>
+                                    {% elif loop.index == 2 %}<span class="medal medal-2">2</span>
+                                    {% elif loop.index == 3 %}<span class="medal medal-3">3</span>
+                                    {% else %}<span class="medal medal-default">{{ loop.index }}</span>{% endif %}
                                 </td>
                                 <td class="text-start text-truncate" style="max-width: 150px;">
                                     <a href="/teams/{{ s.team.id }}" class="text-decoration-none d-inline-flex align-items-center" title="{{ s.team.name }}">
@@ -241,32 +209,21 @@
                                 <td class="text-muted">{{ s.games_played }}</td>
                                 <td><span class="badge bg-dark rounded-pill px-2">{{ s.points }}</span></td>
                             </tr>
-                            {% else %}
-                            <tr><td colspan="4" class="text-muted py-3">Нет данных</td></tr>
-                            {% endfor %}
+                            {% else %}<tr><td colspan="4" class="text-muted py-3">Нет данных</td></tr>{% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- БОМБАРДИРЫ -->
             <div class="card border-0 shadow-sm mb-3 mb-md-4" style="border-radius: 8px; overflow: hidden;">
-                <div class="card-header bg-dark text-white fw-bold text-uppercase text-center py-2" style="background-color: #0f2537 !important; font-size: 14px;">
-                    Бомбардиры
-                </div>
+                <div class="card-header bg-dark text-white fw-bold text-uppercase text-center py-2" style="background-color: #0f2537 !important; font-size: 14px;">Бомбардиры</div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
                         {% for scorer in top_scorers %}
                         <a href="/player/{{ scorer.id }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-0 border-bottom text-decoration-none">
                             <div class="d-flex align-items-center gap-2">
-                                {% if scorer.photo_url %}
-                                    <img src="{{ scorer.photo_url }}" class="rounded-circle border shadow-sm" style="width: 35px; height: 35px; object-fit: cover;">
-                                {% else %}
-                                    <div class="rounded-circle bg-light border d-flex justify-content-center align-items-center shadow-sm" style="width: 35px; height: 35px;">
-                                        <i class="bi bi-person text-muted"></i>
-                                    </div>
-                                {% endif %}
-
+                                {% if scorer.photo_url %}<img src="{{ scorer.photo_url }}" class="rounded-circle border shadow-sm" style="width: 35px; height: 35px; object-fit: cover;">
+                                {% else %}<div class="rounded-circle bg-light border d-flex justify-content-center align-items-center shadow-sm" style="width: 35px; height: 35px;"><i class="bi bi-person text-muted"></i></div>{% endif %}
                                 <div class="text-truncate">
                                     <div class="fw-bold text-dark text-truncate" style="max-width: 160px; font-size: 13px;">{{ scorer.name }}</div>
                                     <div class="text-muted" style="font-size: 11px;">{{ scorer.team_name }}</div>
@@ -274,65 +231,133 @@
                             </div>
                             <span class="badge bg-success bg-opacity-10 text-success border border-success" style="font-size: 13px;">{{ scorer.goals }}</span>
                         </a>
-                        {% else %}
-                        <div class="text-center text-muted py-3" style="font-size: 13px;">Нет забитых голов</div>
-                        {% endfor %}
+                        {% else %}<div class="text-center text-muted py-3" style="font-size: 13px;">Нет забитых голов</div>{% endfor %}
                     </div>
                 </div>
             </div>
 
-            <!-- ДИСКВАЛИФИКАЦИИ -->
             <div class="card border-0 shadow-sm mb-4" style="border-radius: 8px; overflow: hidden;">
-                <div class="card-header bg-dark text-white fw-bold text-uppercase text-center py-2" style="background-color: #0f2537 !important; font-size: 14px;">
-                    Дисквалификации
-                </div>
+                <div class="card-header bg-dark text-white fw-bold text-uppercase text-center py-2" style="background-color: #0f2537 !important; font-size: 14px;">Дисквалификации</div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush">
                         {% for disq in active_disqualifications %}
                         <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3 border-0 border-bottom">
                             <div class="d-flex align-items-center gap-2">
-                                {% if disq.player.photo_url %}
-                                    <img src="{{ disq.player.photo_url }}" class="rounded-circle border shadow-sm" style="width: 35px; height: 35px; object-fit: cover;">
-                                {% else %}
-                                    <div class="rounded-circle bg-light border d-flex justify-content-center align-items-center shadow-sm" style="width: 35px; height: 35px;">
-                                        <i class="bi bi-person text-muted"></i>
-                                    </div>
-                                {% endif %}
-
+                                {% if disq.player.photo_url %}<img src="{{ disq.player.photo_url }}" class="rounded-circle border shadow-sm" style="width: 35px; height: 35px; object-fit: cover;">
+                                {% else %}<div class="rounded-circle bg-light border d-flex justify-content-center align-items-center shadow-sm" style="width: 35px; height: 35px;"><i class="bi bi-person text-muted"></i></div>{% endif %}
                                 <div class="text-truncate">
                                     <div class="fw-bold text-dark text-truncate" style="max-width: 160px; font-size: 13px;">
-                                        <a href="/player/{{ disq.player.id }}" class="text-dark text-decoration-none">
-                                            {{ disq.player.last_name }} {{ disq.player.first_name[0] if disq.player.first_name else '' }}.
-                                        </a>
+                                        <a href="/player/{{ disq.player.id }}" class="text-dark text-decoration-none">{{ disq.player.last_name }} {{ disq.player.first_name[0] if disq.player.first_name else '' }}.</a>
                                     </div>
-                                    <div class="text-muted" style="font-size: 11px;">
-                                        {{ disq.team.name if disq.team else 'Без команды' }}
-                                    </div>
+                                    <div class="text-muted" style="font-size: 11px;">{{ disq.team.name if disq.team else 'Без команды' }}</div>
                                 </div>
                             </div>
-
                             <div class="text-end">
-                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger" style="font-size: 13px;">
-                                    {{ disq.matches_remaining }}
-                                </span>
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger" style="font-size: 13px;">{{ disq.matches_remaining }}</span>
                                 <div class="text-muted" style="font-size: 9px;">матч(а)</div>
                             </div>
                         </div>
                         {% else %}
-                        <div class="text-center text-muted py-3">
-                            <i class="bi bi-shield-check text-success fs-5 d-block mb-1"></i>
-                            <span style="font-size: 13px;">Нет дисквалифицированных</span>
-                        </div>
+                        <div class="text-center text-muted py-3"><i class="bi bi-shield-check text-success fs-5 d-block mb-1"></i><span style="font-size: 13px;">Нет дисквалифицированных</span></div>
                         {% endfor %}
                     </div>
                 </div>
             </div>
-
             {% else %}
             <div class="alert alert-light border text-center text-muted">Турниров пока нет.</div>
             {% endif %}
-
         </div>
     </div>
 </div>
+
+<!-- КОНТЕЙНЕР ДЛЯ ВСПЛЫВАЮЩЕГО ОКНА -->
+<div id="hover-card"></div>
+
+<script>
+    const matchData = {{ matches_dict | tojson if matches_dict else '{}' }};
+    let hoverTimeout;
+    const hoverCard = document.getElementById('hover-card');
+
+    document.querySelectorAll('.match-popup-trigger').forEach(el => {
+        el.addEventListener('mouseenter', function(e) {
+            clearTimeout(hoverTimeout);
+            const matchId = this.getAttribute('data-match-id');
+            const data = matchData[matchId];
+            if (!data) return;
+
+            let homeGoals = '';
+            let awayGoals = '';
+            if (data.events) {
+                data.events.forEach(ev => {
+                    if (ev.type === 'GOAL' || ev.type === 'PENALTY' || ev.type === 'OWN_GOAL') {
+                        if (ev.team_id === data.home_team_id) {
+                            homeGoals += `<div class="hc-goal-item text-end"><span>${ev.player}</span> <b>${ev.minute}'</b></div>`;
+                        } else if (ev.team_id === data.away_team_id) {
+                            awayGoals += `<div class="hc-goal-item text-start"><b>${ev.minute}'</b> <span>${ev.player}</span></div>`;
+                        }
+                    }
+                });
+            }
+
+            const defaultHomeLogo = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.home_name)}&background=0f2537&color=fff&size=64&rounded=true`;
+            const defaultAwayLogo = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.away_name)}&background=0f2537&color=fff&size=64&rounded=true`;
+            const homeLogoUrl = data.home_logo ? data.home_logo : defaultHomeLogo;
+            const awayLogoUrl = data.away_logo ? data.away_logo : defaultAwayLogo;
+
+            hoverCard.innerHTML = `
+                <div class="hc-header">
+                    <div class="hc-team">
+                        <img src="${homeLogoUrl}" alt="${data.home_name}" onerror="this.onerror=null; this.src='${defaultHomeLogo}';">
+                        <span>${data.home_name}</span>
+                    </div>
+                    <div class="hc-score">${data.home_score} - ${data.away_score}</div>
+                    <div class="hc-team">
+                        <img src="${awayLogoUrl}" alt="${data.away_name}" onerror="this.onerror=null; this.src='${defaultAwayLogo}';">
+                        <span>${data.away_name}</span>
+                    </div>
+                </div>
+                <div class="hc-body">
+                    <div class="hc-tournament">${data.stage_name || 'МАТЧ'}</div>
+                    <div class="hc-date">${data.date}</div>
+                    <div class="hc-stadium"><i class="bi bi-geo-alt-fill text-danger"></i> ${data.stadium}</div>
+                    <div class="hc-events">
+                        <div class="hc-events-left">${homeGoals}</div>
+                        <div class="hc-events-right">${awayGoals}</div>
+                    </div>
+                </div>
+                <div class="hc-footer">
+                    <a href="/matches/${data.id}?tab=preview"><i class="bi bi-eye"></i> ПРЕВЬЮ</a>
+                    <a href="/matches/${data.id}?tab=protocol"><i class="bi bi-file-earmark-text"></i> ПРОТОКОЛ</a>
+                    <a href="/matches/${data.id}?tab=events"><i class="bi bi-list-ul"></i> СОБЫТИЯ</a>
+                </div>
+            `;
+
+            const rect = this.getBoundingClientRect();
+            const cardWidth = 340;
+            const cardHeight = 320;
+
+            let left = rect.left + (rect.width / 2) - (cardWidth / 2);
+            let top = rect.bottom - 1;
+
+            if (rect.bottom + cardHeight > window.innerHeight) {
+                top = rect.top - cardHeight + 1;
+            }
+            if (left < 10) left = 10;
+            if (left + cardWidth > window.innerWidth) left = window.innerWidth - cardWidth - 10;
+
+            hoverCard.style.left = `${left}px`;
+            hoverCard.style.top = `${top}px`;
+            hoverCard.classList.add('show');
+        });
+
+        el.addEventListener('mouseleave', function() {
+            hoverTimeout = setTimeout(() => {
+                hoverCard.classList.remove('show');
+            }, 400);
+        });
+    });
+
+    hoverCard.addEventListener('mouseenter', () => clearTimeout(hoverTimeout));
+    hoverCard.addEventListener('mouseleave', () => hoverCard.classList.remove('show'));
+</script>
 {% endblock %}

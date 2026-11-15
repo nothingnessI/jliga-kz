@@ -41,8 +41,6 @@
     @media (min-width: 768px) {
         .match-layout {
             display: grid;
-            /* 1fr — левая колонка, auto — центр, 1fr — правая */
-            /* Это гарантирует, что центр всегда будет ровно посередине */
             grid-template-columns: 1fr auto 1fr;
             align-items: center;
             gap: 20px;
@@ -52,19 +50,18 @@
             justify-self: start;
             border-right: 1px solid #e9ecef;
             padding-right: 20px;
-            width: 100%; /* Для рамки */
+            width: 100%;
             max-width: 140px;
         }
 
         .match-col-center {
             display: grid;
-            /* Внутри центра тоже 3 колонки: команда - счет - команда */
             grid-template-columns: 1fr auto 1fr;
             align-items: center;
             gap: 15px;
             justify-self: center;
             width: 100%;
-            max-width: 600px; /* Ограничитель, чтобы названия не растягивались на весь экран */
+            max-width: 600px;
         }
 
         .match-col-tournament {
@@ -75,6 +72,41 @@
             max-width: 220px;
         }
     }
+
+    /* ================= ДИЗАЙН HOVER-КАРТОЧКИ ================= */
+    #hover-card {
+        position: fixed; z-index: 9999; width: 340px; background: #ffffff;
+        border-radius: 16px; box-shadow: 0 10px 40px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(0,0,0,0.05);
+        overflow: hidden; opacity: 0; transform: translateY(10px) scale(0.95);
+        transition: opacity 0.2s ease, transform 0.2s ease; pointer-events: none;
+        font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+    }
+    #hover-card.show { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+    #hover-card::before { content: ''; position: absolute; top: -20px; left: 0; width: 100%; height: 20px; background: transparent; }
+
+    .hc-header { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); padding: 16px; display: flex; justify-content: space-between; align-items: center; position: relative; }
+    .hc-score { background: #ffd700; color: #0f172a; font-size: 20px; font-weight: 900; padding: 6px 16px; border-radius: 8px; box-shadow: 0 4px 10px rgba(255, 215, 0, 0.3); z-index: 2; letter-spacing: 1px; flex-shrink: 0; white-space: nowrap; }
+    .hc-team { display: flex; flex-direction: column; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+    .hc-team img { width: 48px; height: 48px; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3)); flex-shrink: 0; }
+    .hc-team span { font-size: 12px; font-weight: 700; color: #ffffff; text-align: center; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; }
+
+    .hc-body { padding: 16px; text-align: center; background: #f8fafc; }
+    .hc-tournament { font-size: 11px; font-weight: 800; color: #3b82f6; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+    .hc-date { font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 4px; }
+    .hc-stadium { font-size: 12px; color: #64748b; margin-bottom: 12px; }
+
+    .hc-events { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px; }
+    .hc-events-left { text-align: right; width: 48%; display: flex; flex-direction: column; gap: 4px; }
+    .hc-events-right { text-align: left; width: 48%; display: flex; flex-direction: column; gap: 4px; }
+    .hc-goal-item { background: #fff; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+    .hc-goal-item span { font-size: 11px; font-weight: 600; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hc-goal-item b { color: #0f172a; font-size: 11px; }
+
+    .hc-footer { display: flex; background: #ffffff; border-top: 1px solid #e2e8f0; }
+    .hc-footer a { flex: 1; text-align: center; padding: 12px 0; color: #64748b; font-size: 11px; font-weight: 800; text-decoration: none; transition: all 0.2s; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .hc-footer a:hover { background: #f1f5f9; color: #0d6efd; }
+    .hc-footer a:not(:last-child) { border-right: 1px solid #e2e8f0; }
+    .hc-footer i { font-size: 16px; }
 </style>
 
 <div class="container py-3 py-md-5" style="max-width: 1200px;">
@@ -113,7 +145,8 @@
     <div class="card border-0 shadow-sm" style="border-radius: 8px; overflow: hidden;">
         <div class="card-body p-0">
             {% for m in matches %}
-            <a href="/matches/{{ m.id }}" class="match-row p-3">
+            <!-- Добавлены класс match-popup-trigger и data-match-id -->
+            <a href="/matches/{{ m.id }}" class="match-row p-3 match-popup-trigger" data-match-id="{{ m.id }}">
 
                 <!-- СЕТКА МАТЧА -->
                 <div class="match-layout">
@@ -207,4 +240,95 @@
     {% endif %}
 
 </div>
+
+<!-- КОНТЕЙНЕР ДЛЯ ВСПЛЫВАЮЩЕГО ОКНА -->
+<div id="hover-card"></div>
+
+<script>
+    const matchData = {{ matches_dict | tojson if matches_dict else '{}' }};
+    let hoverTimeout;
+    const hoverCard = document.getElementById('hover-card');
+
+    document.querySelectorAll('.match-popup-trigger').forEach(el => {
+        el.addEventListener('mouseenter', function(e) {
+            clearTimeout(hoverTimeout);
+            const matchId = this.getAttribute('data-match-id');
+            const data = matchData[matchId];
+            if (!data) return;
+
+            let homeGoals = '';
+            let awayGoals = '';
+            if (data.events) {
+                data.events.forEach(ev => {
+                    if (ev.type === 'GOAL' || ev.type === 'PENALTY' || ev.type === 'OWN_GOAL') {
+                        if (ev.team_id === data.home_team_id) {
+                            homeGoals += `<div class="hc-goal-item text-end"><span>${ev.player}</span> <b>${ev.minute}'</b></div>`;
+                        } else if (ev.team_id === data.away_team_id) {
+                            awayGoals += `<div class="hc-goal-item text-start"><b>${ev.minute}'</b> <span>${ev.player}</span></div>`;
+                        }
+                    }
+                });
+            }
+
+            const defaultHomeLogo = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.home_name)}&background=0f2537&color=fff&size=64&rounded=true`;
+            const defaultAwayLogo = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.away_name)}&background=0f2537&color=fff&size=64&rounded=true`;
+            const homeLogoUrl = data.home_logo ? data.home_logo : defaultHomeLogo;
+            const awayLogoUrl = data.away_logo ? data.away_logo : defaultAwayLogo;
+
+            hoverCard.innerHTML = `
+                <div class="hc-header">
+                    <div class="hc-team">
+                        <img src="${homeLogoUrl}" alt="${data.home_name}" onerror="this.onerror=null; this.src='${defaultHomeLogo}';">
+                        <span>${data.home_name}</span>
+                    </div>
+                    <div class="hc-score">${data.home_score} - ${data.away_score}</div>
+                    <div class="hc-team">
+                        <img src="${awayLogoUrl}" alt="${data.away_name}" onerror="this.onerror=null; this.src='${defaultAwayLogo}';">
+                        <span>${data.away_name}</span>
+                    </div>
+                </div>
+                <div class="hc-body">
+                    <div class="hc-tournament">${data.stage_name || 'МАТЧ'}</div>
+                    <div class="hc-date">${data.date}</div>
+                    <div class="hc-stadium"><i class="bi bi-geo-alt-fill text-danger"></i> ${data.stadium}</div>
+                    <div class="hc-events">
+                        <div class="hc-events-left">${homeGoals}</div>
+                        <div class="hc-events-right">${awayGoals}</div>
+                    </div>
+                </div>
+                <div class="hc-footer">
+                    <a href="/matches/${data.id}?tab=preview"><i class="bi bi-eye"></i> ПРЕВЬЮ</a>
+                    <a href="/matches/${data.id}?tab=protocol"><i class="bi bi-file-earmark-text"></i> ПРОТОКОЛ</a>
+                    <a href="/matches/${data.id}?tab=events"><i class="bi bi-list-ul"></i> СОБЫТИЯ</a>
+                </div>
+            `;
+
+            const rect = this.getBoundingClientRect();
+            const cardWidth = 340;
+            const cardHeight = 320;
+
+            let left = rect.left + (rect.width / 2) - (cardWidth / 2);
+            let top = rect.bottom - 1;
+
+            if (rect.bottom + cardHeight > window.innerHeight) {
+                top = rect.top - cardHeight + 1;
+            }
+            if (left < 10) left = 10;
+            if (left + cardWidth > window.innerWidth) left = window.innerWidth - cardWidth - 10;
+
+            hoverCard.style.left = `${left}px`;
+            hoverCard.style.top = `${top}px`;
+            hoverCard.classList.add('show');
+        });
+
+        el.addEventListener('mouseleave', function() {
+            hoverTimeout = setTimeout(() => {
+                hoverCard.classList.remove('show');
+            }, 400);
+        });
+    });
+
+    hoverCard.addEventListener('mouseenter', () => clearTimeout(hoverTimeout));
+    hoverCard.addEventListener('mouseleave', () => hoverCard.classList.remove('show'));
+</script>
 {% endblock %}
