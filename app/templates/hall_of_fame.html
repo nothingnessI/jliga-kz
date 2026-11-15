@@ -2,445 +2,526 @@
 
 {% block content %}
 <style>
-    /* Стили для карточек зала славы */
-    .hof-card {
-        background: #fff;
-        border-radius: 8px;
-        overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        border: none;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    }
-    .hof-header {
-        background: linear-gradient(135deg, #0f2537 0%, #1e405a 100%);
-        color: white;
-        padding: 20px;
-        position: relative;
-        overflow: hidden;
-    }
-    
-    /* Декоративный кубок на фоне */
-    .hof-bg-icon {
-        position: absolute;
-        right: -20px;
-        bottom: -20px;
-        opacity: 0.05;
-        font-size: 150px;
-        line-height: 1;
-        z-index: 0;
-        pointer-events: none;
+    /* Базовые стили для карточек Зала Славы */
+    .hall-section-title {
+        font-size: 20px;
+        font-weight: 800;
+        color: #0f2537;
+        text-transform: uppercase;
+        margin-bottom: 20px;
+        margin-top: 40px;
     }
 
-    .hof-content { position: relative; z-index: 1; }
-    .hof-title { font-size: 14px; text-transform: uppercase; font-weight: 700; margin-bottom: 15px; letter-spacing: 0.5px; }
-    
-    .hof-leader {
+    .hall-card {
+        border-radius: 8px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+        background: white;
+        height: 100%;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s;
+    }
+    .hall-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    .hall-card-header {
+        background: #1e293b;
+        color: white;
+        padding: 12px 16px;
+        font-weight: 700;
+        font-size: 14px;
+    }
+
+    /* Цветовые темы для Зала Славы */
+    .hof-style-default .hall-card-header { background: #1e293b; }
+    .hof-style-default .hall-hero { background: linear-gradient(135deg, #0f2537 0%, #1a7dab 100%); }
+
+    .hof-style-gold .hall-card-header { background: #111111; color: #ffd700; }
+    .hof-style-gold .hall-hero { background: linear-gradient(135deg, #000000 0%, #d4af37 100%); }
+
+    .hof-style-emerald .hall-card-header { background: #064e3b; }
+    .hof-style-emerald .hall-hero { background: linear-gradient(135deg, #064e3b 0%, #10b981 100%); }
+
+    .hof-style-purple .hall-card-header { background: #2e1065; }
+    .hof-style-purple .hall-hero { background: linear-gradient(135deg, #2e1065 0%, #d946ef 100%); }
+
+    .hof-style-dark .hall-card-header { background: #334155; }
+    .hof-style-dark .hall-hero { background: linear-gradient(135deg, #1e293b 0%, #475569 100%); }
+
+
+    .hall-hero {
+        position: relative;
+        display: flex;
+        align-items: center;
+        padding: 20px 16px;
+        color: white;
+        overflow: hidden;
+    }
+    /* Иконка кубка на фоне */
+    .hall-hero::after {
+        content: '\F2D1';
+        font-family: "bootstrap-icons";
+        position: absolute;
+        right: -10px;
+        bottom: -20px;
+        font-size: 120px;
+        color: rgba(255, 255, 255, 0.1);
+        z-index: 0;
+    }
+
+    .hall-hero-content {
+        position: relative;
+        z-index: 1;
         display: flex;
         align-items: center;
         gap: 15px;
+        width: 100%;
     }
-    .hof-photo-wrapper {
-        width: 80px;
-        height: 80px;
+
+    .hall-hero-avatar {
+        width: 70px;
+        height: 70px;
         border-radius: 50%;
-        background: #fff;
+        background: white;
+        object-fit: contain;
+        padding: 5px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        flex-shrink: 0;
+    }
+    .hall-hero-avatar.round-player {
+        border-radius: 50%;
+        object-fit: cover;
+        padding: 0;
+        border: 3px solid rgba(255,255,255,0.3);
+    }
+
+    .hall-hero-info {
+        flex-grow: 1;
+        min-width: 0;
+    }
+
+    /* СТИЛИ ДЛЯ ССЫЛОК (Чтобы не менялся цвет) */
+    .hall-hero-name {
+        font-size: 16px;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    a.hall-hero-name {
+        color: white;
+        text-decoration: none;
+        display: block;
+    }
+    a.hall-hero-name:hover {
+        text-decoration: underline;
+    }
+
+    .hall-hero-sub {
+        font-size: 12px;
+        color: rgba(255,255,255,0.8);
+        margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .hall-hero-value {
+        font-size: 28px;
+        font-weight: 900;
+        line-height: 1;
+    }
+
+    /* Мини-таблица */
+    .hall-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    .hall-list-item {
         display: flex;
         align-items: center;
-        justify-content: center;
-        border: 3px solid rgba(255,255,255,0.2);
-        flex-shrink: 0;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        padding: 10px 16px;
+        border-bottom: 1px solid #f1f5f9;
+        font-size: 13px;
     }
-    .hof-photo-wrapper img { width: 100%; height: 100%; object-fit: contain; border-radius: 50%; }
-    .hof-photo-wrapper img.cover { object-fit: cover; }
-    
-    .hof-leader-info { flex-grow: 1; }
-    .hof-leader-name { font-size: 18px; font-weight: 800; margin: 0 0 5px 0; line-height: 1.1; }
-    .hof-leader-team { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 600; margin-bottom: 5px;}
-    .hof-leader-stat { font-size: 36px; font-weight: 800; line-height: 1; margin: 0; }
+    .hall-list-item:last-child {
+        border-bottom: none;
+    }
+    .hall-list-rank {
+        width: 20px;
+        color: #64748b;
+        font-weight: 600;
+    }
+    .hall-list-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        object-fit: contain;
+        background: #f8fafc;
+        margin-right: 10px;
+        flex-shrink: 0;
+    }
+    .hall-list-avatar.round-player {
+        object-fit: cover;
+    }
 
-    /* Таблица */
-    .hof-table { margin: 0; font-size: 14px; }
-    .hof-table td { vertical-align: middle; padding: 12px 15px; border-bottom: 1px solid #f1f5f9; }
-    .hof-table tr:last-child td { border-bottom: none; }
-    .hof-table .pos { font-weight: 800; color: #64748b; width: 30px; text-align: center; }
-    .hof-table .name { font-weight: 700; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
-    .hof-table .team { font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 600; display: block;}
-    .hof-table .stat { font-weight: 800; color: #0f2537; text-align: right; }
-    
-    .hof-avatar { width: 28px; height: 28px; object-fit: contain; border-radius: 50%; margin-right: 10px; background: #f8fafc;}
-    .hof-avatar.cover { object-fit: cover; }
+    /* СТИЛИ ДЛЯ ССЫЛОК В СПИСКЕ */
+    .hall-list-name {
+        flex-grow: 1;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    a.hall-list-name {
+        color: #1e293b;
+        text-decoration: none;
+        display: block;
+    }
+    a.hall-list-name:hover {
+        color: #0d6efd;
+    }
 
-    .hof-footer { text-align: center; padding: 12px; border-top: 1px solid #f1f5f9; background: #f8fafc; margin-top: auto;}
-    .hof-footer a { text-decoration: none; font-weight: 700; color: #3092b8; font-size: 13px; text-transform: uppercase; }
-    .hof-footer a:hover { color: #0f2537; }
+    .hall-list-sub {
+        font-size: 10px;
+        color: #94a3b8;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .hall-list-value {
+        font-weight: 800;
+        color: #0f2537;
+        margin-left: 10px;
+    }
 
-    /* Раздел */
-    .hof-section-title {
-        font-size: 28px; font-weight: 800; text-transform: uppercase; color: #0f2537; margin: 40px 0 20px;
-        border-left: 5px solid #d8232a; padding-left: 15px; letter-spacing: 1px;
+    .hall-footer {
+        padding: 12px;
+        text-align: center;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+    }
+    .hall-footer a {
+        font-size: 12px;
+        color: #0d6efd;
+        text-decoration: none;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    .hall-footer a:hover {
+        text-decoration: underline;
     }
 </style>
 
-<div class="container py-5">
-    <h1 class="fw-bold text-uppercase text-center mb-5" style="color: #0f2537; letter-spacing: 2px;">Зал славы</h1>
+<div class="container py-4 py-md-5">
 
-    <!-- ==================== КОМАНДЫ ==================== -->
-    <h3 class="hof-section-title">Команды</h3>
-    <div class="row g-4">
-        
-        <!-- 1. Игры -->
-        <div class="col-md-6 col-xl-3">
-            <div class="hof-card">
-                <div class="hof-header">
-                    <i class="bi bi-trophy-fill hof-bg-icon"></i>
-                    <div class="hof-content">
-                        <div class="hof-title">Игры</div>
-                        {% if teams_games %}
-                        {% set top = teams_games[0] %}
-                        <div class="hof-leader">
-                            <div class="hof-photo-wrapper">
-                                <img src="{{ top.team.logo_url or '/static/default_team.png' }}">
-                            </div>
-                            <div class="hof-leader-info">
-                                <h4 class="hof-leader-name text-truncate">{{ top.team.name }}</h4>
-                                <p class="hof-leader-stat">{{ top.games }}</p>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <table class="table hof-table">
-                    <tbody>
-                        {% for item in teams_games[1:5] %}
-                        <tr>
-                            <td class="pos">{{ loop.index + 1 }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img src="{{ item.team.logo_url or '/static/default_team.png' }}" class="hof-avatar">
-                                    <div class="name text-truncate">{{ item.team.name }}</div>
-                                </div>
-                            </td>
-                            <td class="stat">{{ item.games }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                <div class="hof-footer"><a href="/participants/teams">Все команды</a></div>
-            </div>
-        </div>
-
-        <!-- 2. Победы -->
-        <div class="col-md-6 col-xl-3">
-            <div class="hof-card">
-                <div class="hof-header">
-                    <i class="bi bi-trophy-fill hof-bg-icon"></i>
-                    <div class="hof-content">
-                        <div class="hof-title">Победы</div>
-                        {% if teams_wins %}
-                        {% set top = teams_wins[0] %}
-                        <div class="hof-leader">
-                            <div class="hof-photo-wrapper">
-                                <img src="{{ top.team.logo_url or '/static/default_team.png' }}">
-                            </div>
-                            <div class="hof-leader-info">
-                                <h4 class="hof-leader-name text-truncate">{{ top.team.name }}</h4>
-                                <p class="hof-leader-stat">{{ top.wins }}</p>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <table class="table hof-table">
-                    <tbody>
-                        {% for item in teams_wins[1:5] %}
-                        <tr>
-                            <td class="pos">{{ loop.index + 1 }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img src="{{ item.team.logo_url or '/static/default_team.png' }}" class="hof-avatar">
-                                    <div class="name text-truncate">{{ item.team.name }}</div>
-                                </div>
-                            </td>
-                            <td class="stat">{{ item.wins }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                <div class="hof-footer"><a href="/participants/teams">Все команды</a></div>
-            </div>
-        </div>
-
-        <!-- 3. Матчи на ноль -->
-        <div class="col-md-6 col-xl-3">
-            <div class="hof-card">
-                <div class="hof-header">
-                    <i class="bi bi-shield-fill hof-bg-icon"></i>
-                    <div class="hof-content">
-                        <div class="hof-title">Матчи на ноль</div>
-                        {% if teams_cs %}
-                        {% set top = teams_cs[0] %}
-                        <div class="hof-leader">
-                            <div class="hof-photo-wrapper">
-                                <img src="{{ top.team.logo_url or '/static/default_team.png' }}">
-                            </div>
-                            <div class="hof-leader-info">
-                                <h4 class="hof-leader-name text-truncate">{{ top.team.name }}</h4>
-                                <p class="hof-leader-stat">{{ top.clean_sheets }}</p>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <table class="table hof-table">
-                    <tbody>
-                        {% for item in teams_cs[1:5] %}
-                        <tr>
-                            <td class="pos">{{ loop.index + 1 }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img src="{{ item.team.logo_url or '/static/default_team.png' }}" class="hof-avatar">
-                                    <div class="name text-truncate">{{ item.team.name }}</div>
-                                </div>
-                            </td>
-                            <td class="stat">{{ item.clean_sheets }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                <div class="hof-footer"><a href="/participants/teams">Все команды</a></div>
-            </div>
-        </div>
-
-        <!-- 4. Забитые мячи -->
-        <div class="col-md-6 col-xl-3">
-            <div class="hof-card">
-                <div class="hof-header">
-                    <i class="bi bi-dribbble hof-bg-icon"></i>
-                    <div class="hof-content">
-                        <div class="hof-title">Забитые мячи</div>
-                        {% if teams_goals %}
-                        {% set top = teams_goals[0] %}
-                        <div class="hof-leader">
-                            <div class="hof-photo-wrapper">
-                                <img src="{{ top.team.logo_url or '/static/default_team.png' }}">
-                            </div>
-                            <div class="hof-leader-info">
-                                <h4 class="hof-leader-name text-truncate">{{ top.team.name }}</h4>
-                                <p class="hof-leader-stat">{{ top.goals }}</p>
-                            </div>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <table class="table hof-table">
-                    <tbody>
-                        {% for item in teams_goals[1:5] %}
-                        <tr>
-                            <td class="pos">{{ loop.index + 1 }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img src="{{ item.team.logo_url or '/static/default_team.png' }}" class="hof-avatar">
-                                    <div class="name text-truncate">{{ item.team.name }}</div>
-                                </div>
-                            </td>
-                            <td class="stat">{{ item.goals }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                <div class="hof-footer"><a href="/participants/teams">Все команды</a></div>
-            </div>
-        </div>
+    <!-- ЗАГОЛОВОК СТРАНИЦЫ -->
+    <div class="text-center mb-5">
+        <h1 class="fw-bold text-uppercase" style="color: #0f2537; letter-spacing: 2px;">Зал Славы</h1>
+        <p class="text-muted">Лучшие из лучших за всю историю лиги</p>
     </div>
 
+    <!-- ОБЕРТКА ДЛЯ СТИЛЕЙ -->
+    <div class="hof-style-{{ hof_style }}">
 
-    <!-- ==================== ИГРОКИ ==================== -->
-    <h3 class="hof-section-title mt-5">Игроки</h3>
-    <div class="row g-4">
+        <!-- ==================== КОМАНДЫ ==================== -->
+        <h3 class="hall-section-title"><i class="bi bi-shield-fill me-2"></i> Команды</h3>
+        <div class="row g-3 g-md-4">
 
-        <!-- 1. Игры -->
-        <div class="col-md-6 col-xl-3">
-            <div class="hof-card">
-                <div class="hof-header">
-                    <i class="bi bi-person-fill hof-bg-icon"></i>
-                    <div class="hof-content">
-                        <div class="hof-title">Игры</div>
-                        {% if players_games %}
-                        {% set top = players_games[0] %}
-                        <div class="hof-leader">
-                            <div class="hof-photo-wrapper">
-                                <img class="cover" src="{{ top.player.photo_url or '/static/default_player.png' }}">
-                            </div>
-                            <div class="hof-leader-info">
-                                <h4 class="hof-leader-name text-truncate">{{ top.player.last_name }} {{ top.player.first_name }}</h4>
-                                <div class="hof-leader-team text-truncate">{{ top.team.name if top.team else '' }}</div>
-                                <p class="hof-leader-stat">{{ top.games }}</p>
+            <!-- Игры (Команды) -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="hall-card">
+                    <div class="hall-card-header">Игры</div>
+                    {% if teams_games %}
+                    <div class="hall-hero">
+                        <div class="hall-hero-content">
+                            <img src="{{ teams_games[0].team.logo_url or 'https://ui-avatars.com/api/?name=' ~ teams_games[0].team.name ~ '&background=fff&color=0f2537&size=64' }}" class="hall-hero-avatar">
+                            <div class="hall-hero-info">
+                                <a href="/teams/{{ teams_games[0].team.id }}" class="hall-hero-name">{{ teams_games[0].team.name }}</a>
+                                <div class="hall-hero-value">{{ teams_games[0].games }}</div>
                             </div>
                         </div>
-                        {% endif %}
                     </div>
-                </div>
-                <table class="table hof-table">
-                    <tbody>
-                        {% for item in players_games[1:5] %}
-                        <tr>
-                            <td class="pos">{{ loop.index + 1 }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img class="hof-avatar cover" src="{{ item.player.photo_url or '/static/default_player.png' }}">
-                                    <div>
-                                        <div class="name text-truncate">{{ item.player.last_name }}</div>
-                                        <span class="team text-truncate">{{ item.team.name if item.team else '' }}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="stat">{{ item.games }}</td>
-                        </tr>
+                    {% endif %}
+                    <ul class="hall-list">
+                        {% for item in teams_games[1:] %}
+                        <li class="hall-list-item">
+                            <div class="hall-list-rank">{{ loop.index + 1 }}</div>
+                            <img src="{{ item.team.logo_url or 'https://ui-avatars.com/api/?name=' ~ item.team.name ~ '&background=f8fafc&color=0f2537&size=24' }}" class="hall-list-avatar">
+                            <a href="/teams/{{ item.team.id }}" class="hall-list-name">{{ item.team.name }}</a>
+                            <div class="hall-list-value">{{ item.games }}</div>
+                        </li>
                         {% endfor %}
-                    </tbody>
-                </table>
-                <div class="hof-footer"><a href="/participants/players">Все игроки</a></div>
+                    </ul>
+                    <div class="hall-footer"><a href="/participants/teams">Все команды</a></div>
+                </div>
             </div>
-        </div>
 
-        <!-- 2. Гол + Пас -->
-        <div class="col-md-6 col-xl-3">
-            <div class="hof-card">
-                <div class="hof-header">
-                    <i class="bi bi-star-fill hof-bg-icon"></i>
-                    <div class="hof-content">
-                        <div class="hof-title">Гол + Пас</div>
-                        {% if players_ga %}
-                        {% set top = players_ga[0] %}
-                        <div class="hof-leader">
-                            <div class="hof-photo-wrapper">
-                                <img class="cover" src="{{ top.player.photo_url or '/static/default_player.png' }}">
-                            </div>
-                            <div class="hof-leader-info">
-                                <h4 class="hof-leader-name text-truncate">{{ top.player.last_name }} {{ top.player.first_name }}</h4>
-                                <div class="hof-leader-team text-truncate">{{ top.team.name if top.team else '' }}</div>
-                                <p class="hof-leader-stat">{{ top.goals + top.assists }}</p>
+            <!-- Победы (Команды) -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="hall-card">
+                    <div class="hall-card-header">Победы</div>
+                    {% if teams_wins %}
+                    <div class="hall-hero">
+                        <div class="hall-hero-content">
+                            <img src="{{ teams_wins[0].team.logo_url or 'https://ui-avatars.com/api/?name=' ~ teams_wins[0].team.name ~ '&background=fff&color=0f2537&size=64' }}" class="hall-hero-avatar">
+                            <div class="hall-hero-info">
+                                <a href="/teams/{{ teams_wins[0].team.id }}" class="hall-hero-name">{{ teams_wins[0].team.name }}</a>
+                                <div class="hall-hero-value">{{ teams_wins[0].wins }}</div>
                             </div>
                         </div>
-                        {% endif %}
                     </div>
-                </div>
-                <table class="table hof-table">
-                    <tbody>
-                        {% for item in players_ga[1:5] %}
-                        <tr>
-                            <td class="pos">{{ loop.index + 1 }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img class="hof-avatar cover" src="{{ item.player.photo_url or '/static/default_player.png' }}">
-                                    <div>
-                                        <div class="name text-truncate">{{ item.player.last_name }}</div>
-                                        <span class="team text-truncate">{{ item.team.name if item.team else '' }}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="stat">{{ item.goals + item.assists }}</td>
-                        </tr>
+                    {% endif %}
+                    <ul class="hall-list">
+                        {% for item in teams_wins[1:] %}
+                        <li class="hall-list-item">
+                            <div class="hall-list-rank">{{ loop.index + 1 }}</div>
+                            <img src="{{ item.team.logo_url or 'https://ui-avatars.com/api/?name=' ~ item.team.name ~ '&background=f8fafc&color=0f2537&size=24' }}" class="hall-list-avatar">
+                            <a href="/teams/{{ item.team.id }}" class="hall-list-name">{{ item.team.name }}</a>
+                            <div class="hall-list-value">{{ item.wins }}</div>
+                        </li>
                         {% endfor %}
-                    </tbody>
-                </table>
-                <div class="hof-footer"><a href="/participants/players">Все игроки</a></div>
+                    </ul>
+                    <div class="hall-footer"><a href="/participants/teams">Все команды</a></div>
+                </div>
             </div>
-        </div>
 
-        <!-- 3. Бомбардиры -->
-        <div class="col-md-6 col-xl-3">
-            <div class="hof-card">
-                <div class="hof-header">
-                    <i class="bi bi-dribbble hof-bg-icon"></i>
-                    <div class="hof-content">
-                        <div class="hof-title">Бомбардиры</div>
-                        {% if players_goals %}
-                        {% set top = players_goals[0] %}
-                        <div class="hof-leader">
-                            <div class="hof-photo-wrapper">
-                                <img class="cover" src="{{ top.player.photo_url or '/static/default_player.png' }}">
-                            </div>
-                            <div class="hof-leader-info">
-                                <h4 class="hof-leader-name text-truncate">{{ top.player.last_name }} {{ top.player.first_name }}</h4>
-                                <div class="hof-leader-team text-truncate">{{ top.team.name if top.team else '' }}</div>
-                                <p class="hof-leader-stat">{{ top.goals }}</p>
+            <!-- Матчи на ноль (Команды) -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="hall-card">
+                    <div class="hall-card-header">Матчи на ноль</div>
+                    {% if teams_cs %}
+                    <div class="hall-hero">
+                        <div class="hall-hero-content">
+                            <img src="{{ teams_cs[0].team.logo_url or 'https://ui-avatars.com/api/?name=' ~ teams_cs[0].team.name ~ '&background=fff&color=0f2537&size=64' }}" class="hall-hero-avatar">
+                            <div class="hall-hero-info">
+                                <a href="/teams/{{ teams_cs[0].team.id }}" class="hall-hero-name">{{ teams_cs[0].team.name }}</a>
+                                <div class="hall-hero-value">{{ teams_cs[0].clean_sheets }}</div>
                             </div>
                         </div>
-                        {% endif %}
                     </div>
-                </div>
-                <table class="table hof-table">
-                    <tbody>
-                        {% for item in players_goals[1:5] %}
-                        <tr>
-                            <td class="pos">{{ loop.index + 1 }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img class="hof-avatar cover" src="{{ item.player.photo_url or '/static/default_player.png' }}">
-                                    <div>
-                                        <div class="name text-truncate">{{ item.player.last_name }}</div>
-                                        <span class="team text-truncate">{{ item.team.name if item.team else '' }}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="stat">{{ item.goals }}</td>
-                        </tr>
+                    {% endif %}
+                    <ul class="hall-list">
+                        {% for item in teams_cs[1:] %}
+                        <li class="hall-list-item">
+                            <div class="hall-list-rank">{{ loop.index + 1 }}</div>
+                            <img src="{{ item.team.logo_url or 'https://ui-avatars.com/api/?name=' ~ item.team.name ~ '&background=f8fafc&color=0f2537&size=24' }}" class="hall-list-avatar">
+                            <a href="/teams/{{ item.team.id }}" class="hall-list-name">{{ item.team.name }}</a>
+                            <div class="hall-list-value">{{ item.clean_sheets }}</div>
+                        </li>
                         {% endfor %}
-                    </tbody>
-                </table>
-                <div class="hof-footer"><a href="/participants/players">Все игроки</a></div>
+                    </ul>
+                    <div class="hall-footer"><a href="/participants/teams">Все команды</a></div>
+                </div>
             </div>
-        </div>
 
-        <!-- 4. Ассистенты -->
-        <div class="col-md-6 col-xl-3">
-            <div class="hof-card">
-                <div class="hof-header">
-                    <i class="bi bi-bullseye hof-bg-icon"></i>
-                    <div class="hof-content">
-                        <div class="hof-title">Ассистенты</div>
-                        {% if players_assists %}
-                        {% set top = players_assists[0] %}
-                        <div class="hof-leader">
-                            <div class="hof-photo-wrapper">
-                                <img class="cover" src="{{ top.player.photo_url or '/static/default_player.png' }}">
-                            </div>
-                            <div class="hof-leader-info">
-                                <h4 class="hof-leader-name text-truncate">{{ top.player.last_name }} {{ top.player.first_name }}</h4>
-                                <div class="hof-leader-team text-truncate">{{ top.team.name if top.team else '' }}</div>
-                                <p class="hof-leader-stat">{{ top.assists }}</p>
+            <!-- Забитые мячи (Команды) -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="hall-card">
+                    <div class="hall-card-header">Забитые мячи</div>
+                    {% if teams_goals %}
+                    <div class="hall-hero">
+                        <div class="hall-hero-content">
+                            <img src="{{ teams_goals[0].team.logo_url or 'https://ui-avatars.com/api/?name=' ~ teams_goals[0].team.name ~ '&background=fff&color=0f2537&size=64' }}" class="hall-hero-avatar">
+                            <div class="hall-hero-info">
+                                <a href="/teams/{{ teams_goals[0].team.id }}" class="hall-hero-name">{{ teams_goals[0].team.name }}</a>
+                                <div class="hall-hero-value">{{ teams_goals[0].goals }}</div>
                             </div>
                         </div>
-                        {% endif %}
                     </div>
-                </div>
-                <table class="table hof-table">
-                    <tbody>
-                        {% for item in players_assists[1:5] %}
-                        <tr>
-                            <td class="pos">{{ loop.index + 1 }}</td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img class="hof-avatar cover" src="{{ item.player.photo_url or '/static/default_player.png' }}">
-                                    <div>
-                                        <div class="name text-truncate">{{ item.player.last_name }}</div>
-                                        <span class="team text-truncate">{{ item.team.name if item.team else '' }}</span>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="stat">{{ item.assists }}</td>
-                        </tr>
+                    {% endif %}
+                    <ul class="hall-list">
+                        {% for item in teams_goals[1:] %}
+                        <li class="hall-list-item">
+                            <div class="hall-list-rank">{{ loop.index + 1 }}</div>
+                            <img src="{{ item.team.logo_url or 'https://ui-avatars.com/api/?name=' ~ item.team.name ~ '&background=f8fafc&color=0f2537&size=24' }}" class="hall-list-avatar">
+                            <a href="/teams/{{ item.team.id }}" class="hall-list-name">{{ item.team.name }}</a>
+                            <div class="hall-list-value">{{ item.goals }}</div>
+                        </li>
                         {% endfor %}
-                    </tbody>
-                </table>
-                <div class="hof-footer"><a href="/participants/players">Все игроки</a></div>
+                    </ul>
+                    <div class="hall-footer"><a href="/participants/teams">Все команды</a></div>
+                </div>
             </div>
+
         </div>
 
+
+        <!-- ==================== ИГРОКИ ==================== -->
+        <h3 class="hall-section-title"><i class="bi bi-person-fill me-2"></i> Игроки</h3>
+        <div class="row g-3 g-md-4">
+
+            <!-- Игры (Игроки) -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="hall-card">
+                    <div class="hall-card-header">Игры</div>
+                    {% if players_games %}
+                    <div class="hall-hero">
+                        <div class="hall-hero-content">
+                            {% if players_games[0].player.photo_url %}
+                                <img src="{{ players_games[0].player.photo_url }}" class="hall-hero-avatar round-player">
+                            {% else %}
+                                <div class="hall-hero-avatar round-player d-flex align-items-center justify-content-center bg-light"><i class="bi bi-person text-muted fs-2"></i></div>
+                            {% endif %}
+                            <div class="hall-hero-info">
+                                <a href="/player/{{ players_games[0].player.id }}" class="hall-hero-name">{{ players_games[0].player.last_name }} {{ players_games[0].player.first_name }}</a>
+                                <div class="hall-hero-sub">{{ players_games[0].team.name if players_games[0].team else '' }}</div>
+                                <div class="hall-hero-value">{{ players_games[0].games }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <ul class="hall-list">
+                        {% for item in players_games[1:] %}
+                        <li class="hall-list-item">
+                            <div class="hall-list-rank">{{ loop.index + 1 }}</div>
+                            {% if item.player.photo_url %}
+                                <img src="{{ item.player.photo_url }}" class="hall-list-avatar round-player">
+                            {% else %}
+                                <div class="hall-list-avatar round-player d-flex align-items-center justify-content-center"><i class="bi bi-person text-muted"></i></div>
+                            {% endif %}
+                            <div class="hall-list-name">
+                                <a href="/player/{{ item.player.id }}" class="hall-list-name">{{ item.player.last_name }} {{ item.player.first_name }}</a>
+                                <span class="hall-list-sub">{{ item.team.name if item.team else '' }}</span>
+                            </div>
+                            <div class="hall-list-value">{{ item.games }}</div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="hall-footer"><a href="/participants/players">Все игроки</a></div>
+                </div>
+            </div>
+
+            <!-- Гол+Пас (Игроки) -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="hall-card">
+                    <div class="hall-card-header">Гол + Пас</div>
+                    {% if players_ga %}
+                    <div class="hall-hero">
+                        <div class="hall-hero-content">
+                            {% if players_ga[0].player.photo_url %}
+                                <img src="{{ players_ga[0].player.photo_url }}" class="hall-hero-avatar round-player">
+                            {% else %}
+                                <div class="hall-hero-avatar round-player d-flex align-items-center justify-content-center bg-light"><i class="bi bi-person text-muted fs-2"></i></div>
+                            {% endif %}
+                            <div class="hall-hero-info">
+                                <a href="/player/{{ players_ga[0].player.id }}" class="hall-hero-name">{{ players_ga[0].player.last_name }} {{ players_ga[0].player.first_name }}</a>
+                                <div class="hall-hero-sub">{{ players_ga[0].team.name if players_ga[0].team else '' }}</div>
+                                <div class="hall-hero-value">{{ players_ga[0].goals + players_ga[0].assists }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <ul class="hall-list">
+                        {% for item in players_ga[1:] %}
+                        <li class="hall-list-item">
+                            <div class="hall-list-rank">{{ loop.index + 1 }}</div>
+                            {% if item.player.photo_url %}
+                                <img src="{{ item.player.photo_url }}" class="hall-list-avatar round-player">
+                            {% else %}
+                                <div class="hall-list-avatar round-player d-flex align-items-center justify-content-center"><i class="bi bi-person text-muted"></i></div>
+                            {% endif %}
+                            <div class="hall-list-name">
+                                <a href="/player/{{ item.player.id }}" class="hall-list-name">{{ item.player.last_name }} {{ item.player.first_name }}</a>
+                                <span class="hall-list-sub">{{ item.team.name if item.team else '' }}</span>
+                            </div>
+                            <div class="hall-list-value">{{ item.goals + item.assists }}</div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="hall-footer"><a href="/participants/players">Все игроки</a></div>
+                </div>
+            </div>
+
+            <!-- Бомбардиры (Игроки) -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="hall-card">
+                    <div class="hall-card-header">Бомбардиры</div>
+                    {% if players_goals %}
+                    <div class="hall-hero">
+                        <div class="hall-hero-content">
+                            {% if players_goals[0].player.photo_url %}
+                                <img src="{{ players_goals[0].player.photo_url }}" class="hall-hero-avatar round-player">
+                            {% else %}
+                                <div class="hall-hero-avatar round-player d-flex align-items-center justify-content-center bg-light"><i class="bi bi-person text-muted fs-2"></i></div>
+                            {% endif %}
+                            <div class="hall-hero-info">
+                                <a href="/player/{{ players_goals[0].player.id }}" class="hall-hero-name">{{ players_goals[0].player.last_name }} {{ players_goals[0].player.first_name }}</a>
+                                <div class="hall-hero-sub">{{ players_goals[0].team.name if players_goals[0].team else '' }}</div>
+                                <div class="hall-hero-value">{{ players_goals[0].goals }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <ul class="hall-list">
+                        {% for item in players_goals[1:] %}
+                        <li class="hall-list-item">
+                            <div class="hall-list-rank">{{ loop.index + 1 }}</div>
+                            {% if item.player.photo_url %}
+                                <img src="{{ item.player.photo_url }}" class="hall-list-avatar round-player">
+                            {% else %}
+                                <div class="hall-list-avatar round-player d-flex align-items-center justify-content-center"><i class="bi bi-person text-muted"></i></div>
+                            {% endif %}
+                            <div class="hall-list-name">
+                                <a href="/player/{{ item.player.id }}" class="hall-list-name">{{ item.player.last_name }} {{ item.player.first_name }}</a>
+                                <span class="hall-list-sub">{{ item.team.name if item.team else '' }}</span>
+                            </div>
+                            <div class="hall-list-value">{{ item.goals }}</div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="hall-footer"><a href="/participants/players">Все игроки</a></div>
+                </div>
+            </div>
+
+            <!-- Ассистенты (Игроки) -->
+            <div class="col-12 col-md-6 col-lg-3">
+                <div class="hall-card">
+                    <div class="hall-card-header">Ассистенты</div>
+                    {% if players_assists %}
+                    <div class="hall-hero">
+                        <div class="hall-hero-content">
+                            {% if players_assists[0].player.photo_url %}
+                                <img src="{{ players_assists[0].player.photo_url }}" class="hall-hero-avatar round-player">
+                            {% else %}
+                                <div class="hall-hero-avatar round-player d-flex align-items-center justify-content-center bg-light"><i class="bi bi-person text-muted fs-2"></i></div>
+                            {% endif %}
+                            <div class="hall-hero-info">
+                                <a href="/player/{{ players_assists[0].player.id }}" class="hall-hero-name">{{ players_assists[0].player.last_name }} {{ players_assists[0].player.first_name }}</a>
+                                <div class="hall-hero-sub">{{ players_assists[0].team.name if players_assists[0].team else '' }}</div>
+                                <div class="hall-hero-value">{{ players_assists[0].assists }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    <ul class="hall-list">
+                        {% for item in players_assists[1:] %}
+                        <li class="hall-list-item">
+                            <div class="hall-list-rank">{{ loop.index + 1 }}</div>
+                            {% if item.player.photo_url %}
+                                <img src="{{ item.player.photo_url }}" class="hall-list-avatar round-player">
+                            {% else %}
+                                <div class="hall-list-avatar round-player d-flex align-items-center justify-content-center"><i class="bi bi-person text-muted"></i></div>
+                            {% endif %}
+                            <div class="hall-list-name">
+                                <a href="/player/{{ item.player.id }}" class="hall-list-name">{{ item.player.last_name }} {{ item.player.first_name }}</a>
+                                <span class="hall-list-sub">{{ item.team.name if item.team else '' }}</span>
+                            </div>
+                            <div class="hall-list-value">{{ item.assists }}</div>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="hall-footer"><a href="/participants/players">Все игроки</a></div>
+                </div>
+            </div>
+
+        </div>
     </div>
 </div>
 {% endblock %}

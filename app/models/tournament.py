@@ -43,7 +43,7 @@ class Tournament(Base, TimestampMixin):
 
     jliga_id: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True, index=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0", nullable=False)
-
+    stats_style: Mapped[str | None] = mapped_column(String(50), nullable=True, default="default")
     # =========================================================================
     # РЕГЛАМЕНТ ТУРНИРА
     # =========================================================================

@@ -530,7 +530,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 async def tournament_page(
         tournament_id: int,
         request: Request,
-        show_past: bool = False,  # <--- Параметр для календаря
+        show_past: bool = True,
         db: AsyncSession = Depends(get_db)
 ):
     import re
@@ -2218,19 +2218,23 @@ async def admin_tournament_create(
         age_category: str = Form(...),
         status: TournamentStatus = Form(...),
         max_teams: int = Form(...),
-        tournament_format: str = Form(None), # Принимаем строкой, чтобы избежать 422
+        tournament_format: str = Form(None),
         sort_order: int = Form(0),
+        stats_style: str = Form("default"),  # <--- НОВОЕ ПОЛЕ
         logo: UploadFile = File(None),
         db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
+    # 1. Загружаем логотип
     logo_url = await save_upload_file(logo, "tournaments")
+
+    # 2. Парсим даты
     start_date = datetime.fromisoformat(start_at) if start_at else None
     end_date = datetime.fromisoformat(end_at) if end_at else None
 
-    # Конвертируем строку в Enum (на случай если пришло маленькими буквами)
+    # 3. Обрабатываем Enum формат
     fmt = None
     if tournament_format:
         try:
@@ -2238,17 +2242,19 @@ async def admin_tournament_create(
         except ValueError:
             pass
 
+    # 4. Создаем турнир
     tournament_in = TournamentCreate(
         name=name, short_name=short_name, menu_category=menu_category,
         show_in_menu=show_in_menu, description=description,
         start_at=start_date, end_at=end_date,
         division=division, season=season, age_category=age_category,
         status=status, max_teams=max_teams, logo_url=logo_url,
-        tournament_format=fmt, sort_order=sort_order
+        tournament_format=fmt, sort_order=sort_order,
+        stats_style=stats_style  # <--- ПЕРЕДАЕМ В БАЗУ
     )
+
     await crud_tournament.create(db, obj_in=tournament_in)
     return RedirectResponse(url="/admin/tournaments", status_code=303)
-
 
 
 @router.get("/admin/tournaments/{tournament_id}/edit")
@@ -2293,21 +2299,27 @@ async def admin_tournament_edit(
         max_teams: int = Form(...),
         tournament_format: str = Form(None),
         sort_order: int = Form(0),
+        stats_style: str = Form("default"),
         logo: UploadFile = File(None),
         db: AsyncSession = Depends(get_db)
 ):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
+    # 1. Получаем турнир
     tournament = await crud_tournament.get(db, tournament_id)
-    if not tournament: return RedirectResponse(url="/admin/tournaments", status_code=303)
+    if not tournament:
+        return RedirectResponse(url="/admin/tournaments", status_code=303)
 
+    # 2. Обновляем логотип (если загружен новый)
     new_logo_url = await save_upload_file(logo, "tournaments")
     final_logo_url = new_logo_url if new_logo_url else tournament.logo_url
 
+    # 3. Парсим даты
     start_date = datetime.fromisoformat(start_at) if start_at else None
     end_date = datetime.fromisoformat(end_at) if end_at else None
 
+    # 4. Обрабатываем Enum формат
     fmt = None
     if tournament_format:
         try:
@@ -2315,24 +2327,29 @@ async def admin_tournament_edit(
         except ValueError:
             pass
 
+    # 5. Обновляем данные
     tournament_in = TournamentUpdate(
         name=name, short_name=short_name, menu_category=menu_category,
         show_in_menu=show_in_menu, description=description,
         start_at=start_date, end_at=end_date,
         division=division, season=season, age_category=age_category,
         status=status, max_teams=max_teams, logo_url=final_logo_url,
-        tournament_format=fmt, sort_order=sort_order
+        tournament_format=fmt, sort_order=sort_order,
+        stats_style=stats_style  # <--- ПЕРЕДАЕМ В БАЗУ
     )
     await crud_tournament.update(db, db_obj=tournament, obj_in=tournament_in)
 
     # =========================================================================
-    # ЛОГИКА ДЛЯ НОВОСТЕЙ О ЧЕМПИОНЕ (ОСТАВЛЯЕМ КАК БЫЛО)
+    # ЛОГИКА ДЛЯ НОВОСТЕЙ О ЧЕМПИОНЕ (ЕСЛИ ТУРНИР ЗАВЕРШЕН)
     # =========================================================================
     if status == TournamentStatus.FINISHED:
+        # Проверяем, нет ли уже новости о чемпионе
         existing_news = await db.scalar(
             select(News).where(News.tournament_id == tournament_id, News.title.ilike("%Чемпион%"))
         )
+
         if not existing_news:
+            # Находим победителя (1-е место)
             stmt = select(TournamentStanding).where(
                 TournamentStanding.tournament_id == tournament_id
             ).options(selectinload(TournamentStanding.team)).order_by(
@@ -2340,23 +2357,31 @@ async def admin_tournament_edit(
                 (TournamentStanding.goals_for - TournamentStanding.goals_against).desc(),
                 TournamentStanding.goals_for.desc()
             ).limit(1)
+
             winner_standing = (await db.execute(stmt)).scalar_one_or_none()
 
             if winner_standing and winner_standing.team:
                 winner_team = winner_standing.team
                 card_url = None
+
+                # Пытаемся сгенерировать AI-карточку
                 try:
                     from app.services.champion_card import generate_champion_card
                     card_url = await generate_champion_card(db, tournament_id, prompt_index=0)
                 except Exception as e:
                     print(f"  ⚠️ AI-карточка не сгенерирована: {e}")
 
+                # Формируем новость
                 news_title = f"{winner_team.name} - Чемпион {tournament.name}"
+
+                # Генерируем slug
                 import re
                 slug = re.sub(r'[^a-z0-9]+', '-', news_title.lower()).strip('-')
-                if not slug: slug = f"champion-{tournament_id}-{int(datetime.now().timestamp())}"
+                if not slug:
+                    slug = f"champion-{tournament_id}-{int(datetime.now().timestamp())}"
 
                 hero_image = card_url or winner_team.logo_url or '/static/default_team.png'
+
                 news_content = f"""
                 <div class="text-center mb-4">
                     <img src="{winner_team.logo_url or '/static/default_team.png'}" style="max-height: 150px; object-fit: contain;" class="mb-3">
@@ -2367,16 +2392,19 @@ async def admin_tournament_edit(
                     <h4 class="mb-0">Очки: {winner_standing.points} | Победы: {winner_standing.wins} | Забито: {winner_standing.goals_for}</h4>
                 </div>
                 """
+
                 new_news = News(
                     title=news_title, slug=slug, content=news_content,
                     image_url=hero_image, published_at=datetime.now(timezone.utc),
                     is_published=True, tournament_id=tournament_id
                 )
+
                 new_news.teams.append(winner_team)
                 db.add(new_news)
                 await db.commit()
 
     return RedirectResponse(url="/admin/tournaments", status_code=303)
+
 
 
 @router.post("/admin/tournaments/{tournament_id}/delete")
@@ -3922,14 +3950,24 @@ async def admin_match_finish(
 
 
 @router.get("/participants/hall-of-fame")
-async def participants_hall_page(request: Request, db: AsyncSession = Depends(get_db)):
-    # ==================== 1. СБОР СТАТИСТИКИ КОМАНД ====================
+async def participants_hall_page(
+        request: Request,
+        db: AsyncSession = Depends(get_db)
+):
+    from sqlalchemy import select, func, desc
+    from app.models.team import Team
+    from app.models.player import Player
+    from app.models.team_player import TeamPlayer
+    from app.models.match import Match
+    from app.models.enums import MatchStatus
+
+    # ==================== 1. СТАТИСТИКА КОМАНД ====================
     stmt_matches = select(Match).where(Match.status == MatchStatus.FINISHED)
     all_matches = (await db.execute(stmt_matches)).scalars().all()
 
-    team_stats = {}  # {team_id: {'games': 0, 'wins': 0, 'goals': 0, 'clean_sheets': 0}}
-
+    team_stats = {}
     for m in all_matches:
+        # Инициализация
         if m.home_team_id not in team_stats: team_stats[m.home_team_id] = {'games': 0, 'wins': 0, 'goals': 0, 'clean_sheets': 0}
         if m.away_team_id not in team_stats: team_stats[m.away_team_id] = {'games': 0, 'wins': 0, 'goals': 0, 'clean_sheets': 0}
 
@@ -3938,7 +3976,6 @@ async def participants_hall_page(request: Request, db: AsyncSession = Depends(ge
 
         h['games'] += 1
         a['games'] += 1
-
         h['goals'] += (m.home_score or 0)
         a['goals'] += (m.away_score or 0)
 
@@ -3963,12 +4000,14 @@ async def participants_hall_page(request: Request, db: AsyncSession = Depends(ge
                 "clean_sheets": stats['clean_sheets']
             })
 
+    # Сортируем и берем топ-5 для каждой категории
     top_teams_games = sorted(teams_list, key=lambda x: x['games'], reverse=True)[:5]
     top_teams_wins = sorted(teams_list, key=lambda x: x['wins'], reverse=True)[:5]
     top_teams_cs = sorted(teams_list, key=lambda x: x['clean_sheets'], reverse=True)[:5]
     top_teams_goals = sorted(teams_list, key=lambda x: x['goals'], reverse=True)[:5]
 
-    # ==================== 2. СБОР СТАТИСТИКИ ИГРОКОВ ====================
+    # ==================== 2. СТАТИСТИКА ИГРОКОВ ====================
+    # Загружаем всех игроков с их статистикой из заявок (суммируем по всем турнирам)
     stmt_tp = select(TeamPlayer).options(
         selectinload(TeamPlayer.player),
         selectinload(TeamPlayer.team)
@@ -3976,7 +4015,6 @@ async def participants_hall_page(request: Request, db: AsyncSession = Depends(ge
     all_tp = (await db.execute(stmt_tp)).scalars().all()
 
     player_stats = {}
-
     for tp in all_tp:
         if not tp.player: continue
         pid = tp.player.id
@@ -3990,6 +4028,7 @@ async def participants_hall_page(request: Request, db: AsyncSession = Depends(ge
         player_stats[pid]['games'] += (tp.stats_games or 0)
         player_stats[pid]['goals'] += (tp.stats_goals or 0)
         player_stats[pid]['assists'] += (tp.stats_assists or 0)
+        if tp.team: player_stats[pid]['team'] = tp.team # Обновляем на актуальную
 
     players_list = list(player_stats.values())
 
@@ -3997,6 +4036,12 @@ async def participants_hall_page(request: Request, db: AsyncSession = Depends(ge
     top_players_ga = sorted(players_list, key=lambda x: (x['goals'] + x['assists']), reverse=True)[:5]
     top_players_goals = sorted(players_list, key=lambda x: x['goals'], reverse=True)[:5]
     top_players_assists = sorted(players_list, key=lambda x: x['assists'], reverse=True)[:5]
+
+    # Получаем стиль из первого турнира (или задаем дефолтный)
+    # В идеале нужно глобальное поле, но пока берем стиль первого турнира или default
+    from app.models.tournament import Tournament
+    first_tournament = await db.scalar(select(Tournament).limit(1))
+    hof_style = getattr(first_tournament, 'stats_style', 'default') or 'default'
 
     return await render_page(request, db, "hall_of_fame.html", context={
         "teams_games": top_teams_games,
@@ -4007,6 +4052,7 @@ async def participants_hall_page(request: Request, db: AsyncSession = Depends(ge
         "players_ga": top_players_ga,
         "players_goals": top_players_goals,
         "players_assists": top_players_assists,
+        "hof_style": hof_style
     })
 
 
@@ -4369,3 +4415,67 @@ def build_matches_dict(matches):
             "stadium": m.stadium or 'Стадион TBA', "events": events_list,
         }
     return matches_dict
+
+
+@router.get("/tournaments/{tournament_id}/stats")
+async def tournament_full_stats_page(
+        tournament_id: int,
+        request: Request,
+        db: AsyncSession = Depends(get_db)
+):
+    from sqlalchemy import func, or_
+    from sqlalchemy.orm import selectinload
+    from app.models.tournament import Tournament
+    from app.models.team_player import TeamPlayer
+    from app.models.player import Player
+    from app.models.tournament_standing import TournamentStanding
+
+    # 1. Получаем турнир
+    tournament = await db.get(Tournament, tournament_id)
+    if not tournament:
+        raise HTTPException(status_code=404, detail="Турнир не найден")
+
+    # 2. Все бомбардиры (без лимита)
+    stmt_goals = select(TeamPlayer).join(Player).where(
+        TeamPlayer.tournament_id == tournament_id,
+        func.coalesce(TeamPlayer.stats_goals, 0) > 0
+    ).options(
+        selectinload(TeamPlayer.player),
+        selectinload(TeamPlayer.team)
+    ).order_by(
+        func.coalesce(TeamPlayer.stats_goals, 0).desc(),
+        func.coalesce(TeamPlayer.stats_games, 0).asc()
+    )
+    stats_goals = (await db.execute(stmt_goals)).scalars().all()
+
+    # 3. Все карточки (без лимита)
+    stmt_cards = select(TeamPlayer).join(Player).where(
+        TeamPlayer.tournament_id == tournament_id,
+        or_(
+            func.coalesce(TeamPlayer.stats_yellow_cards, 0) > 0,
+            func.coalesce(TeamPlayer.stats_red_cards, 0) > 0
+        )
+    ).options(
+        selectinload(TeamPlayer.player),
+        selectinload(TeamPlayer.team)
+    ).order_by(
+        func.coalesce(TeamPlayer.stats_yellow_cards, 0).desc(),
+        func.coalesce(TeamPlayer.stats_red_cards, 0).desc()
+    )
+    stats_cards = (await db.execute(stmt_cards)).scalars().all()
+
+    # 4. Команды (таблица)
+    stmt_standings = select(TournamentStanding).where(
+        TournamentStanding.tournament_id == tournament_id
+    ).options(selectinload(TournamentStanding.team)).order_by(
+        TournamentStanding.points.desc(),
+        (TournamentStanding.goals_for - TournamentStanding.goals_against).desc()
+    )
+    standings = (await db.execute(stmt_standings)).scalars().all()
+
+    return await render_page(request, db, "tournament_stats_full.html", context={
+        "tournament": tournament,
+        "tournament_stats_goals": stats_goals,
+        "tournament_stats_cards": stats_cards,
+        "standings": standings
+    })

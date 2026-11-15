@@ -1,0 +1,313 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+    /* Стили для красивой таблицы */
+    .custom-table thead th {
+        background-color: #f8fafc;
+        color: #64748b;
+        font-size: 12px;
+        text-transform: uppercase;
+        font-weight: 700;
+        border-bottom: 2px solid #e2e8f0;
+        padding: 15px 10px;
+    }
+
+    /* Стили для сортируемых колонок */
+    .custom-table th.sortable {
+        cursor: pointer;
+        user-select: none;
+        position: relative;
+        transition: background-color 0.2s;
+    }
+    .custom-table th.sortable:hover {
+        background-color: #e2e8f0;
+    }
+    .custom-table th.sortable::after {
+        content: '↕';
+        opacity: 0.3;
+        margin-left: 5px;
+        font-size: 14px;
+    }
+    .custom-table th.sort-asc::after {
+        content: '↑';
+        opacity: 1;
+        color: #0d6efd;
+    }
+    .custom-table th.sort-desc::after {
+        content: '↓';
+        opacity: 1;
+        color: #0d6efd;
+    }
+
+    .custom-table tbody td {
+        vertical-align: middle;
+        padding: 12px 10px;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .custom-table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+    .player-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid #e2e8f0;
+        background: #f1f5f9;
+    }
+    .team-logo-sm {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+    }
+    .stat-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 14px;
+    }
+    .badge-goals { background: #dcfce7; color: #166534; }
+    .badge-yellow { background: #fef3c7; color: #92400e; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-points { background: #e0f2fe; color: #075985; }
+</style>
+
+<div class="container py-4" style="max-width: 1000px;">
+
+    <!-- ХЕДЕР -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+        <div>
+            <h3 class="fw-bold text-uppercase m-0" style="color: #0f2537;">
+                Полная статистика
+            </h3>
+            <p class="text-muted m-0">{{ tournament.name }} ({{ tournament.season }})</p>
+        </div>
+        <a href="/tournaments/{{ tournament.id }}?view=stats" class="btn btn-outline-dark fw-bold px-4">
+            <i class="bi bi-arrow-left me-1"></i> Назад к турниру
+        </a>
+    </div>
+
+    <!-- ВКЛАДКИ -->
+    <div class="card border-0 shadow-sm" style="border-radius: 12px; overflow: hidden;">
+        <div class="card-header bg-white p-0 border-bottom">
+            <ul class="nav nav-tabs nav-fill border-0" id="statsTabsFull" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link active fw-bold text-uppercase py-3 border-0" data-bs-toggle="tab" data-bs-target="#all-goals" type="button" style="color: #0f2537; font-size: 14px;">Бомбардиры</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-bold text-uppercase py-3 border-0" data-bs-toggle="tab" data-bs-target="#all-cards" type="button" style="color: #64748b; font-size: 14px;">Карточки</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-bold text-uppercase py-3 border-0" data-bs-toggle="tab" data-bs-target="#all-teams" type="button" style="color: #64748b; font-size: 14px;">Команды</button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body p-0 bg-white">
+            <div class="tab-content" id="statsTabsContent">
+
+                <!-- БОМБАРДИРЫ -->
+                <div class="tab-pane fade show active" id="all-goals" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table custom-table mb-0 sortable-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Игрок</th>
+                                    <th class="text-center sortable" data-sort="number">И</th>
+                                    <th class="text-center sortable" data-sort="number">Г (Пн.)</th>
+                                    <th class="text-center sortable" data-sort="number">Ср.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in tournament_stats_goals %}
+                                <tr>
+                                    <td class="fw-bold text-muted ps-4">{{ loop.index }}</td>
+                                    <td>
+                                        <a href="/player/{{ s.player.id }}" class="d-flex align-items-center gap-3 text-decoration-none text-dark">
+                                            {% if s.player.photo_url %}
+                                                <img src="{{ s.player.photo_url }}" class="player-avatar">
+                                            {% else %}
+                                                <div class="player-avatar d-flex align-items-center justify-content-center">
+                                                    <i class="bi bi-person text-muted"></i>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="fw-bold" style="font-size: 14px;">{{ s.player.last_name }} {{ s.player.first_name }}</div>
+                                                <div class="text-muted small d-flex align-items-center gap-1">
+                                                    <img src="{{ s.team.logo_url or 'https://ui-avatars.com/api/?name=' ~ s.team.name ~ '&background=fff&color=0f2537&size=16' }}" class="team-logo-sm">
+                                                    {{ s.team.name }}
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </td>
+                                    <td class="text-center fw-bold text-muted">{{ s.stats_games or 0 }}</td>
+                                    <td class="text-center">
+                                        <span class="stat-badge badge-goals">{{ s.stats_goals or 0 }}</span>
+                                    </td>
+                                    <td class="text-center fw-bold text-muted">{{ "%.2f"|format(s.stats_goals / s.stats_games) if s.stats_games and s.stats_games > 0 else '0.00' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-center py-5 text-muted">Бомбардиров пока нет</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- КАРТОЧКИ -->
+                <div class="tab-pane fade" id="all-cards" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table custom-table mb-0 sortable-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th>Игрок</th>
+                                    <th class="text-center sortable" data-sort="number">И</th>
+                                    <th class="text-center sortable" data-sort="number">ЖК</th>
+                                    <th class="text-center sortable" data-sort="number">КК</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in tournament_stats_cards %}
+                                <tr>
+                                    <td class="fw-bold text-muted ps-4">{{ loop.index }}</td>
+                                    <td>
+                                        <a href="/player/{{ s.player.id }}" class="d-flex align-items-center gap-3 text-decoration-none text-dark">
+                                            {% if s.player.photo_url %}
+                                                <img src="{{ s.player.photo_url }}" class="player-avatar">
+                                            {% else %}
+                                                <div class="player-avatar d-flex align-items-center justify-content-center">
+                                                    <i class="bi bi-person text-muted"></i>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="fw-bold" style="font-size: 14px;">{{ s.player.last_name }} {{ s.player.first_name }}</div>
+                                                <div class="text-muted small d-flex align-items-center gap-1">
+                                                    <img src="{{ s.team.logo_url or 'https://ui-avatars.com/api/?name=' ~ s.team.name ~ '&background=fff&color=0f2537&size=16' }}" class="team-logo-sm">
+                                                    {{ s.team.name }}
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </td>
+                                    <td class="text-center fw-bold text-muted">{{ s.stats_games or 0 }}</td>
+                                    <td class="text-center">
+                                        <span class="stat-badge badge-yellow">{{ s.stats_yellow_cards or 0 }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="stat-badge badge-red">{{ s.stats_red_cards or 0 }}</span>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="5" class="text-center py-5 text-muted">Предупреждений пока нет</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- КОМАНДЫ -->
+                <div class="tab-pane fade" id="all-teams" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table custom-table mb-0 text-center sortable-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">#</th>
+                                    <th class="text-start">Команда</th>
+                                    <th class="sortable" data-sort="number">И</th>
+                                    <th class="sortable" data-sort="number">В</th>
+                                    <th class="sortable" data-sort="number">Н</th>
+                                    <th class="sortable" data-sort="number">П</th>
+                                    <th class="sortable" data-sort="number">МЗ</th>
+                                    <th class="sortable" data-sort="number">МП</th>
+                                    <th class="sortable" data-sort="number">О</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for s in standings %}
+                                <tr>
+                                    <td class="fw-bold text-muted ps-4">{{ loop.index }}</td>
+                                    <td class="text-start">
+                                        <a href="/tournaments/{{ tournament.id }}/teams/{{ s.team.id }}/application" class="d-flex align-items-center gap-2 text-decoration-none text-dark">
+                                            <img src="{{ s.team.logo_url or 'https://ui-avatars.com/api/?name=' ~ s.team.name ~ '&background=fff&color=0f2537&size=24' }}" style="width: 30px; height: 30px; object-fit: contain;">
+                                            <span class="fw-bold">{{ s.team.name }}</span>
+                                        </a>
+                                    </td>
+                                    <td class="text-muted">{{ s.games_played }}</td>
+                                    <td class="text-success fw-bold">{{ s.wins }}</td>
+                                    <td class="text-warning fw-bold">{{ s.draws }}</td>
+                                    <td class="text-danger fw-bold">{{ s.losses }}</td>
+                                    <td class="text-muted">{{ s.goals_for }}</td>
+                                    <td class="text-muted">{{ s.goals_against }}</td>
+                                    <td><span class="stat-badge badge-points">{{ s.points }}</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- СКРИПТ ДЛЯ СОРТИРОВКИ ТАБЛИЦ -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Находим все таблицы, у которых есть класс sortable-table
+        document.querySelectorAll('.sortable-table').forEach(table => {
+            const headers = table.querySelectorAll('.sortable');
+
+            headers.forEach(header => {
+                header.addEventListener('click', () => {
+                    const tbody = table.querySelector('tbody');
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                    // Если таблица пуста, ничего не делаем
+                    if (rows.length === 1 && rows[0].querySelector('td[colspan]')) return;
+
+                    const sortType = header.getAttribute('data-sort') || 'string';
+
+                    // Проверяем текущее состояние сортировки
+                    let isAsc = header.getAttribute('data-asc') === 'true';
+
+                    // Сбрасываем стрелочки у всех заголовков
+                    headers.forEach(h => {
+                        h.classList.remove('sort-asc', 'sort-desc');
+                        h.removeAttribute('data-asc');
+                    });
+
+                    // Переключаем направление
+                    isAsc = !isAsc;
+                    header.setAttribute('data-asc', isAsc);
+                    header.classList.add(isAsc ? 'sort-asc' : 'sort-desc');
+
+                    // Индекс колонки
+                    const colIndex = Array.from(header.parentNode.children).indexOf(header);
+
+                    // Сортировка строк
+                    rows.sort((a, b) => {
+                        let valA = a.children[colIndex].textContent.trim();
+                        let valB = b.children[colIndex].textContent.trim();
+
+                        if (sortType === 'number') {
+                            valA = parseFloat(valA) || 0;
+                            valB = parseFloat(valB) || 0;
+                            return isAsc ? valA - valB : valB - valA;
+                        } else {
+                            return isAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+                        }
+                    });
+
+                    // Вставляем отсортированные строки обратно в таблицу
+                    tbody.innerHTML = '';
+                    rows.forEach(row => tbody.appendChild(row));
+                });
+            });
+        });
+    });
+</script>
+{% endblock %}

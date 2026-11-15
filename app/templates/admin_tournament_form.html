@@ -43,7 +43,6 @@
                                 <small class="text-muted d-block mb-2 fw-bold"><i class="bi bi-tags-fill me-1"></i> Существующие заголовки:</small>
                                 <div class="d-flex flex-wrap gap-2">
                                     {% for cat in existing_categories %}
-                                        <!-- Заменили span на button для удобства тапов -->
                                         <button type="button" class="btn btn-sm btn-secondary shadow-sm"
                                                 onclick="document.getElementById('menu_category_input').value = this.innerText">
                                             {{ cat }}
@@ -112,7 +111,7 @@
                             <input type="number" name="max_teams" class="form-control" inputmode="numeric" value="{{ tournament.max_teams if tournament else 16 }}" required>
                         </div>
 
-                        <!-- 4. СИСТЕМА И СТАТУС -->
+                        <!-- 4. СИСТЕМА, СТАТУС И СТИЛЬ -->
                         <div class="col-12 col-md-3">
                             <label class="form-label text-danger small fw-bold text-uppercase">Тип системы</label>
                             <select name="tournament_format" class="form-select border-danger">
@@ -149,6 +148,34 @@
                                 <small class="text-success d-block mt-1 text-truncate"><i class="bi bi-check-circle-fill"></i> Логотип загружен</small>
                             {% endif %}
                         </div>
+
+                        <!-- 5. СТИЛЬ СТАТИСТИКИ -->
+                        <div class="col-12 mt-3">
+                            <div class="p-3 bg-light rounded border border-primary shadow-sm">
+                                <label class="form-label text-primary small fw-bold text-uppercase mb-2">
+                                    <i class="bi bi-palette-fill me-1"></i> Стиль карточек статистики (Бомбардиры и др.)
+                                </label>
+                                <select name="stats_style" class="form-select border-primary">
+                                    <option value="default" {% if not tournament or tournament.stats_style == 'default' or not tournament.stats_style %}selected{% endif %}>
+                                        🔵 Классика (Темно-синий + Красный)
+                                    </option>
+                                    <option value="gold" {% if tournament and tournament.stats_style == 'gold' %}selected{% endif %}>
+                                        🟡 Золото (Черный + Золотой)
+                                    </option>
+                                    <option value="emerald" {% if tournament and tournament.stats_style == 'emerald' %}selected{% endif %}>
+                                        🟢 Изумруд (Темно-зеленый + Салатовый)
+                                    </option>
+                                    <option value="purple" {% if tournament and tournament.stats_style == 'purple' %}selected{% endif %}>
+                                        🟣 Неон (Фиолетовый + Розовый)
+                                    </option>
+                                    <option value="dark" {% if tournament and tournament.stats_style == 'dark' %}selected{% endif %}>
+                                        ⚫ Минимализм (Черный + Серый)
+                                    </option>
+                                </select>
+                                <div class="form-text small mt-1">Этот стиль применяется к виджетам бомбардиров и карточек на странице турнира.</div>
+                            </div>
+                        </div>
+
                     </div>
 
                     <!-- КНОПКИ СОХРАНЕНИЯ (Адаптивные) -->
@@ -189,6 +216,10 @@
 
                     <a href="/admin/matches?tournament_id={{ tournament.id }}" class="btn btn-info text-white fw-bold text-start py-2">
                         <i class="bi bi-calendar-event me-2"></i> Матчи турнира
+                    </a>
+
+                    <a href="/admin/media?tournament_id={{ tournament.id }}" class="btn btn-outline-secondary fw-bold text-start py-2 border-2">
+                        <i class="bi bi-images me-2"></i> Медиа турнира
                     </a>
                 </div>
 

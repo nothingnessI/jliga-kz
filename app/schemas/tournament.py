@@ -27,6 +27,7 @@ class TournamentBase(BaseModel):
     tie_breakers: list | None = None
     custom_groups: list | None = None
     menu_category: str | None = None
+    stats_style: str | None = Field("default", max_length=50)
 
 
 class TournamentCreate(TournamentBase):
@@ -54,6 +55,7 @@ class TournamentUpdate(BaseModel):
     tie_breakers: list | None = None
     custom_groups: list | None = None
     menu_category: str | None = None
+    stats_style: str | None = Field(None, max_length=50)
 
 
 class TournamentRead(ORMModel):
@@ -80,6 +82,7 @@ class TournamentRead(ORMModel):
     created_at: datetime
     updated_at: datetime
     menu_category: str | None
+    stats_style: str | None
 
 
 class TournamentReadShort(ORMModel):
@@ -96,3 +99,4 @@ class TournamentReadShort(ORMModel):
     status: TournamentStatus
     logo_url: str | None
     menu_category: str | None
+    stats_style: str | None
