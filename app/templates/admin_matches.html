@@ -11,14 +11,14 @@
 <!-- ПАНЕЛЬ ФИЛЬТРОВ -->
 <div class="card border-0 shadow-sm mb-4">
     <div class="card-body p-3">
-        <!-- Добавили id="searchForm" для JS -->
         <form method="GET" action="/admin/matches" class="d-flex flex-column gap-3" id="searchForm">
 
+            <!-- Поиск по команде -->
             <label for="search-input" class="m-0 w-100" style="cursor: text;">
                 <input type="text" id="search-input" name="search" class="form-control" placeholder="Название команды..." value="{{ current_search or '' }}" autocomplete="off" style="padding: 12px; font-size: 16px;">
             </label>
 
-            <!-- Убрали onchange="this.form.submit()", чтобы форма не грузилась при случайном выборе -->
+            <!-- Фильтр по турниру -->
             <select name="tournament_id" class="form-select" style="padding: 12px; font-size: 16px;">
                 <option value="">Все турниры</option>
                 {% for t in tournaments %}
@@ -28,14 +28,27 @@
                 {% endfor %}
             </select>
 
+            <!-- ФИЛЬТР ПО ДАТАМ -->
+            <div class="row g-2">
+                <div class="col-md-6">
+                    <label class="form-label text-muted small mb-1">Дата от</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ current_date_from or '' }}" style="padding: 10px;">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label text-muted small mb-1">Дата до</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ current_date_to or '' }}" style="padding: 10px;">
+                </div>
+            </div>
+
             <div class="d-flex gap-2">
-                <!-- Добавили id="searchBtn" и спиннер для JS -->
+                <!-- Кнопка Найти -->
                 <button type="submit" id="searchBtn" class="btn btn-secondary flex-grow-1 d-flex justify-content-center align-items-center gap-2" style="padding: 12px;">
                     <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
                     <span id="btnText">Найти</span>
                 </button>
-                {% if current_search or current_tournament_id %}
-                    <a href="/admin/matches" class="btn btn-outline-danger d-flex align-items-center justify-content-center" style="padding: 12px; min-width: 60px;">
+                <!-- Кнопка Сброса -->
+                {% if current_search or current_tournament_id or current_date_from or current_date_to %}
+                    <a href="/admin/matches" class="btn btn-outline-danger d-flex align-items-center justify-content-center" style="padding: 12px; min-width: 60px;" title="Сбросить фильтры">
                         <i class="bi bi-x-lg"></i>
                     </a>
                 {% endif %}
@@ -46,7 +59,7 @@
 
 {% if matches %}
 <div class="alert alert-info py-2 px-3 small border-info shadow-sm mb-3">
-    <i class="bi bi-info-circle me-1"></i> Показаны последние 100 матчей. Если нужного матча нет, воспользуйтесь поиском или фильтром по турниру.
+    <i class="bi bi-info-circle me-1"></i> Показаны последние 100 матчей. Если нужного матча нет, воспользуйтесь поиском, фильтром по турниру или датам.
 </div>
 {% endif %}
 
@@ -89,8 +102,18 @@
                     {% endif %}
                 </div>
 
-                <div class="text-center px-3">
-                    <div class="fw-bold fs-5">
+                <!-- КЛИКАБЕЛЬНЫЙ СЧЕТ -->
+                <div class="text-center px-3" style="cursor: pointer;"
+                     data-bs-toggle="modal" data-bs-target="#quickEditModal"
+                     data-id="{{ match.id }}"
+                     data-date="{{ match.match_date.strftime('%Y-%m-%dT%H:%M') if match.match_date else '' }}"
+                     data-home="{{ match.home_score if match.home_score is not none else '' }}"
+                     data-away="{{ match.away_score if match.away_score is not none else '' }}"
+                     data-hpen="{{ match.home_penalty if match.home_penalty is not none else '' }}"
+                     data-apen="{{ match.away_penalty if match.away_penalty is not none else '' }}"
+                     data-round="{{ match.round or '' }}"
+                     onclick="fillQuickEditModal(this)">
+                    <div class="fw-bold fs-5 text-primary border-bottom border-primary d-inline-block" title="Нажмите для быстрого редактирования">
                         {{ match.home_score if match.home_score is not none else '-' }} : {{ match.away_score if match.away_score is not none else '-' }}
                     </div>
                 </div>
@@ -132,21 +155,89 @@
     {% endfor %}
 </div>
 
-<!-- JS для спиннера загрузки -->
+<!-- МОДАЛЬНОЕ ОКНО БЫСТРОГО РЕДАКТИРОВАНИЯ -->
+<div class="modal fade" id="quickEditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form id="quickEditForm" method="POST" action="">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Быстрое редактирование</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Дата и время</label>
+                        <input type="datetime-local" name="match_date" id="qe-date" class="form-control">
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">Голы хозяев</label>
+                            <input type="number" name="home_score" id="qe-home" class="form-control text-center fw-bold fs-5">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">Голы гостей</label>
+                            <input type="number" name="away_score" id="qe-away" class="form-control text-center fw-bold fs-5">
+                        </div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">Пенальти (Хоз)</label>
+                            <input type="number" name="home_penalty" id="qe-hpen" class="form-control text-center">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label text-muted small fw-bold">Пенальти (Гости)</label>
+                            <input type="number" name="away_penalty" id="qe-apen" class="form-control text-center">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-muted small fw-bold">Тур (раунд)</label>
+                        <input type="number" name="round" id="qe-round" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-success fw-bold"><i class="bi bi-check-lg"></i> Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- JS СКРИПТЫ -->
 <script>
+    // 1. Скрипт для спиннера загрузки (кнопка Найти)
     document.getElementById('searchForm').addEventListener('submit', function() {
         const btn = document.getElementById('searchBtn');
         const text = document.getElementById('btnText');
         const spinner = document.getElementById('btnSpinner');
 
-        // Блокируем кнопку, чтобы не нажать дважды
         btn.disabled = true;
         btn.classList.remove('btn-secondary');
         btn.classList.add('btn-dark');
-
-        // Показываем спиннер и меняем текст
         text.textContent = 'Загрузка...';
         spinner.classList.remove('d-none');
     });
+
+    // 2. Скрипт для заполнения модального окна
+    function fillQuickEditModal(element) {
+        const id = element.getAttribute('data-id');
+        const date = element.getAttribute('data-date');
+        const home = element.getAttribute('data-home');
+        const away = element.getAttribute('data-away');
+        const hpen = element.getAttribute('data-hpen');
+        const apen = element.getAttribute('data-apen');
+        const round = element.getAttribute('data-round');
+
+        // Устанавливаем action формы
+        document.getElementById('quickEditForm').action = `/admin/matches/${id}/quick-update`;
+
+        // Заполняем поля
+        document.getElementById('qe-date').value = date;
+        document.getElementById('qe-home').value = home;
+        document.getElementById('qe-away').value = away;
+        document.getElementById('qe-hpen').value = hpen;
+        document.getElementById('qe-apen').value = apen;
+        document.getElementById('qe-round').value = round;
+    }
 </script>
 {% endblock %}

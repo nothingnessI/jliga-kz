@@ -71,14 +71,15 @@
                             <textarea name="description" class="form-control" rows="2">{{ tournament.description if tournament and tournament.description else '' }}</textarea>
                         </div>
 
+                        <!-- ИЗМЕНЕННЫЙ БЛОК С ДАТАМИ (УБРАНО ВРЕМЯ) -->
                         <div class="col-12 col-md-6">
                             <label class="form-label text-muted small fw-bold text-uppercase">Дата начала</label>
-                            <input type="datetime-local" name="start_at" class="form-control" value="{{ tournament.start_at.strftime('%Y-%m-%dT%H:%M') if tournament and tournament.start_at else '' }}">
+                            <input type="date" name="start_at" class="form-control" value="{{ tournament.start_at.strftime('%Y-%m-%d') if tournament and tournament.start_at else '' }}">
                         </div>
 
                         <div class="col-12 col-md-6">
                             <label class="form-label text-muted small fw-bold text-uppercase">Дата окончания</label>
-                            <input type="datetime-local" name="end_at" class="form-control" value="{{ tournament.end_at.strftime('%Y-%m-%dT%H:%M') if tournament and tournament.end_at else '' }}">
+                            <input type="date" name="end_at" class="form-control" value="{{ tournament.end_at.strftime('%Y-%m-%d') if tournament and tournament.end_at else '' }}">
                         </div>
 
                         <!-- 3. ХАРАКТЕРИСТИКИ -->
