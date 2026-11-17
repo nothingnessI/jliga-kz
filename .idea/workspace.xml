@@ -5,11 +5,15 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7e289f6c-8968-49f0-ac18-b3bedd7dea2b" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/app/services/schedule_generator.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/app/templates/admin_schedule.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/api/v1/pages.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/v1/pages.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_base.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_base.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_matches.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_matches.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_tournament_form.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_tournament_form.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/enums.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/enums.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/models/match.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/match.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/admin_roster.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_roster.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/tournament_detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/tournament_detail.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/parser.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -51,61 +55,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="0.0" />
-      <entry key="S2" value="4.5071774175674126E-129" />
-      <entry key="S5" value="4.587349839577706E-52" />
-      <entry key="S10" value="2.141809944784482E-26" />
-      <entry key="S30" value="2.7771135893434558E-9" />
-      <entry key="S60" value="5.270101627957064E-5" />
-      <entry key="M2" value="0.007628816184475129" />
-      <entry key="M5" value="0.5875647004248133" />
-      <entry key="M10" value="5.224989904083895" />
-      <entry key="M15" value="11.721389694616226" />
-      <entry key="M30" value="31.752884320670695" />
-      <entry key="H1" value="66.12827443902758" />
-      <entry key="H2" value="110.44816351988533" />
-      <entry key="H4" value="183.0682636794767" />
-      <entry key="D1" value="833.5822091277527" />
-      <entry key="W1" value="3544.5945347113347" />
+      <entry key="MS100" value="1.8517792404680926" />
+      <entry key="MS500" value="2.8001638019765265" />
+      <entry key="S2" value="4.451900405263089" />
+      <entry key="S5" value="5.827424219260681" />
+      <entry key="S10" value="6.704888216291441" />
+      <entry key="S30" value="7.54391168988382" />
+      <entry key="S60" value="8.023648910719535" />
+      <entry key="M2" value="8.718639333464573" />
+      <entry key="M5" value="9.713383912600476" />
+      <entry key="M10" value="10.28513969559296" />
+      <entry key="M15" value="10.820463738332347" />
+      <entry key="M30" value="17.277647422516996" />
+      <entry key="H1" value="46.07948370628841" />
+      <entry key="H2" value="107.91053074675091" />
+      <entry key="H4" value="205.45469420344716" />
+      <entry key="D1" value="894.8445838441902" />
+      <entry key="W1" value="3640.3831564509023" />
     </decayedCancelled>
     <decayedSelected>
-      <entry key="MS100" value="1.0001738342523923" />
-      <entry key="MS500" value="1.177021929776818" />
-      <entry key="S2" value="1.648644541442145" />
-      <entry key="S5" value="1.8410129963301876" />
-      <entry key="S10" value="1.91706760728432" />
-      <entry key="S30" value="1.971554388567122" />
-      <entry key="S60" value="1.9856745856757523" />
-      <entry key="M2" value="1.9928283005050287" />
-      <entry key="M5" value="2.0158184040773426" />
-      <entry key="M10" value="2.2092890847081037" />
-      <entry key="M15" value="2.569230729979536" />
-      <entry key="M30" value="4.1944016883324835" />
-      <entry key="H1" value="7.100227194661294" />
-      <entry key="H2" value="10.068953146178748" />
-      <entry key="H4" value="12.356800326412172" />
-      <entry key="D1" value="21.687324471523453" />
-      <entry key="W1" value="187.46398075116053" />
+      <entry key="MS100" value="0.0" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="4.8050845742784185E-230" />
+      <entry key="S30" value="3.635523966802703E-77" />
+      <entry key="S60" value="6.029530634139523E-39" />
+      <entry key="M2" value="7.765005238945404E-20" />
+      <entry key="M5" value="2.2705817583776046E-8" />
+      <entry key="M10" value="1.538615505026754E-4" />
+      <entry key="M15" value="0.0031598019910543205" />
+      <entry key="M30" value="0.10062473500716224" />
+      <entry key="H1" value="0.9855692134197608" />
+      <entry key="H2" value="3.76343777908491" />
+      <entry key="H4" value="7.749038369821437" />
+      <entry key="D1" value="20.694402975011016" />
+      <entry key="W1" value="185.97091855800343" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="2.359097694470992E-4" />
-      <entry key="MS500" value="0.22673592489180647" />
-      <entry key="S2" value="1.1018025284917834" />
-      <entry key="S5" value="1.5683233932038687" />
-      <entry key="S10" value="1.7696715918000547" />
-      <entry key="S30" value="1.9197375667658214" />
-      <entry key="S60" value="1.9594676881917417" />
-      <entry key="M2" value="1.987226225041898" />
-      <entry key="M5" value="2.5979259773629" />
-      <entry key="M10" value="7.431054313503937" />
-      <entry key="M15" value="14.287420451359225" />
-      <entry key="M30" value="35.941996122072204" />
-      <entry key="H1" value="73.22195165923836" />
-      <entry key="H2" value="120.51170243283093" />
-      <entry key="H4" value="195.42147405783754" />
-      <entry key="D1" value="855.2684134646016" />
-      <entry key="W1" value="3732.057191032774" />
+      <entry key="MS100" value="1.2915102729175536" />
+      <entry key="MS500" value="2.5893774137051437" />
+      <entry key="S2" value="4.293367663205777" />
+      <entry key="S5" value="5.654172092329054" />
+      <entry key="S10" value="6.574694803315199" />
+      <entry key="S30" value="7.486159188175644" />
+      <entry key="S60" value="7.992394587207182" />
+      <entry key="M2" value="8.701839054394013" />
+      <entry key="M5" value="9.705868980926283" />
+      <entry key="M10" value="10.281271560565166" />
+      <entry key="M15" value="10.820829079566542" />
+      <entry key="M30" value="17.376514461873235" />
+      <entry key="H1" value="47.063085975811745" />
+      <entry key="H2" value="111.67128509665642" />
+      <entry key="H4" value="213.20110475651262" />
+      <entry key="D1" value="915.5378473068632" />
+      <entry key="W1" value="3826.3527504278686" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -123,52 +127,53 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
-    &quot;JavaScript Debug.admin_match_form.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.index.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.matches.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.players_list.html.executor&quot;: &quot;Run&quot;,
-    &quot;JavaScript Debug.tournament_detail.html.executor&quot;: &quot;Run&quot;,
-    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
-    &quot;Python.check.executor&quot;: &quot;Run&quot;,
-    &quot;Python.conftest.executor&quot;: &quot;Run&quot;,
-    &quot;Python.create_admin.executor&quot;: &quot;Run&quot;,
-    &quot;Python.main.executor&quot;: &quot;Run&quot;,
-    &quot;Python.news.executor&quot;: &quot;Run&quot;,
-    &quot;Python.pages.executor&quot;: &quot;Run&quot;,
-    &quot;Python.parser.executor&quot;: &quot;Run&quot;,
-    &quot;Python.parser_1.executor&quot;: &quot;Run&quot;,
-    &quot;Python.parser_tables.executor&quot;: &quot;Run&quot;,
-    &quot;Python.tournament.executor&quot;: &quot;Run&quot;,
-    &quot;Python.tournaments.executor&quot;: &quot;Run&quot;,
-    &quot;Python.update_stadium.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
-    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
-    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;C:/Users/imran/PycharmProjects/jliga-kz&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.jshint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.jshint&quot;: &quot;&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;python.packages.toolwindow.project.migrated.to.right.top.v2&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.fonts.default&quot;,
-    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "DefaultHtmlFileTemplate": "HTML File",
+    "JavaScript Debug.admin_match_form.html.executor": "Run",
+    "JavaScript Debug.index.html.executor": "Run",
+    "JavaScript Debug.matches.html.executor": "Run",
+    "JavaScript Debug.players_list.html.executor": "Run",
+    "JavaScript Debug.tournament_detail.html.executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "Python tests.Python tests in parser.py.executor": "Run",
+    "Python.check.executor": "Run",
+    "Python.conftest.executor": "Run",
+    "Python.create_admin.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.news.executor": "Run",
+    "Python.pages.executor": "Run",
+    "Python.parser.executor": "Run",
+    "Python.parser_1.executor": "Run",
+    "Python.parser_tables.executor": "Run",
+    "Python.tournament.executor": "Run",
+    "Python.tournaments.executor": "Run",
+    "Python.update_stadium.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "codeWithMe.voiceChat.enabledByDefault": "false",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
+    "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
+    "last_opened_file_path": "C:/Users/imran/PycharmProjects/jliga-kz",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.jshint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.jshint": "",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "python.packages.toolwindow.project.migrated.to.right.top.v2": "true",
+    "settings.editor.selected.configurable": "editor.preferences.fonts.default",
+    "to.speed.mode.migration.done": "true"
   },
-  &quot;keyToStringList&quot;: {
-    &quot;DatabaseDriversLRU&quot;: [
-      &quot;postgresql&quot;
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "postgresql"
     ]
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\imran\PycharmProjects\jliga-kz" />

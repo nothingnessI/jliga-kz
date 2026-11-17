@@ -14,6 +14,7 @@ class TournamentFormat(str, enum.Enum):
 
 
 class MatchStatus(str, enum.Enum):
+    DRAFT = "DRAFT"
     SCHEDULED = "scheduled"
     LIVE = "live"
     FINISHED = "finished"
@@ -49,3 +50,9 @@ class UserRole(str, enum.Enum):
     EDITOR = "editor"
     CAPTAIN = "captain"
     USER = "user"
+
+
+class ScheduleStatus(str, enum.Enum):
+    NOT_GENERATED = "NOT_GENERATED"
+    DRAFT = "DRAFT"
+    APPROVED = "APPROVED"

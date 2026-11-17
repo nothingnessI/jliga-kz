@@ -1,208 +1,313 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
-<!-- Подключаем Tom Select для умного поиска игроков -->
-<link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
-
-<!-- ШАПКА -->
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+<div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-4 gap-3">
     <div>
         <h4 class="fw-bold m-0">Заявка: {{ team.name }}</h4>
-        <span class="text-muted">Управление составом на турнир</span>
+        <small class="text-muted">Управление составом и игроками</small>
     </div>
-    <a href="/admin/teams" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center">
+    <a href="/admin/teams" class="btn btn-outline-secondary d-inline-flex align-items-center">
         <i class="bi bi-arrow-left me-1"></i> Назад к командам
     </a>
 </div>
 
-<!-- ВЫБОР ТУРНИРА -->
-<div class="card border-0 shadow-sm mb-4">
-    <div class="card-body p-3">
-        <form action="/admin/teams/{{ team.id }}/roster" method="get" class="d-flex flex-column flex-sm-row align-items-sm-center gap-2 gap-sm-3">
-            <label class="fw-bold text-muted text-uppercase small m-0 flex-shrink-0">Турнир:</label>
-            <select name="tournament_id" class="form-select" onchange="this.form.submit()" style="font-size: 16px; padding: 12px;">
-                <option value="">-- Выберите турнир --</option>
-                {% for t in tournaments %}
-                    <option value="{{ t.id }}" {% if selected_tournament_id == t.id %}selected{% endif %}>{{ t.name }} ({{ t.season }})</option>
-                {% endfor %}
-            </select>
-            <noscript><button type="submit" class="btn btn-primary w-100">Показать</button></noscript>
-        </form>
+<!-- Уведомления -->
+{% if request.query_params.get('msg') %}
+<div class="alert alert-success alert-dismissible fade show" role="alert">
+    <i class="bi bi-check-circle-fill me-2"></i> Действие успешно выполнено!
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+<!-- ФИЛЬТР ПО ТУРНИРУ -->
+<div class="card border-0 shadow-sm mb-4 bg-light">
+    <div class="card-body p-3 p-md-4">
+        <div class="row align-items-center">
+            <div class="col-12 col-md-3">
+                <label class="form-label fw-bold text-uppercase small mb-0">Фильтр по турниру:</label>
+            </div>
+            <div class="col-12 col-md-9">
+                <select class="form-select"
+                        onchange="window.location.href='/admin/teams/{{ team.id }}/roster' + (this.value ? '?tournament_id=' + this.value : '');">
+                    <option value="" {% if not selected_tournament_id %}selected{% endif %}>-- Показать всех игроков (все турниры) --</option>
+                    {% for t in all_tournaments %}
+                        <option value="{{ t.id }}" {% if selected_tournament_id == t.id %}selected{% endif %}>
+                            {{ t.name }} ({{ t.season }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
     </div>
 </div>
 
-{% if selected_tournament_id %}
-<div class="row g-4">
-
-    <!-- ТЕКУЩИЙ СОСТАВ -->
-    <div class="col-12 col-lg-7">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-header bg-dark text-white fw-bold py-3 d-flex justify-content-between align-items-center">
-                <span><i class="bi bi-people me-2"></i>Заявленные игроки ({{ roster|length }})</span>
-            </div>
-            <div class="card-body p-3 bg-light">
-
-                {% for item in roster %}
-                <!-- КАРТОЧКА ИГРОКА -->
-                <div class="card border-0 shadow-sm mb-2">
-                    <div class="card-body p-2 d-flex align-items-center justify-content-between gap-2">
-
-                        <!-- Номер и Инфо -->
-                        <div class="d-flex align-items-center gap-3 flex-grow-1" style="min-width: 0;">
-                            <!-- Номер -->
-                            <div class="bg-secondary bg-opacity-10 text-dark fw-bold fs-4 rounded d-flex align-items-center justify-content-center flex-shrink-0" style="width: 45px; height: 45px;">
-                                {{ item.jersey_number or '-' }}
-                            </div>
-
-                            <!-- Имя и позиция -->
-                            <div class="text-truncate">
-                                <div class="fw-bold text-dark text-truncate" style="font-size: 15px;">
-                                    {{ item.player.last_name }} {{ item.player.first_name }}
-                                    {% if item.is_captain %}<span class="badge bg-warning text-dark ms-1" title="Капитан">К</span>{% endif %}
-                                </div>
-                                <div class="text-muted small mt-1 d-flex align-items-center gap-2">
-                                    <span>{{ item.player.position.value if item.player.position else 'Амплуа не указано' }}</span>
-                                    {% if not item.is_active %}
-                                        <span class="badge bg-danger" style="font-size: 10px;">Не активен</span>
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h5 class="mb-0 fw-bold">
+            Состав команды
+            {% if selected_tournament_id %}
+                <span class="text-primary">(фильтр по турниру)</span>
+            {% endif %}
+            · {{ roster|length }} чел.
+        </h5>
+        <button class="btn btn-success fw-bold" data-bs-toggle="modal" data-bs-target="#addPlayerModal">
+            <i class="bi bi-person-plus-fill me-1"></i> Добавить игрока
+        </button>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-4" style="width: 80px;">Номер</th>
+                        <th>Игрок</th>
+                        <th>Амплуа</th>
+                        <th>Турнир</th>
+                        <th class="text-end pe-4">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tp in roster %}
+                    <tr>
+                        <td class="ps-4 fw-bold text-center" style="font-size: 1.1rem;">
+                            {{ tp.jersey_number if tp.jersey_number else '—' }}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if tp.player.photo_url %}
+                                    <img src="{{ tp.player.photo_url }}" class="rounded-circle me-3" style="width: 40px; height: 40px; object-fit: cover;">
+                                {% else %}
+                                    <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px; font-weight: bold;">
+                                        {{ tp.player.last_name[0] }}{{ tp.player.first_name[0] }}
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <div class="fw-bold">{{ tp.player.last_name }} {{ tp.player.first_name }}</div>
+                                    {% if tp.player.date_of_birth %}
+                                    <small class="text-muted">{{ tp.player.date_of_birth.strftime('%d.%m.%Y') }}</small>
                                     {% endif %}
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Кнопки действий -->
-                        <div class="d-flex gap-1 flex-shrink-0">
-                            <button type="button" class="btn btn-sm btn-outline-primary"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#editRosterModal"
-                                    onclick="fillRosterModal({{ item.id }}, '{{ item.jersey_number or '' }}', {{ 'true' if item.is_captain else 'false' }}, {{ 'true' if item.is_active else 'false' }})"
-                                    title="Редактировать">
+                        </td>
+                        <td>
+                            {% if tp.player.position %}
+                                <span class="badge bg-info text-dark">{{ tp.player.position.value }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ tp.tournament.name if tp.tournament else 'Нет данных' }}</span>
+                        </td>
+                        <td class="text-end pe-4">
+                            <!-- Кнопка редактирования -->
+                            <button class="btn btn-sm btn-outline-primary edit-btn"
+                                    data-id="{{ tp.id }}"
+                                    data-first_name="{{ tp.player.first_name|default('', true) }}"
+                                    data-last_name="{{ tp.player.last_name|default('', true) }}"
+                                    data-position="{{ tp.player.position.value if tp.player.position else '' }}"
+                                    data-jersey="{{ tp.jersey_number if tp.jersey_number else '' }}"
+                                    data-dob="{{ tp.player.date_of_birth.strftime('%Y-%m-%d') if tp.player.date_of_birth else '' }}"
+                                    data-photo="{{ tp.player.photo_url|default('', true) }}">
                                 <i class="bi bi-pencil"></i>
                             </button>
 
-                            <form action="/admin/roster/{{ item.id }}/delete" method="post" onsubmit="return confirm('Полностью удалить из заявки?');">
+                            <!-- Удаление -->
+                            <form action="/admin/roster/{{ tp.id }}/delete" method="POST" class="d-inline" onsubmit="return confirm('Удалить игрока из состава?');">
                                 <input type="hidden" name="team_id" value="{{ team.id }}">
-                                <input type="hidden" name="tournament_id" value="{{ selected_tournament_id }}">
-                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить"><i class="bi bi-trash"></i></button>
+                                <input type="hidden" name="tournament_id" value="{{ tp.tournament_id }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Удалить">
+                                    <i class="bi bi-trash"></i>
+                                </button>
                             </form>
-                        </div>
-
-                    </div>
-                </div>
-                {% else %}
-                <div class="alert alert-white border text-center py-4 text-muted mb-0">
-                    <i class="bi bi-person-x fs-3 d-block mb-2"></i>
-                    Состав пока пуст.
-                </div>
-                {% endfor %}
-
-            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="bi bi-people display-4 d-block mb-3 opacity-50"></i>
+                            <h5>В команде пока нет игроков</h5>
+                            <p class="mb-0">Нажмите «Добавить игрока», чтобы создать состав.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-
-    <!-- ФОРМА ДОБАВЛЕНИЯ -->
-    <div class="col-12 col-lg-5">
-        <div class="card border-0 shadow-sm bg-light h-100">
-            <div class="card-body p-3">
-                <h6 class="fw-bold mb-3"><i class="bi bi-person-plus me-1"></i> Добавить игрока</h6>
-
-                <form action="/admin/teams/{{ team.id }}/roster/add" method="post">
-                    <input type="hidden" name="tournament_id" value="{{ selected_tournament_id }}">
-
-                    <div class="mb-3">
-                        <label class="form-label text-muted small fw-bold">ИГРОК (начните печатать)</label>
-                        <select name="player_id" id="player-select" class="form-select" required>
-                            <option value="">Выберите...</option>
-                            {% for p in all_players %}
-                                <option value="{{ p.id }}">{{ p.last_name }} {{ p.first_name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-12 col-sm-6">
-                            <label class="form-label text-muted small fw-bold">ИГРОВОЙ НОМЕР</label>
-                            <input type="number" name="jersey_number" class="form-control" min="1" max="99" style="font-size: 16px; padding: 10px;">
-                        </div>
-                        <div class="col-12 col-sm-6 d-flex align-items-end pb-2">
-                            <div class="form-check form-switch fs-5 mb-0">
-                                <input class="form-check-input" type="checkbox" name="is_captain" id="is_captain" value="true">
-                                <label class="form-check-label fs-6 fw-bold text-muted mt-1" for="is_captain">Капитан</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-success w-100 fw-bold py-2">
-                        <i class="bi bi-plus-lg"></i> Добавить в заявку
-                    </button>
-                </form>
-
-            </div>
-        </div>
-    </div>
-
 </div>
 
-<!-- МОДАЛЬНОЕ ОКНО РЕДАКТИРОВАНИЯ -->
-<div class="modal fade" id="editRosterModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered"> <!-- Центрируем на экране -->
-        <div class="modal-content border-0 shadow">
-            <form id="editRosterForm" method="post">
-                <div class="modal-header bg-light">
-                    <h5 class="modal-title fw-bold">Изменить данные</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- МОДАЛКА: ДОБАВЛЕНИЕ -->
+<div class="modal fade" id="addPlayerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <!-- ВАЖНО: enctype для загрузки файлов -->
+            <form action="/admin/teams/{{ team.id }}/roster/add" method="POST" enctype="multipart/form-data">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-person-plus-fill me-2"></i> Новый игрок</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-4">
-                    <div class="mb-4">
-                        <label class="form-label small fw-bold text-muted text-uppercase">Игровой номер</label>
-                        <input type="number" name="jersey_number" class="form-control form-control-lg" id="modal-jersey-number" min="1" max="99" style="font-size: 16px;">
-                    </div>
-                    <div class="form-check form-switch mb-3 fs-5">
-                        <input class="form-check-input" type="checkbox" name="is_captain" id="modal-is-captain">
-                        <label class="form-check-label fs-6 mt-1 fw-bold" for="modal-is-captain">Капитан команды</label>
-                    </div>
-                    <div class="form-check form-switch fs-5">
-                        <input class="form-check-input" type="checkbox" name="is_active" id="modal-is-active">
-                        <label class="form-check-label fs-6 mt-1 fw-bold" for="modal-is-active">Активен в заявке (участвует в играх)</label>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Заявить на турнир *</label>
+                            <select name="tournament_id" class="form-select" required>
+                                <option value="" disabled {% if not selected_tournament_id %}selected{% endif %}>-- Выберите турнир --</option>
+                                {% for t in all_tournaments %}
+                                    <option value="{{ t.id }}" {% if selected_tournament_id == t.id %}selected{% endif %}>
+                                        {{ t.name }} ({{ t.season }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Фамилия *</label>
+                            <input type="text" name="last_name" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Имя *</label>
+                            <input type="text" name="first_name" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Номер</label>
+                            <input type="number" name="jersey_number" class="form-control" min="1" max="99">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Амплуа</label>
+                            <select name="position" class="form-select">
+                                <option value="">-- Не указано --</option>
+                                {% for pos in positions %}
+                                    <option value="{{ pos.value }}">{{ pos.value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Дата рождения</label>
+                            <input type="date" name="date_of_birth" class="form-control">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Фото игрока</label>
+                            <input type="file" name="photo" class="form-control" accept="image/*">
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="submit" class="btn btn-primary fw-bold">Сохранить</button>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-success fw-bold px-4">Добавить в состав</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-<style>
-    /* Фикс для iOS, чтобы не было автозума при клике на поля */
-    .form-control, .form-select, .ts-control {
-        font-size: 16px !important;
-    }
-</style>
+<!-- МОДАЛКА: РЕДАКТИРОВАНИЕ -->
+<div class="modal fade" id="editPlayerModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <!-- ВАЖНО: enctype для загрузки файлов -->
+            <form id="editPlayerForm" method="POST" enctype="multipart/form-data" action="">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i> Редактировать игрока</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Фамилия *</label>
+                            <input type="text" name="last_name" id="edit_last_name" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Имя *</label>
+                            <input type="text" name="first_name" id="edit_first_name" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Номер</label>
+                            <input type="number" name="jersey_number" id="edit_jersey_number" class="form-control" min="1" max="99">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Амплуа</label>
+                            <select name="position" id="edit_position" class="form-select">
+                                <option value="">-- Не указано --</option>
+                                {% for pos in positions %}
+                                    <option value="{{ pos.value }}">{{ pos.value }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-bold text-uppercase text-muted">Дата рождения</label>
+                            <input type="date" name="date_of_birth" id="edit_date_of_birth" class="form-control">
+                        </div>
+
+                        <!-- Блок с фото при редактировании -->
+                        <div class="col-12 border-top pt-3 mt-3">
+                            <div class="d-flex align-items-center mb-2" id="current_photo_container">
+                                <img id="edit_current_photo" src="" class="rounded-circle me-3 d-none" style="width: 50px; height: 50px; object-fit: cover;">
+                                <div>
+                                    <label class="form-label small fw-bold text-uppercase text-muted mb-1">Новое фото (если нужно заменить)</label>
+                                    <input type="file" name="photo" class="form-control form-control-sm" accept="image/*">
+                                </div>
+                            </div>
+                            <div class="form-check" id="remove_photo_container">
+                                <input class="form-check-input" type="checkbox" name="remove_photo" value="1" id="edit_remove_photo">
+                                <label class="form-check-label text-danger small" for="edit_remove_photo">
+                                    Удалить текущее фото
+                                </label>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <div class="modal-footer border-top-0">
+                    <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Отмена</button>
+                    <button type="submit" class="btn btn-primary fw-bold px-4">Сохранить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <script>
-// Логика для модального окна редактирования
-function fillRosterModal(id, number, isCaptain, isActive) {
-    document.getElementById("editRosterForm").action = `/admin/roster/${id}/edit`;
-    document.getElementById("modal-jersey-number").value = number;
-    document.getElementById("modal-is-captain").checked = isCaptain;
-    document.getElementById("modal-is-active").checked = isActive;
-}
+document.addEventListener('DOMContentLoaded', function() {
+    const editBtns = document.querySelectorAll('.edit-btn');
+    const editForm = document.getElementById('editPlayerForm');
+    const editModalEl = document.getElementById('editPlayerModal');
+    const editModal = new bootstrap.Modal(editModalEl);
 
-// Инициализация умного поиска Tom Select
-document.addEventListener("DOMContentLoaded", function() {
-    new TomSelect("#player-select", {
-        create: false,
-        sortField: {
-            field: "text",
-            direction: "asc"
-        },
-        placeholder: "Введите фамилию или имя...",
-        maxOptions: 50
+    editBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const id = this.dataset.id;
+            // Устанавливаем правильный URL для формы
+            editForm.action = `/admin/teams/{{ team.id }}/roster/edit/${id}`;
+
+            // Заполняем текстовые поля (без JSON.parse, чтобы не ломалось)
+            document.getElementById('edit_first_name').value = this.dataset.first_name || '';
+            document.getElementById('edit_last_name').value = this.dataset.last_name || '';
+            document.getElementById('edit_position').value = this.dataset.position || '';
+            document.getElementById('edit_jersey_number').value = this.dataset.jersey || '';
+            document.getElementById('edit_date_of_birth').value = this.dataset.dob || '';
+
+            // Логика с фото
+            const photoUrl = this.dataset.photo;
+            const photoImg = document.getElementById('edit_current_photo');
+            const removeCheckbox = document.getElementById('edit_remove_photo');
+            const removeContainer = document.getElementById('remove_photo_container');
+
+            // Сбрасываем галочку удаления
+            removeCheckbox.checked = false;
+
+            if (photoUrl) {
+                photoImg.src = photoUrl;
+                photoImg.classList.remove('d-none');
+                removeContainer.classList.remove('d-none');
+            } else {
+                photoImg.src = '';
+                photoImg.classList.add('d-none');
+                removeContainer.classList.add('d-none');
+            }
+
+            editModal.show();
+        });
     });
 });
 </script>
-{% endif %}
 {% endblock %}

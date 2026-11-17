@@ -344,13 +344,10 @@
                                             {% else %}
                                                 {% set data = matrix.get((home_team.id, away_team.id)) %}
                                                 {% if data %}
-                                                    {% if data.score == '-:-' or ':-:' in data.score %}
-                                                        <td class="text-muted bg-light">{{ data.score }}</td>
-                                                    {% else %}
-                                                        <td class="grid-match-cell match-popup-trigger {% if data.result == 'W' %}bg-success text-white{% elif data.result == 'L' %}bg-danger text-white{% else %}bg-light{% endif %}" data-match-id="{{ data.match_id }}">
-                                                            {{ data.score }}
-                                                        </td>
-                                                    {% endif %}
+                                                    <!-- Обертка триггера для ВСЕХ матчей (и сыгранных, и нет) -->
+                                                    <td class="grid-match-cell match-popup-trigger {% if data.score == '-:-' or ':-:' in data.score %}text-muted bg-light{% elif data.result == 'W' %}bg-success text-white{% elif data.result == 'L' %}bg-danger text-white{% else %}bg-light{% endif %}" data-match-id="{{ data.match_id }}">
+                                                        {{ data.score }}
+                                                    </td>
                                                 {% else %}
                                                     <td class="text-muted bg-light">-</td>
                                                 {% endif %}
@@ -794,13 +791,16 @@
             const homeLogoUrl = data.home_logo ? data.home_logo : defaultHomeLogo;
             const awayLogoUrl = data.away_logo ? data.away_logo : defaultAwayLogo;
 
+            // Проверка статуса для отображения счета (- : - для несыгранных)
+            const displayScore = (data.status === 'SCHEDULED' || data.status === 'LIVE') ? '- : -' : `${data.home_score} - ${data.away_score}`;
+
             hoverCard.innerHTML = `
                 <div class="hc-header">
                     <div class="hc-team">
                         <img src="${homeLogoUrl}" alt="${data.home_name}" onerror="this.onerror=null; this.src='${defaultHomeLogo}';">
                         <span>${data.home_name}</span>
                     </div>
-                    <div class="hc-score">${data.home_score} - ${data.away_score}</div>
+                    <div class="hc-score">${displayScore}</div>
                     <div class="hc-team">
                         <img src="${awayLogoUrl}" alt="${data.away_name}" onerror="this.onerror=null; this.src='${defaultAwayLogo}';">
                         <span>${data.away_name}</span>

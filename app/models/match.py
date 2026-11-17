@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from lxml.etree import FallbackElementClassLookup
 from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String, Column, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

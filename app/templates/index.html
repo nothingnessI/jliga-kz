@@ -69,7 +69,7 @@
 
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px; font-size: 18px;">
-                    <i class="bi bi-calendar-event me-2" style="color: #3092b8;"></i> Матчи сегодня
+                    <i class="bi bi-calendar-event me-2" style="color: #3092b8;"></i> Ближайшие матчи
                 </h5>
                 <a href="/matches" class="text-decoration-none fw-bold small" style="color: #3092b8;">
                     Весь календарь <i class="bi bi-arrow-right"></i>
@@ -77,16 +77,19 @@
             </div>
 
             <div class="row g-2 g-md-3 mb-4 mb-md-5">
-                {% for match in today_matches %}
+                {% for match in upcoming_matches %}
                 <div class="col-12 col-md-6">
-                    <!-- Добавлены класс match-popup-trigger и data-match-id -->
                     <a href="/matches/{{ match.id }}" class="text-decoration-none match-popup-trigger" data-match-id="{{ match.id }}">
                         <div class="card border-0 shadow-sm h-100 hover-card">
                             <div class="card-header bg-white border-bottom border-light py-2 px-3 d-flex justify-content-between text-muted small">
                                 <span class="text-truncate fw-bold" style="max-width: 65%;">{{ match.tournament.name }}</span>
                                 <span class="text-danger fw-bold">
                                     <i class="bi bi-clock me-1"></i>
-                                    {% if match.match_date %}{{ match.match_date.strftime('%H:%M') }}{% else %}TBA{% endif %}
+                                    {% if match.match_date %}
+                                        {{ match.match_date.strftime('%d.%m %H:%M') }}
+                                    {% else %}
+                                        TBA
+                                    {% endif %}
                                 </span>
                             </div>
                             <div class="card-body p-0">
@@ -116,14 +119,13 @@
                 <div class="col-12">
                     <div class="alert alert-light border text-center py-4 text-muted shadow-sm rounded-3">
                         <i class="bi bi-calendar-x fs-2 d-block mb-2 text-secondary"></i>
-                        <h6 class="fw-bold m-0">Сегодня матчей нет</h6>
+                        <h6 class="fw-bold m-0">Ближайших матчей нет</h6>
                     </div>
                 </div>
                 {% endfor %}
             </div>
 
             <!-- НОВОСТИ -->
-            <!-- (Оставляем без изменений) -->
             <div class="d-flex justify-content-between align-items-center mb-3 mt-4 mt-md-5">
                 <h5 class="fw-bold text-uppercase m-0" style="color: #0f2537; letter-spacing: 1px; font-size: 18px;">
                     <i class="bi bi-newspaper me-2" style="color: #3092b8;"></i> Новости
@@ -170,7 +172,7 @@
         <!-- ПРАВАЯ КОЛОНКА -->
         <div class="col-12 col-lg-4">
             {% if tournaments %}
-            <!-- Таблица, Бомбардиры, Дисквалификации (Оставляем без изменений) -->
+            <!-- Таблица -->
             <div class="mb-3 mb-md-4 shadow-sm" style="border-radius: 8px; overflow: hidden;">
                 <form method="GET" action="/">
                     <select name="tournament_id" class="form-select border-0 fw-bold text-white" style="background-color: #3092b8; cursor: pointer; padding: 12px; box-shadow: none;" onchange="this.form.submit()">
