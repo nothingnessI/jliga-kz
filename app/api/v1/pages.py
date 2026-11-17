@@ -3345,7 +3345,7 @@ async def admin_match_events(match_id: int, request: Request, db: AsyncSession =
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Явно подгружаем матч со всеми связями, включая турнир
+    # 1. Явно подгружаем матч со всеми связями, включая турнир
     stmt = select(Match).where(Match.id == match_id).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
@@ -3356,15 +3356,30 @@ async def admin_match_events(match_id: int, request: Request, db: AsyncSession =
     if not match:
         return RedirectResponse(url="/admin/matches", status_code=303)
 
-    events = await crud_match_event.get_by_match(db, match_id=match_id)
-    home_players = await crud_team_player.get_by_tournament_and_team(db, tournament_id=match.tournament_id,
-                                                                     team_id=match.home_team_id)
-    away_players = await crud_team_player.get_by_tournament_and_team(db, tournament_id=match.tournament_id,
-                                                                     team_id=match.away_team_id)
+    # 2. Делаем прямой запрос к событиям с ЖАДНОЙ ЗАГРУЗКОЙ (selectinload) игроков и команд
+    # Это решает ошибку MissingGreenlet
+    stmt_events = select(MatchEvent).where(MatchEvent.match_id == match_id).options(
+        selectinload(MatchEvent.player),
+        selectinload(MatchEvent.team)
+    ).order_by(MatchEvent.minute)
+
+    events = (await db.execute(stmt_events)).scalars().all()
+
+    # 3. Загружаем заявки команд (для выпадающих списков в форме)
+    home_players = await crud_team_player.get_by_tournament_and_team(
+        db, tournament_id=match.tournament_id, team_id=match.home_team_id
+    )
+    away_players = await crud_team_player.get_by_tournament_and_team(
+        db, tournament_id=match.tournament_id, team_id=match.away_team_id
+    )
 
     return await render_page(request, db, "admin_match_events.html", context={
-        "user": user, "match": match, "events": events,
-        "home_players": home_players, "away_players": away_players, "event_types": MatchEventType
+        "user": user,
+        "match": match,
+        "events": events,
+        "home_players": home_players,
+        "away_players": away_players,
+        "event_types": MatchEventType
     })
 
 
