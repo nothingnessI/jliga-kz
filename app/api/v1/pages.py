@@ -292,7 +292,7 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
         Match.match_date.isnot(None),
         Match.match_date >= start_of_day,
         Match.match_date < end_of_day,
-        Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE])
+        Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE, MatchStatus.FINISHED, MatchStatus.CANCELLED])
     ).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
