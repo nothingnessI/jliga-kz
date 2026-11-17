@@ -37,7 +37,6 @@
                             <input type="text" name="menu_category" id="menu_category_input" class="form-control" value="{{ tournament.menu_category if tournament and tournament.menu_category else '' }}" placeholder="Например: ЧЕМПИОНАТ 2026">
                             <div class="form-text mb-2">Турниры с одинаковым заголовком собираются в одну колонку.</div>
 
-                            <!-- БЛОК СУЩЕСТВУЮЩИХ ПЛАШЕК -->
                             {% if existing_categories %}
                             <div class="p-2 bg-light rounded border">
                                 <small class="text-muted d-block mb-2 fw-bold"><i class="bi bi-tags-fill me-1"></i> Существующие заголовки:</small>
@@ -71,7 +70,6 @@
                             <textarea name="description" class="form-control" rows="2">{{ tournament.description if tournament and tournament.description else '' }}</textarea>
                         </div>
 
-                        <!-- ИЗМЕНЕННЫЙ БЛОК С ДАТАМИ (УБРАНО ВРЕМЯ) -->
                         <div class="col-12 col-md-6">
                             <label class="form-label text-muted small fw-bold text-uppercase">Дата начала</label>
                             <input type="date" name="start_at" class="form-control" value="{{ tournament.start_at.strftime('%Y-%m-%d') if tournament and tournament.start_at else '' }}">
@@ -179,7 +177,7 @@
 
                     </div>
 
-                    <!-- КНОПКИ СОХРАНЕНИЯ (Адаптивные) -->
+                    <!-- КНОПКИ СОХРАНЕНИЯ -->
                     <div class="mt-4 pt-4 border-top d-flex flex-column flex-sm-row gap-2">
                         <button type="submit" class="btn btn-success btn-lg fw-bold px-4 w-100 w-sm-auto">
                             <i class="bi bi-check-lg me-1"></i> Сохранить турнир
@@ -192,7 +190,7 @@
     </div>
 
     <!-- ===================================================================== -->
-    <!-- ПРАВАЯ КОЛОНКА: УПРАВЛЕНИЕ (Только если турнир уже создан) -->
+    <!-- ПРАВАЯ КОЛОНКА: УПРАВЛЕНИЕ (только если турнир создан) -->
     <!-- ===================================================================== -->
     {% if tournament %}
     <div class="col-12 col-lg-4">
@@ -217,6 +215,10 @@
 
                     <a href="/admin/matches?tournament_id={{ tournament.id }}" class="btn btn-info text-white fw-bold text-start py-2">
                         <i class="bi bi-calendar-event me-2"></i> Матчи турнира
+                    </a>
+
+                    <a href="/admin/tournaments/{{ tournament.id }}/schedule" class="btn btn-success fw-bold text-start py-2">
+                        <i class="bi bi-calendar-plus me-2"></i> Генератор календаря
                     </a>
 
                     <a href="/admin/media?tournament_id={{ tournament.id }}" class="btn btn-outline-secondary fw-bold text-start py-2 border-2">
@@ -270,7 +272,6 @@
                     </button>
                 </form>
 
-                <!-- ПРЕВЬЮ ГОТОВОЙ КАРТИНКИ -->
                 {% if request.query_params.get('card_url') %}
                 <div class="mt-4 pt-3 border-top border-warning">
                     <h6 class="fw-bold text-dark mb-2">Готово!</h6>

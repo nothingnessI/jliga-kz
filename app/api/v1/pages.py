@@ -53,6 +53,47 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 
+from types import SimpleNamespace
+
+
+def calculate_standings_from_matches(matches, teams, is_cup=False):
+    stats = {}
+    for t in teams:
+        stats[t.id] = {
+            "team": t, "group_name": None, "games_played": 0, "wins": 0,
+            "draws": 0, "losses": 0, "goals_for": 0, "goals_against": 0, "points": 0
+        }
+    for m in matches:
+        if m.home_score is None or m.away_score is None:
+            continue
+        h = stats.get(m.home_team_id)
+        a = stats.get(m.away_team_id)
+        if not h or not a: continue
+
+        if m.group_name:
+            h["group_name"] = m.group_name
+            a["group_name"] = m.group_name
+
+        h["games_played"] += 1; a["games_played"] += 1
+        h["goals_for"] += m.home_score; h["goals_against"] += m.away_score
+        a["goals_for"] += m.away_score; a["goals_against"] += m.home_score
+
+        if m.home_score > m.away_score:
+            h["wins"] += 1; h["points"] += 3; a["losses"] += 1
+        elif m.home_score < m.away_score:
+            a["wins"] += 1; a["points"] += 3; h["losses"] += 1
+        else:
+            h["draws"] += 1; a["draws"] += 1
+            h["points"] += 1; a["points"] += 1
+
+    result = [SimpleNamespace(**v) for v in stats.values()]
+    if is_cup:
+        result.sort(key=lambda x: (x.group_name or 'ZZZ', -x.points, -x.goals_for))
+    else:
+        result.sort(key=lambda x: (-x.points, -(x.goals_for - x.goals_against), -x.goals_for))
+    return result
+
+
 def to_local_time(dt):
     """Конвертирует UTC время в часовой пояс Алматы (UTC+5)"""
     if not dt:
@@ -205,6 +246,10 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     from sqlalchemy.orm import selectinload
     from app.models.enums import MatchStatus, MatchEventType
     from app.models.match_event import MatchEvent
+    from app.models.match import Match
+    from app.models.team import Team
+    from app.models.tournament_team import TournamentTeam
+    from types import SimpleNamespace
 
     # Определяем часовой пояс
     try:
@@ -244,7 +289,7 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     end_of_day = start_of_day + timedelta(days=2)  # Захватываем сегодня и завтра
 
     stmt_upcoming = select(Match).where(
-        Match.match_date.isnot(None),  # Строго с проставленной датой (без TBA)
+        Match.match_date.isnot(None),
         Match.match_date >= start_of_day,
         Match.match_date < end_of_day,
         Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE])
@@ -254,12 +299,11 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
         selectinload(Match.tournament),
         selectinload(Match.events).selectinload(MatchEvent.player)
     ).order_by(
-        Match.match_date.asc()  # nullslast() больше не нужен, так как пустых нет
+        Match.match_date.asc()
     )
 
     upcoming_matches = (await db.execute(stmt_upcoming)).scalars().all()
 
-    # Конвертируем время в Алматы для корректного отображения
     for m in upcoming_matches:
         if m.match_date:
             m.match_date = m.match_date.astimezone(local_tz)
@@ -270,13 +314,62 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     active_disqualifications = []
 
     if active_tournament:
-        stmt_standings = select(TournamentStanding).where(
-            TournamentStanding.tournament_id == active_tournament.id
-        ).options(selectinload(TournamentStanding.team)).order_by(
-            TournamentStanding.points.desc(),
-            (TournamentStanding.goals_for - TournamentStanding.goals_against).desc()
+        # 👇 ДИНАМИЧЕСКИЙ РАСЧЕТ ТАБЛИЦЫ (ВМЕСТО ЗАПРОСА К TournamentStanding) 👇
+        stmt_matches_table = select(Match).where(Match.tournament_id == active_tournament.id)
+        matches_for_table = (await db.execute(stmt_matches_table)).scalars().all()
+
+        stmt_teams_table = select(Team).join(TournamentTeam, Team.id == TournamentTeam.team_id).where(
+            TournamentTeam.tournament_id == active_tournament.id
         )
-        standings = (await db.execute(stmt_standings)).scalars().all()
+        teams_for_table = (await db.execute(stmt_teams_table)).scalars().all()
+
+        is_cup = active_tournament.division == "CUP" or any(m.group_name for m in matches_for_table)
+
+        # Считаем прямо из матчей
+        standings_dict = {}
+        for t in teams_for_table:
+            standings_dict[t.id] = {
+                "team": t, "group_name": None, "games_played": 0, "wins": 0,
+                "draws": 0, "losses": 0, "goals_for": 0, "goals_against": 0, "points": 0
+            }
+
+        for m in matches_for_table:
+            if m.home_score is None or m.away_score is None: continue
+            h = standings_dict.get(m.home_team_id)
+            a = standings_dict.get(m.away_team_id)
+            if not h or not a: continue
+
+            if m.group_name:
+                h["group_name"] = m.group_name
+                a["group_name"] = m.group_name
+
+            h["games_played"] += 1;
+            a["games_played"] += 1
+            h["goals_for"] += m.home_score;
+            h["goals_against"] += m.away_score
+            a["goals_for"] += m.away_score;
+            a["goals_against"] += m.home_score
+
+            if m.home_score > m.away_score:
+                h["wins"] += 1;
+                h["points"] += 3;
+                a["losses"] += 1
+            elif m.home_score < m.away_score:
+                a["wins"] += 1;
+                a["points"] += 3;
+                h["losses"] += 1
+            else:
+                h["draws"] += 1;
+                a["draws"] += 1
+                h["points"] += 1;
+                a["points"] += 1
+
+        standings = [SimpleNamespace(**v) for v in standings_dict.values()]
+        if is_cup:
+            standings.sort(key=lambda x: (x.group_name or 'ZZZ', -x.points, -x.goals_for))
+        else:
+            standings.sort(key=lambda x: (-x.points, -(x.goals_for - x.goals_against), -x.goals_for))
+        # 👆 КОНЕЦ ДИНАМИЧЕСКОГО РАСЧЕТА 👆
 
         stmt_scorers = select(TeamPlayer).join(Player).join(Team).where(
             TeamPlayer.tournament_id == active_tournament.id,
@@ -325,11 +418,16 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
             sorted_events = sorted(m.events, key=lambda x: x.minute)
             for e in sorted_events:
                 event_str = str(e.event_type).upper()
-                if "YELLOW" in event_str: etype = "YELLOW"
-                elif "RED" in event_str: etype = "RED"
-                elif "OWN" in event_str: etype = "OWN_GOAL"
-                elif "PENALTY" in event_str: etype = "PENALTY"
-                else: etype = "GOAL"
+                if "YELLOW" in event_str:
+                    etype = "YELLOW"
+                elif "RED" in event_str:
+                    etype = "RED"
+                elif "OWN" in event_str:
+                    etype = "OWN_GOAL"
+                elif "PENALTY" in event_str:
+                    etype = "PENALTY"
+                else:
+                    etype = "GOAL"
 
                 events_list.append({
                     "minute": e.minute, "team_id": e.team_id,
@@ -568,6 +666,73 @@ from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from types import SimpleNamespace
+
+
+def calculate_standings(matches: list, teams: list, is_cup: bool = False) -> list:
+    # Инициализируем нулями все команды турнира
+    stats = {}
+    for t in teams:
+        stats[t.id] = {
+            "team": t,
+            "group_name": None,
+            "games_played": 0, "wins": 0, "draws": 0, "losses": 0,
+            "goals_for": 0, "goals_against": 0, "points": 0
+        }
+
+    # Проходим по всем матчам и считаем
+    for m in matches:
+        # Берем ТОЛЬКО матчи, где введен счет
+        if m.home_score is None or m.away_score is None:
+            continue
+
+        h = stats.get(m.home_team_id)
+        a = stats.get(m.away_team_id)
+        if not h or not a:
+            continue
+
+        # Записываем группу (если есть)
+        if m.group_name:
+            h["group_name"] = m.group_name
+            a["group_name"] = m.group_name
+
+        h["games_played"] += 1
+        a["games_played"] += 1
+
+        h["goals_for"] += m.home_score
+        h["goals_against"] += m.away_score
+        a["goals_for"] += m.away_score
+        a["goals_against"] += m.home_score
+
+        # Начисляем очки
+        if m.home_score > m.away_score:
+            h["wins"] += 1;
+            h["points"] += 3;
+            a["losses"] += 1
+        elif m.home_score < m.away_score:
+            a["wins"] += 1;
+            a["points"] += 3;
+            h["losses"] += 1
+        else:
+            h["draws"] += 1;
+            a["draws"] += 1
+            h["points"] += 1;
+            a["points"] += 1
+
+    # Превращаем в объекты и сортируем
+    result = [SimpleNamespace(**v) for v in stats.values()]
+
+    if is_cup:
+        # Сортировка для кубка/групп: Группа -> Очки -> Забитые
+        result.sort(key=lambda x: (x.group_name or 'ZZZ', -x.points, -x.goals_for))
+    else:
+        # Сортировка для лиги: Очки -> Разница -> Забитые
+        result.sort(key=lambda x: (-x.points, -(x.goals_for - x.goals_against), -x.goals_for))
+
+    return result
+
+
+from types import SimpleNamespace
 
 @router.get("/tournaments/{tournament_id}")
 async def tournament_page(
@@ -582,7 +747,6 @@ async def tournament_page(
     from sqlalchemy.orm import selectinload
     from datetime import datetime, timezone
     from app.models.tournament import Tournament
-    from app.models.tournament_standing import TournamentStanding
     from app.models.match import Match
     from app.models.match_event import MatchEvent
     from app.models.team_player import TeamPlayer
@@ -590,6 +754,8 @@ async def tournament_page(
     from app.models.disqualification import Disqualification
     from app.models.news import News
     from app.models.enums import MatchStatus, MatchStage
+    from app.models.tournament_team import TournamentTeam
+    from app.models.team import Team
 
     # 1. ПОЛУЧАЕМ ТУРНИР
     tournament = await db.get(Tournament, tournament_id)
@@ -597,29 +763,7 @@ async def tournament_page(
         raise HTTPException(status_code=404, detail="Турнир не найден")
 
     # =========================================================================
-    # 2. ТУРНИРНАЯ ТАБЛИЦА
-    # =========================================================================
-    stmt_standings = select(TournamentStanding).where(
-        TournamentStanding.tournament_id == tournament_id
-    ).options(selectinload(TournamentStanding.team))
-    standings_raw = (await db.execute(stmt_standings)).scalars().all()
-
-    is_cup = any(s.group_name for s in standings_raw) or tournament.division == "CUP"
-
-    if is_cup:
-        standings = sorted(standings_raw, key=lambda x: (x.group_name or 'ZZZ', -x.points, -x.goals_for))
-    else:
-        standings = sorted(standings_raw, key=lambda x: (-x.points, -x.goals_for))
-
-    grouped_standings = {}
-    for s in standings:
-        group_name = s.group_name if s.group_name else "Общая таблица"
-        if group_name not in grouped_standings:
-            grouped_standings[group_name] = []
-        grouped_standings[group_name].append(s)
-
-    # =========================================================================
-    # 3. МАТЧИ (Групповой этап и Сетки)
+    # 2. МАТЧИ И КОМАНДЫ
     # =========================================================================
     stmt_matches = select(Match).where(Match.tournament_id == tournament_id).options(
         selectinload(Match.home_team),
@@ -628,6 +772,80 @@ async def tournament_page(
     )
     matches_raw = (await db.execute(stmt_matches)).scalars().all()
 
+    # Получаем все команды, заявленные на турнир
+    stmt_teams = select(Team).join(TournamentTeam, Team.id == TournamentTeam.team_id).where(
+        TournamentTeam.tournament_id == tournament_id
+    )
+    teams_raw = (await db.execute(stmt_teams)).scalars().all()
+
+    # =========================================================================
+    # 3. ДИНАМИЧЕСКИЙ РАСЧЕТ ТАБЛИЦЫ (НА ОСНОВЕ МАТЧЕЙ)
+    # =========================================================================
+    standings_dict = {}
+    for t in teams_raw:
+        standings_dict[t.id] = {
+            "team": t,
+            "group_name": None,
+            "games_played": 0, "wins": 0, "draws": 0, "losses": 0,
+            "goals_for": 0, "goals_against": 0, "points": 0
+        }
+
+    for m in matches_raw:
+        # Берем только матчи с введенным счетом
+        if m.home_score is None or m.away_score is None:
+            continue
+
+        h = standings_dict.get(m.home_team_id)
+        a = standings_dict.get(m.away_team_id)
+        if not h or not a:
+            continue
+
+        # Если матч в группе, проставляем группу командам
+        if m.group_name:
+            h["group_name"] = m.group_name
+            a["group_name"] = m.group_name
+
+        h["games_played"] += 1
+        a["games_played"] += 1
+
+        h["goals_for"] += m.home_score
+        h["goals_against"] += m.away_score
+        a["goals_for"] += m.away_score
+        a["goals_against"] += m.home_score
+
+        # Начисление очков
+        if m.home_score > m.away_score:
+            h["wins"] += 1; h["points"] += 3; a["losses"] += 1
+        elif m.home_score < m.away_score:
+            a["wins"] += 1; a["points"] += 3; h["losses"] += 1
+        else:
+            h["draws"] += 1; a["draws"] += 1
+            h["points"] += 1; a["points"] += 1
+
+    # Превращаем словарь в список объектов
+    standings = [SimpleNamespace(**v) for v in standings_dict.values()]
+
+    is_cup = tournament.division == "CUP" or any(s.group_name for s in standings)
+
+    if is_cup:
+        # Сортировка: Группа -> Очки -> Забитые
+        standings.sort(key=lambda x: (x.group_name or 'ZZZ', -x.points, -x.goals_for))
+    else:
+        # Сортировка: Очки -> Разница -> Забитые
+        standings.sort(key=lambda x: (-x.points, -(x.goals_for - x.goals_against), -x.goals_for))
+
+    grouped_standings = {}
+    for s in standings:
+        group_name = s.group_name if s.group_name else "Общая таблица"
+        if group_name not in grouped_standings:
+            grouped_standings[group_name] = []
+        grouped_standings[group_name].append(s)
+
+    teams_list = [s.team for s in standings]
+
+    # =========================================================================
+    # 4. СОРТИРОВКА МАТЧЕЙ И СЕТКА
+    # =========================================================================
     for m in matches_raw:
         m.match_date = to_local_time(m.match_date)
 
@@ -642,7 +860,6 @@ async def tournament_page(
 
     playoff_matches = [m for m in matches if m.stage in [MatchStage.PLAYOFF, MatchStage.FINAL]]
 
-    # Парсинг сеток плей-офф
     brackets_data = {}
     for m in playoff_matches:
         bracket_name = m.group_name if m.group_name else "Плей-офф"
@@ -673,7 +890,7 @@ async def tournament_page(
     round_names = {1: "1/8 ФИНАЛА", 2: "1/4 ФИНАЛА", 3: "1/2 ФИНАЛА", 4: "ФИНАЛ", 5: "ЗА 3 МЕСТО"}
 
     # =========================================================================
-    # 4. ШАХМАТКА (ЗЕРКАЛЬНОЕ ОТОБРАЖЕНИЕ)
+    # 5. ШАХМАТКА
     # =========================================================================
     matrix_data = {}
     for m in matches:
@@ -692,22 +909,15 @@ async def tournament_page(
         else:
             res_home = res_away = ""
 
-        # Записываем матч в обе стороны (теперь match_id передается всегда)
         matrix_data[(m.home_team_id, m.away_team_id)] = {
-            "score": score_home,
-            "match_id": m.id,
-            "result": res_home
+            "score": score_home, "match_id": m.id, "result": res_home
         }
         matrix_data[(m.away_team_id, m.home_team_id)] = {
-            "score": score_away,
-            "match_id": m.id,
-            "result": res_away
+            "score": score_away, "match_id": m.id, "result": res_away
         }
 
-    teams_list = [s.team for s in standings]
-
     # =========================================================================
-    # 5. ПРОГРЕСС (ВСЕ МАТЧИ)
+    # 6. ПРОГРЕСС
     # =========================================================================
     progress_data = {}
     for team in teams_list:
@@ -725,7 +935,7 @@ async def tournament_page(
         progress_data[team.id] = form_all
 
     # =========================================================================
-    # 6. ДАННЫЕ ДЛЯ ПОПАПОВ МАТЧЕЙ (Включая несыгранные)
+    # 7. ДАННЫЕ ДЛЯ ПОПАПОВ
     # =========================================================================
     matches_dict = {}
     for m in matches:
@@ -734,16 +944,11 @@ async def tournament_page(
             sorted_events = sorted(m.events, key=lambda x: x.minute)
             for e in sorted_events:
                 event_str = str(e.event_type).upper()
-                if "YELLOW" in event_str:
-                    etype = "YELLOW"
-                elif "RED" in event_str:
-                    etype = "RED"
-                elif "OWN" in event_str:
-                    etype = "OWN_GOAL"
-                elif "PENALTY" in event_str:
-                    etype = "PENALTY"
-                else:
-                    etype = "GOAL"
+                if "YELLOW" in event_str: etype = "YELLOW"
+                elif "RED" in event_str: etype = "RED"
+                elif "OWN" in event_str: etype = "OWN_GOAL"
+                elif "PENALTY" in event_str: etype = "PENALTY"
+                else: etype = "GOAL"
 
                 events_list.append({
                     "minute": e.minute, "team_id": e.team_id,
@@ -757,7 +962,6 @@ async def tournament_page(
             "away_name": m.away_team.name,
             "home_team_id": m.home_team_id,
             "away_team_id": m.away_team_id,
-            # Оставляем 0 для JS, но JS будет проверять статус и выводить -:-
             "home_score": m.home_score if m.home_score is not None else 0,
             "away_score": m.away_score if m.away_score is not None else 0,
             "home_logo": m.home_team.logo_url or f"https://ui-avatars.com/api/?name={m.home_team.name}&background=0f2537&color=fff&size=64&rounded=true",
@@ -769,12 +973,11 @@ async def tournament_page(
             "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
             "stadium": m.stadium or 'Стадион TBA',
             "events": events_list,
-            # ДОБАВЛЕНО: статус матча, чтобы JS знал, сыгран он или нет
             "status": m.status.value if hasattr(m.status, 'value') else str(m.status)
         }
 
     # =========================================================================
-    # 7. КАЛЕНДАРЬ (С ФИЛЬТРАЦИЕЙ)
+    # 8. КАЛЕНДАРЬ
     # =========================================================================
     matches_by_round = defaultdict(list)
     matches_by_date = defaultdict(list)
@@ -824,7 +1027,7 @@ async def tournament_page(
     matches_by_round = dict(sorted(matches_by_round.items(), key=group_sort_key))
 
     # =========================================================================
-    # 8. СТАТИСТИКА ИГРОКОВ
+    # 9. СТАТИСТИКА ИГРОКОВ
     # =========================================================================
     stmt_stats_goals = select(TeamPlayer).join(Player).where(
         TeamPlayer.tournament_id == tournament_id, func.coalesce(TeamPlayer.stats_goals, 0) > 0
@@ -842,7 +1045,7 @@ async def tournament_page(
     tournament_stats_cards = (await db.execute(stmt_stats_cards)).scalars().all()
 
     # =========================================================================
-    # 9. ДИСКВАЛИФИКАЦИИ
+    # 10. ДИСКВАЛИФИКАЦИИ
     # =========================================================================
     stmt_disq = select(Disqualification).where(Disqualification.tournament_id == tournament_id).options(
         selectinload(Disqualification.player), selectinload(Disqualification.team)
@@ -852,7 +1055,7 @@ async def tournament_page(
     completed_disq = [d for d in all_disq if not d.matches_remaining or d.matches_remaining == 0]
 
     # =========================================================================
-    # 10. НОВОСТИ ТУРНИРА
+    # 11. НОВОСТИ ТУРНИРА
     # =========================================================================
     stmt_news = select(News).where(
         News.is_published == True, News.tournament_id == tournament_id
@@ -4915,56 +5118,6 @@ async def admin_schedule_get(
         "circles": circles,
     })
 
-
-@router.post("/admin/tournaments/{tid}/schedule/preview")
-async def admin_schedule_preview(
-    request: Request,
-    tid: int,
-    circles: int = Form(1),
-    db: AsyncSession = Depends(get_db),
-):
-    admin = await get_admin_from_cookie(request, db)
-    if isinstance(admin, RedirectResponse):
-        return admin
-
-    tournament = await crud_tournament.get(db, tid)
-    if not tournament:
-        raise HTTPException(404, "Турнир не найден")
-
-    teams_list, groups_info = await _load_schedule_teams(db, tid)
-
-    tteams = (await db.execute(
-        select(TournamentTeam).where(TournamentTeam.tournament_id == tid)
-    )).scalars().all()
-
-    groups: dict[str, list[int]] = {}
-    for tt in tteams:
-        groups.setdefault(tt.group_name or "", []).append(tt.team_id)
-
-    preview: list[dict] = []
-    for group_name, team_ids in groups.items():
-        if len(team_ids) < 2:
-            continue
-        rounds = generate_round_robin(team_ids, circles=circles)
-        for r_idx, pairs in enumerate(rounds, start=1):
-            for home_id, away_id in pairs:
-                preview.append({
-                    "round": r_idx,
-                    "group_name": group_name or "",
-                    "home_team_id": home_id,
-                    "away_team_id": away_id,
-                })
-
-    return await render_page(request, db, "admin_schedule.html", context={
-        "tournament": tournament,
-        "all_tournaments": await _all_tournaments_for_select(db),
-        "teams_list": teams_list,
-        "groups_info": groups_info,
-        "preview_matches": preview,
-        "circles": circles,
-    })
-
-
 @router.post("/admin/tournaments/{tid}/schedule/approve")
 async def admin_schedule_approve(
     request: Request,
@@ -5024,3 +5177,171 @@ async def admin_schedule_approve(
 
     await db.commit()
     return {"ok": True, "count": count}
+
+
+# ==========================================
+# ГЕНЕРАЦИЯ КАЛЕНДАРЯ
+# ==========================================
+
+@router.get("/admin/tournaments/{tournament_id}/schedule")
+async def admin_schedule_page(
+    tournament_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse):
+        return user
+
+    tournament = await db.get(Tournament, tournament_id)
+    if not tournament:
+        raise HTTPException(404, "Турнир не найден")
+
+    stmt_tt = select(TournamentTeam).where(
+        TournamentTeam.tournament_id == tournament_id
+    ).options(selectinload(TournamentTeam.team))
+    tt_list = (await db.execute(stmt_tt)).scalars().all()
+
+    all_teams = [tt.team for tt in tt_list if tt.team]
+
+    groups_info: dict[str, list] = {}
+    has_groups = any(getattr(tt, "group_name", None) for tt in tt_list)
+    if has_groups:
+        for tt in tt_list:
+            if not tt.team:
+                continue
+            gname = (tt.group_name or "").strip() or "—"
+            groups_info.setdefault(gname, []).append(tt.team)
+
+    all_tournaments = (await db.execute(
+        select(Tournament).order_by(Tournament.season.desc(), Tournament.name)
+    )).scalars().all()
+
+    return await render_page(request, db, "admin_schedule.html", context={
+        "user": user,
+        "tournament": tournament,
+        "all_tournaments": all_tournaments,
+        "teams_list": all_teams,
+        "groups_info": groups_info if has_groups else None,
+        "preview_matches": None,
+        "circles": 1,
+    })
+
+
+@router.post("/admin/tournaments/{tournament_id}/schedule/preview")
+async def admin_schedule_preview(
+    tournament_id: int,
+    request: Request,
+    circles: int = Form(1),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse):
+        return user
+
+    tournament = await db.get(Tournament, tournament_id)
+    if not tournament:
+        raise HTTPException(404, "Турнир не найден")
+
+    stmt_tt = select(TournamentTeam).where(
+        TournamentTeam.tournament_id == tournament_id
+    ).options(selectinload(TournamentTeam.team))
+    tt_list = (await db.execute(stmt_tt)).scalars().all()
+
+    all_teams = [tt.team for tt in tt_list if tt.team]
+    if len(all_teams) < 2:
+        raise HTTPException(400, "В турнире меньше 2 команд")
+
+    groups_info: dict[str, list[int]] = {}
+    has_groups = any(getattr(tt, "group_name", None) for tt in tt_list)
+    if has_groups:
+        for tt in tt_list:
+            if not tt.team:
+                continue
+            gname = (tt.group_name or "").strip() or "—"
+            groups_info.setdefault(gname, []).append(tt.team.id)
+
+    from app.services.schedule_generator import generate_for_tournament
+    pairs = generate_for_tournament(
+        all_team_ids=[t.id for t in all_teams],
+        circles=circles,
+        groups_info=groups_info if has_groups else None,
+    )
+
+    preview_matches = [
+        {
+            "round": p.round,
+            "group_name": p.group_name,
+            "home_team_id": p.home_team_id,
+            "away_team_id": p.away_team_id,
+        }
+        for p in pairs
+    ]
+
+    all_tournaments = (await db.execute(
+        select(Tournament).order_by(Tournament.season.desc(), Tournament.name)
+    )).scalars().all()
+
+    return await render_page(request, db, "admin_schedule.html", context={
+        "user": user,
+        "tournament": tournament,
+        "all_tournaments": all_tournaments,
+        "teams_list": all_teams,
+        "groups_info": groups_info if has_groups else None,
+        "preview_matches": preview_matches,
+        "circles": circles,
+    })
+
+
+@router.post("/admin/tournaments/{tournament_id}/schedule/confirm")
+async def admin_schedule_confirm(
+    tournament_id: int,
+    request: Request,
+    replace: str = Form(None),
+    db: AsyncSession = Depends(get_db),
+):
+    user = await get_admin_from_cookie(request, db)
+    if isinstance(user, RedirectResponse):
+        return user
+
+    tournament = await db.get(Tournament, tournament_id)
+    if not tournament:
+        raise HTTPException(404, "Турнир не найден")
+
+    form = await request.form()
+
+    if replace == "true":
+        await db.execute(delete(Match).where(Match.tournament_id == tournament_id))
+
+    from datetime import datetime as _dt
+    created = 0
+    i = 0
+    while f"home_{i}" in form:
+        if form.get(f"include_{i}") == "on":
+            home_id = int(form[f"home_{i}"])
+            away_id = int(form[f"away_{i}"])
+            round_num = form.get(f"round_{i}", "1")
+            date_str = (form.get(f"date_{i}") or "").strip()
+            match_date = None
+            if date_str:
+                try:
+                    match_date = _dt.strptime(date_str, "%Y-%m-%dT%H:%M")
+                except ValueError:
+                    pass
+            if home_id != away_id:
+                db.add(Match(
+                    tournament_id=tournament_id,
+                    round=str(round_num),
+                    home_team_id=home_id,
+                    away_team_id=away_id,
+                    match_date=match_date,
+                    status=MatchStatus.SCHEDULED,
+                ))
+                created += 1
+        i += 1
+
+    await db.commit()
+    return RedirectResponse(
+        url=f"/admin/tournaments/{tournament_id}/schedule?created={created}",
+        status_code=303,
+    )

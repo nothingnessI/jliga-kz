@@ -1,7 +1,7 @@
 {% extends "admin_base.html" %}
 
 {% block admin_content %}
-<!-- ================== ШАПКА ================== -->
+<!-- ШАПКА -->
 <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-4 gap-3">
     <div>
         <h4 class="fw-bold m-0">Генератор календаря</h4>
@@ -16,7 +16,7 @@
     </a>
 </div>
 
-<!-- ================== ВЫБОР ТУРНИРА ================== -->
+<!-- ВЫБОР ТУРНИРА -->
 <div class="card border-0 shadow-sm mb-4 bg-light">
     <div class="card-body p-3 p-md-4">
         <label class="form-label small fw-bold text-uppercase text-muted mb-2">
@@ -46,7 +46,7 @@
 </div>
 
 {% if not tournament %}
-    <!-- ================== ЗАГЛУШКА ================== -->
+    <!-- ЗАГЛУШКА, ЕСЛИ ТУРНИР НЕ ВЫБРАН -->
     <div class="card border-0 shadow-sm">
         <div class="card-body text-center py-5 text-muted">
             <i class="bi bi-calendar-plus display-1 d-block mb-3 text-secondary opacity-50"></i>
@@ -56,7 +56,7 @@
     </div>
 {% else %}
 
-    <!-- ================== ПАРАМЕТРЫ ГЕНЕРАЦИИ ================== -->
+    <!-- ПАРАМЕТРЫ ГЕНЕРАЦИИ -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body p-3 p-md-4">
             <h6 class="fw-bold mb-3 border-bottom pb-2">Параметры генерации</h6>
@@ -85,24 +85,32 @@
         </div>
     </div>
 
-    <!-- ================== КОМАНДЫ ================== -->
+    <!-- КОМАНДЫ ТУРНИРА -->
     <div class="card border-0 shadow-sm mb-4">
         <div class="card-body p-3 p-md-4">
             <h6 class="fw-bold mb-3 border-bottom pb-2">
                 <i class="bi bi-people-fill me-1"></i> Команды турнира ({{ teams_list|length }})
             </h6>
 
-            {% if groups_info %}
-                {% for group_name, teams in groups_info.items() %}
+            {% if teams_list %}
+                {% if groups_info %}
+                    {% for group_name, teams in groups_info.items() %}
+                        <div class="mb-2">
+                            <strong class="text-primary">
+                                {% if group_name %}Группа {{ group_name }}{% else %}Без группы{% endif %}:
+                            </strong>
+                            {% for t in teams %}
+                                <span class="badge bg-secondary me-1 mb-1">{{ t.name }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                {% else %}
                     <div class="mb-2">
-                        <strong class="text-primary">
-                            {% if group_name %}Группа {{ group_name }}{% else %}Без группы{% endif %}:
-                        </strong>
-                        {% for t in teams %}
+                        {% for t in teams_list %}
                             <span class="badge bg-secondary me-1 mb-1">{{ t.name }}</span>
                         {% endfor %}
                     </div>
-                {% endfor %}
+                {% endif %}
             {% else %}
                 <div class="alert alert-warning mb-0 py-2 small">
                     <i class="bi bi-exclamation-triangle me-1"></i>
@@ -114,7 +122,7 @@
     </div>
 
     {% if preview_matches %}
-        <!-- ================== ПРЕДПРОСМОТР ================== -->
+        <!-- ПРЕДПРОСМОТР КАЛЕНДАРЯ -->
         <div class="card border-0 shadow-sm">
             <div class="card-body p-3 p-md-4">
                 <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center mb-3 gap-2">
@@ -195,16 +203,39 @@
             </div>
         </div>
 
-        <!-- СКРИПТ ДЛЯ ПРЕДПРОСМОТРА -->
+        <!-- ШАБЛОН НОВОЙ СТРОКИ -->
+        <template id="rowTemplate">
+            <tr>
+                <td><input type="number" min="1" class="form-control form-control-sm row-round" value="1"></td>
+                <td><input type="text" class="form-control form-control-sm row-group" value="" placeholder="—"></td>
+                <td>
+                    <select class="form-select form-select-sm row-home">
+                        {% for t in teams_list %}
+                        <option value="{{ t.id }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                            onclick="swapRow(this)">⇄</button>
+                </td>
+                <td>
+                    <select class="form-select form-select-sm row-away">
+                        {% for t in teams_list %}
+                        <option value="{{ t.id }}">{{ t.name }}</option>
+                        {% endfor %}
+                    </select>
+                </td>
+                <td class="text-center">
+                    <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2"
+                            onclick="deleteRow(this)">✕</button>
+                </td>
+            </tr>
+        </template>
+
+        <!-- СКРИПТЫ ДЛЯ РАБОТЫ С ТАБЛИЦЕЙ -->
         <script>
             const TOURNAMENT_ID = {{ tournament.id }};
-            const TEAMS = {{ teams_list|tojson }};
-
-            function buildTeamOptions(selectedId) {
-                return TEAMS.map(t =>
-                    `<option value="${t.id}"${t.id === selectedId ? ' selected' : ''}>${t.name}</option>`
-                ).join('');
-            }
 
             function swapRow(btn) {
                 const row = btn.closest('tr');
@@ -221,17 +252,13 @@
             }
 
             function addRow() {
-                const tbody = document.getElementById('previewBody');
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><input type="number" min="1" class="form-control form-control-sm row-round" value="1"></td>
-                    <td><input type="text" class="form-control form-control-sm row-group" value="" placeholder="—"></td>
-                    <td><select class="form-select form-select-sm row-home">${buildTeamOptions(null)}</select></td>
-                    <td class="text-center"><button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="swapRow(this)">⇄</button></td>
-                    <td><select class="form-select form-select-sm row-away">${buildTeamOptions(null)}</select></td>
-                    <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="deleteRow(this)">✕</button></td>
-                `;
-                tbody.appendChild(tr);
+                const tpl = document.getElementById('rowTemplate');
+                const clone = tpl.content.cloneNode(true);
+                const tr = clone.querySelector('tr');
+                // По умолчанию home = первая команда, away = вторая
+                const away = tr.querySelector('.row-away');
+                if (away.options.length > 1) away.selectedIndex = 1;
+                document.getElementById('previewBody').appendChild(clone);
                 updateCount();
             }
 

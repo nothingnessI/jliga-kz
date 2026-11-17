@@ -5,15 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7e289f6c-8968-49f0-ac18-b3bedd7dea2b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/app/services/schedule_generator.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/templates/admin_schedule.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/parser_2.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/api/v1/pages.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/v1/pages.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/enums.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/enums.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/models/match.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/models/match.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_roster.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_roster.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/tournament_detail.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/tournament_detail.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/services/schedule_generator.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/services/schedule_generator.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/admin_schedule.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_schedule.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/templates/admin_tournament_form.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_tournament_form.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/parser.py" beforeDir="false" afterPath="$PROJECT_DIR$/parser.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -45,8 +42,8 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Python Script" />
         <option value="HTML File" />
+        <option value="Python Script" />
       </list>
     </option>
   </component>
@@ -55,61 +52,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.8517792404680926" />
-      <entry key="MS500" value="2.8001638019765265" />
-      <entry key="S2" value="4.451900405263089" />
-      <entry key="S5" value="5.827424219260681" />
-      <entry key="S10" value="6.704888216291441" />
-      <entry key="S30" value="7.54391168988382" />
-      <entry key="S60" value="8.023648910719535" />
-      <entry key="M2" value="8.718639333464573" />
-      <entry key="M5" value="9.713383912600476" />
-      <entry key="M10" value="10.28513969559296" />
-      <entry key="M15" value="10.820463738332347" />
-      <entry key="M30" value="17.277647422516996" />
-      <entry key="H1" value="46.07948370628841" />
-      <entry key="H2" value="107.91053074675091" />
-      <entry key="H4" value="205.45469420344716" />
-      <entry key="D1" value="894.8445838441902" />
-      <entry key="W1" value="3640.3831564509023" />
+      <entry key="MS100" value="1.0000097241258799" />
+      <entry key="MS500" value="1.0996142710169532" />
+      <entry key="S2" value="1.6993378967289632" />
+      <entry key="S5" value="2.4363679857123093" />
+      <entry key="S10" value="3.0106788689418695" />
+      <entry key="S30" value="3.606002432930096" />
+      <entry key="S60" value="3.793452180548348" />
+      <entry key="M2" value="3.89420776325397" />
+      <entry key="M5" value="3.968839491207482" />
+      <entry key="M10" value="4.195541978559239" />
+      <entry key="M15" value="4.564362289401265" />
+      <entry key="M30" value="6.183377180144679" />
+      <entry key="H1" value="16.261942006121693" />
+      <entry key="H2" value="57.842967723707154" />
+      <entry key="H4" value="153.2816285590556" />
+      <entry key="D1" value="872.4521036031962" />
+      <entry key="W1" value="3657.4379824570256" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
       <entry key="MS500" value="0.0" />
       <entry key="S2" value="0.0" />
       <entry key="S5" value="0.0" />
-      <entry key="S10" value="4.8050845742784185E-230" />
-      <entry key="S30" value="3.635523966802703E-77" />
-      <entry key="S60" value="6.029530634139523E-39" />
-      <entry key="M2" value="7.765005238945404E-20" />
-      <entry key="M5" value="2.2705817583776046E-8" />
-      <entry key="M10" value="1.538615505026754E-4" />
-      <entry key="M15" value="0.0031598019910543205" />
-      <entry key="M30" value="0.10062473500716224" />
-      <entry key="H1" value="0.9855692134197608" />
-      <entry key="H2" value="3.76343777908491" />
-      <entry key="H4" value="7.749038369821437" />
-      <entry key="D1" value="20.694402975011016" />
-      <entry key="W1" value="185.97091855800343" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="4.786428140978714E-109" />
+      <entry key="S60" value="1.0314910612344923E-54" />
+      <entry key="M2" value="1.7390235560424666E-27" />
+      <entry key="M5" value="4.3141870649900866E-11" />
+      <entry key="M10" value="1.3012751993297763E-5" />
+      <entry key="M15" value="8.764992320066888E-4" />
+      <entry key="M30" value="0.059867747830178286" />
+      <entry key="H1" value="0.569929458780563" />
+      <entry key="H2" value="2.4911262014487403" />
+      <entry key="H4" value="6.544662594963126" />
+      <entry key="D1" value="22.337156091814354" />
+      <entry key="W1" value="187.21090725653423" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.2915102729175536" />
-      <entry key="MS500" value="2.5893774137051437" />
-      <entry key="S2" value="4.293367663205777" />
-      <entry key="S5" value="5.654172092329054" />
-      <entry key="S10" value="6.574694803315199" />
-      <entry key="S30" value="7.486159188175644" />
-      <entry key="S60" value="7.992394587207182" />
-      <entry key="M2" value="8.701839054394013" />
-      <entry key="M5" value="9.705868980926283" />
-      <entry key="M10" value="10.281271560565166" />
-      <entry key="M15" value="10.820829079566542" />
-      <entry key="M30" value="17.376514461873235" />
-      <entry key="H1" value="47.063085975811745" />
-      <entry key="H2" value="111.67128509665642" />
-      <entry key="H4" value="213.20110475651262" />
-      <entry key="D1" value="915.5378473068632" />
-      <entry key="W1" value="3826.3527504278686" />
+      <entry key="MS100" value="0.8645460561383699" />
+      <entry key="MS500" value="1.0690052139263806" />
+      <entry key="S2" value="1.688233748853031" />
+      <entry key="S5" value="2.4296276572692252" />
+      <entry key="S10" value="3.006295249287091" />
+      <entry key="S30" value="3.6041731486278916" />
+      <entry key="S60" value="3.792478300957562" />
+      <entry key="M2" value="3.893704799815045" />
+      <entry key="M5" value="3.968634096536671" />
+      <entry key="M10" value="4.195449867901379" />
+      <entry key="M15" value="4.565165408565147" />
+      <entry key="M30" value="6.243157470767829" />
+      <entry key="H1" value="16.83153228532432" />
+      <entry key="H2" value="60.333081131688054" />
+      <entry key="H4" value="159.8246794546222" />
+      <entry key="D1" value="894.7881817031778" />
+      <entry key="W1" value="3844.6475767730954" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -145,6 +142,7 @@
     "Python.pages.executor": "Run",
     "Python.parser.executor": "Run",
     "Python.parser_1.executor": "Run",
+    "Python.parser_2.executor": "Run",
     "Python.parser_tables.executor": "Run",
     "Python.tournament.executor": "Run",
     "Python.tournaments.executor": "Run",
