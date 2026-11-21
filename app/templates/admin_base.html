@@ -1,173 +1,936 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Админ-панель | J-LIGA</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>
+        {% block title %}Админ-панель | J-LIGA{% endblock %}
+    </title>
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+        rel="stylesheet"
+    >
+
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; overflow-x: hidden; }
-
-        /* --- ДЕСКТОП (Сайдбар) --- */
-        .sidebar {
-            width: 260px; height: 100vh; position: fixed; top: 0; left: 0;
-            background-color: #2b3035; color: #fff; overflow-y: auto;
-            z-index: 1050; transition: transform 0.3s ease-in-out, visibility 0.3s;
+        :root {
+            --sidebar-width: 260px;
+            --sidebar-bg: #2b3035;
+            --sidebar-header-bg: #212529;
+            --sidebar-hover: #3c4146;
+            --primary-color: #0d6efd;
+            --page-bg: #f4f6f9;
         }
-        .sidebar-header { padding: 20px; background-color: #212529; border-bottom: 1px solid #3c4146; display: block; transition: 0.2s; }
-        .sidebar-header:hover { background-color: #1a1e21; }
-        .sidebar a { color: #adb5bd; text-decoration: none; display: block; padding: 12px 20px; font-size: 15px; transition: 0.2s; }
-        .sidebar a:hover { background-color: #3c4146; color: #fff; }
-        .sidebar a.active { background-color: #0d6efd; color: #fff; }
-        .sidebar .nav-category { padding: 20px 20px 10px; font-size: 12px; text-transform: uppercase; color: #6c757d; font-weight: bold; letter-spacing: 1px; }
 
-        /* --- ОСНОВНОЙ КОНТЕНТ --- */
-        .main-content { margin-left: 260px; min-height: 100vh; display: flex; flex-direction: column; transition: margin-left 0.3s; }
-        .topbar { background-color: #fff; height: 60px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: space-between; padding: 0 15px; }
+        * {
+            box-sizing: border-box;
+        }
 
-        /* --- СТАТИСТИКА --- */
-        .stat-card { border: none; border-radius: 8px; color: white; display: flex; align-items: center; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .stat-card .icon { font-size: 2.5rem; margin-right: 15px; opacity: 0.8; }
-        .stat-card .number { font-size: 1.8rem; font-weight: bold; line-height: 1; }
-        .stat-card .label { font-size: 0.9rem; opacity: 0.9; }
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--page-bg);
+            overflow-x: hidden;
+        }
 
-        /* --- ЗАТЕМНЕНИЕ ФОНА --- */
+        /* =========================================
+           SIDEBAR
+        ========================================= */
+
+        .sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background-color: var(--sidebar-bg);
+            color: #fff;
+            overflow-y: auto;
+            z-index: 1050;
+            transition:
+                transform 0.3s ease-in-out,
+                visibility 0.3s;
+        }
+
+        .sidebar-header {
+            display: block;
+            padding: 20px;
+            background-color: var(--sidebar-header-bg);
+            border-bottom: 1px solid #3c4146;
+            text-decoration: none;
+            color: #fff;
+            transition: background-color 0.2s;
+        }
+
+        .sidebar-header:hover {
+            background-color: #1a1e21;
+            color: #fff;
+        }
+
+        .sidebar-user {
+            padding: 16px;
+            border-bottom: 1px solid #495057;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .sidebar-avatar {
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            background: #495057;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+        }
+
+        .sidebar-user-info {
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        .sidebar-user-name {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .sidebar-user-email {
+            color: #adb5bd;
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .sidebar .nav-category {
+            padding: 20px 20px 10px;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #868e96;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .sidebar .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            color: #adb5bd;
+            font-size: 15px;
+            text-decoration: none;
+            border-radius: 0;
+            transition:
+                background-color 0.2s,
+                color 0.2s;
+        }
+
+        .sidebar .nav-link > i {
+            font-size: 17px;
+            width: 20px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .sidebar .nav-link:hover {
+            background-color: var(--sidebar-hover);
+            color: #fff;
+        }
+
+        .sidebar .nav-link.active {
+            background-color: var(--primary-color);
+            color: #fff;
+        }
+
+        .sidebar .nav-link.active:hover {
+            background-color: #0b5ed7;
+        }
+
+        .sidebar .nav-link .nav-text {
+            flex: 1;
+        }
+
+        /* =========================================
+           BADGE ЗАЯВОК
+        ========================================= */
+
+        .applications-badge {
+            display: none;
+            min-width: 23px;
+            height: 23px;
+            padding: 0 6px;
+            border-radius: 20px;
+            background-color: #dc3545;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+        }
+
+        .applications-badge.visible {
+            display: inline-flex;
+        }
+
+        .sidebar .nav-link.active .applications-badge {
+            background-color: #fff;
+            color: #dc3545;
+        }
+
+        /* =========================================
+           MAIN CONTENT
+        ========================================= */
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.3s;
+        }
+
+        .topbar {
+            background-color: #fff;
+            min-height: 60px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .topbar-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #343a40;
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .page-container {
+            padding: 24px;
+            flex: 1;
+        }
+
+        /* =========================================
+           STATISTICS
+        ========================================= */
+
+        .stat-card {
+            border: none;
+            border-radius: 8px;
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card .icon {
+            font-size: 2.5rem;
+            margin-right: 15px;
+            opacity: 0.8;
+        }
+
+        .stat-card .number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .stat-card .label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        /* =========================================
+           ОБЩИЕ КОМПОНЕНТЫ
+        ========================================= */
+
+        .admin-card {
+            background: #fff;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .admin-card-header {
+            padding: 18px 20px;
+            border-bottom: 1px solid #e9ecef;
+            font-weight: 700;
+        }
+
+        .admin-card-body {
+            padding: 20px;
+        }
+
+        .admin-page-title {
+            font-size: 25px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .admin-page-description {
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .table {
+            vertical-align: middle;
+        }
+
+        .table th {
+            font-size: 13px;
+            font-weight: 700;
+            color: #495057;
+        }
+
+        .btn {
+            border-radius: 7px;
+        }
+
+        /* =========================================
+           ФОТОГРАФИИ ИГРОКОВ И ТРЕНЕРОВ
+        ========================================= */
+
+        .admin-photo {
+            width: 80px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            background: #f8f9fa;
+        }
+
+        .admin-photo-small {
+            width: 48px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+            background: #f8f9fa;
+        }
+
+        .admin-photo-placeholder {
+            width: 80px;
+            height: 100px;
+            background: #f1f3f5;
+            border: 1px dashed #ced4da;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #adb5bd;
+            font-size: 28px;
+        }
+
+        /* =========================================
+           СТАТУСЫ ЗАЯВОК
+        ========================================= */
+
+        .application-status {
+            display: inline-flex;
+            align-items: center;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .application-status-draft {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .application-status-submitted {
+            background: #cfe2ff;
+            color: #084298;
+        }
+
+        .application-status-approved {
+            background: #d1e7dd;
+            color: #0f5132;
+        }
+
+        .application-status-rejected {
+            background: #f8d7da;
+            color: #842029;
+        }
+
+        .application-status-needs_revision {
+            background: #fff3cd;
+            color: #664d03;
+        }
+
+        /* =========================================
+           МОБИЛЬНОЕ МЕНЮ
+        ========================================= */
+
         .sidebar-backdrop {
             display: none;
             position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
             z-index: 1040;
             opacity: 0;
             transition: opacity 0.3s ease;
         }
 
-        /* --- МОБИЛЬНАЯ ВЕРСИЯ --- */
         @media (max-width: 991.98px) {
-            /* САМОЕ ВАЖНОЕ: убираем pointer-events и visibility, чтобы невидимое меню не перекрывало клики */
             .sidebar {
                 transform: translateX(-100%);
                 visibility: hidden;
                 pointer-events: none;
             }
+
             .sidebar.show {
                 transform: translateX(0);
                 visibility: visible;
                 pointer-events: auto;
             }
-            .main-content { margin-left: 0; }
 
             .sidebar-backdrop.show {
                 display: block;
                 opacity: 1;
             }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .page-container {
+                padding: 16px;
+            }
+
+            .topbar {
+                padding: 10px 15px;
+            }
+
+            .admin-page-title {
+                font-size: 21px;
+            }
+
+            .admin-card-body {
+                padding: 15px;
+            }
         }
+
+        @media (max-width: 575.98px) {
+            .topbar-title {
+                font-size: 13px;
+            }
+
+            .stat-card {
+                padding: 15px;
+            }
+
+            .stat-card .number {
+                font-size: 1.5rem;
+            }
+        }
+
+        {% block extra_css %}{% endblock %}
     </style>
 </head>
+
 <body>
 
-    <!-- Затемнение фона (для мобилки) -->
-    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+    <!-- =====================================
+         MOBILE BACKDROP
+    ====================================== -->
 
-    <!-- Сайдбар -->
-    <div class="sidebar" id="sidebar">
-        <a href="/" target="_blank" class="sidebar-header text-decoration-none text-white">
+    <div
+        class="sidebar-backdrop"
+        id="sidebar-backdrop"
+    ></div>
+
+    <!-- =====================================
+         SIDEBAR
+    ====================================== -->
+
+    <aside class="sidebar" id="sidebar">
+
+        <!-- Логотип -->
+
+        <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="sidebar-header"
+        >
             <div class="d-flex align-items-center">
                 <i class="bi bi-shield-shaded fs-3 me-2 text-primary"></i>
                 <h5 class="m-0 fw-bold">САЙТ ЛИГИ</h5>
             </div>
         </a>
 
-        <div class="p-3 border-bottom border-secondary d-flex align-items-center">
-            <div class="bg-secondary rounded-circle d-flex justify-content-center align-items-center me-2" style="width: 40px; height: 40px; flex-shrink: 0;">
+        <!-- Администратор -->
+
+        <div class="sidebar-user">
+
+            <div class="sidebar-avatar">
                 <i class="bi bi-person text-white"></i>
             </div>
-            <div class="text-truncate">
-                <div class="fw-bold" style="font-size: 14px;">J-LIGA</div>
-                <div class="text-muted text-truncate" style="font-size: 12px;">{{ user.email }}</div>
+
+            <div class="sidebar-user-info">
+
+                <div class="sidebar-user-name">
+                    J-LIGA
+                </div>
+
+                <div class="sidebar-user-email">
+                    {{ user.email }}
+                </div>
+
             </div>
+
         </div>
 
-        <div class="nav-category">Основное</div>
-        <a href="/admin" class="nav-link"><i class="bi bi-house-door me-2"></i> Главная</a>
-        <a href="/admin/news" class="nav-link"><i class="bi bi-newspaper me-2"></i> Новости</a>
-        <a href="/admin/media" class="nav-link"><i class="bi bi-images me-2"></i> Медиа</a>
-        <a href="/admin/partners" class="nav-link"><i class="bi bi-briefcase me-2"></i> Партнеры</a>
-        <a href="/admin/staff" class="nav-link"><i class="bi bi-person-badge me-2"></i> Сотрудники</a>
-        <a href="#" class="nav-link"><i class="bi bi-people me-2"></i> Пользователи</a>
+        <!-- =================================
+             ОСНОВНОЕ
+        ================================== -->
 
-        <div class="nav-category">Турниры</div>
-        <a href="/admin/tournaments" class="nav-link"><i class="bi bi-trophy me-2"></i> Мои турниры</a>
-        <a href="/admin/matches" class="nav-link"><i class="bi bi-calendar-event me-2"></i> Матчи</a>
-        <a href="/admin/stadiums" class="nav-link"><i class="bi bi-geo-alt me-2"></i> Стадионы</a>
+        <div class="nav-category">
+            Основное
+        </div>
 
-        <div class="nav-category">Участники</div>
-        <a href="/admin/teams" class="nav-link"><i class="bi bi-shield me-2"></i> Команды</a>
-        <a href="/admin/players" class="nav-link"><i class="bi bi-person me-2"></i> Игроки</a>
-        <a href="/admin/disqualifications" class="nav-link"><i class="bi bi-card-list me-2"></i> Дисквалификации</a>
+        <a href="/admin" class="nav-link">
+            <i class="bi bi-house-door"></i>
+            <span class="nav-text">Главная</span>
+        </a>
+
+        <a href="/admin/news" class="nav-link">
+            <i class="bi bi-newspaper"></i>
+            <span class="nav-text">Новости</span>
+        </a>
+
+        <a href="/admin/media" class="nav-link">
+            <i class="bi bi-images"></i>
+            <span class="nav-text">Медиа</span>
+        </a>
+
+        <a href="/admin/partners" class="nav-link">
+            <i class="bi bi-briefcase"></i>
+            <span class="nav-text">Партнеры</span>
+        </a>
+
+        <a href="/admin/staff" class="nav-link">
+            <i class="bi bi-person-badge"></i>
+            <span class="nav-text">Сотрудники</span>
+        </a>
+
+        <a href="#" class="nav-link">
+            <i class="bi bi-people"></i>
+            <span class="nav-text">Пользователи</span>
+        </a>
+
+        <!-- =================================
+             ТУРНИРЫ
+        ================================== -->
+
+        <div class="nav-category">
+            Турниры
+        </div>
+
+        <a href="/admin/tournaments" class="nav-link">
+            <i class="bi bi-trophy"></i>
+            <span class="nav-text">Мои турниры</span>
+        </a>
+
+        <a href="/admin/matches" class="nav-link">
+            <i class="bi bi-calendar-event"></i>
+            <span class="nav-text">Матчи</span>
+        </a>
+
+        <a href="/admin/stadiums" class="nav-link">
+            <i class="bi bi-geo-alt"></i>
+            <span class="nav-text">Стадионы</span>
+        </a>
+
+        <!-- =================================
+             УЧАСТНИКИ
+        ================================== -->
+
+        <div class="nav-category">
+            Участники
+        </div>
+
+        <a href="/admin/teams" class="nav-link">
+            <i class="bi bi-shield"></i>
+            <span class="nav-text">Команды</span>
+        </a>
+
+        <a href="/admin/players" class="nav-link">
+            <i class="bi bi-person"></i>
+            <span class="nav-text">Игроки</span>
+        </a>
+
+        <!-- =================================
+             НОВЫЙ РАЗДЕЛ: ЗАЯВКИ ТРЕНЕРОВ
+        ================================== -->
+
+        <a
+            href="/admin/coach-applications"
+            class="nav-link"
+            id="coach-applications-link"
+        >
+            <i class="bi bi-clipboard2-check"></i>
+
+            <span class="nav-text">
+                Заявки тренеров
+            </span>
+
+            <span
+                class="applications-badge"
+                id="pending-applications-badge"
+                aria-label="Заявки на проверке"
+            ></span>
+        </a>
+
+        <a
+            href="/admin/disqualifications"
+            class="nav-link"
+        >
+            <i class="bi bi-card-list"></i>
+            <span class="nav-text">
+                Дисквалификации
+            </span>
+        </a>
+
+        <!-- =================================
+             ВЫХОД
+        ================================== -->
 
         <div class="mt-5 mb-3 px-3">
-            <a href="/logout" class="btn btn-outline-danger w-100 btn-sm"><i class="bi bi-box-arrow-right me-1"></i> Выйти</a>
-        </div>
-    </div>
 
-    <!-- Основная часть -->
+            <a
+                href="/logout"
+                class="btn btn-outline-danger w-100 btn-sm"
+            >
+                <i class="bi bi-box-arrow-right me-1"></i>
+                Выйти
+            </a>
+
+        </div>
+
+    </aside>
+
+    <!-- =====================================
+         ОСНОВНОЙ КОНТЕНТ
+    ====================================== -->
+
     <div class="main-content" id="main-content">
-        <div class="topbar">
-            <!-- Кнопка меню (теперь кликабельная) -->
-            <button class="btn btn-link text-dark p-0 d-lg-none" id="menu-toggle" style="text-decoration: none;">
-                <i class="bi bi-list fs-2"></i>
-            </button>
 
-            <!-- Заглушка для десктопа, чтобы топбар не прыгал -->
-            <div class="d-none d-lg-block"></div>
+        <!-- TOPBAR -->
 
-            <div class="d-flex align-items-center">
-                <a href="/" target="_blank" class="btn btn-sm btn-outline-primary me-3 d-none d-sm-block"><i class="bi bi-box-arrow-up-right"></i> На сайт</a>
-                <span class="text-muted small d-none d-sm-block">Панель управления</span>
+        <header class="topbar">
+
+            <div class="d-flex align-items-center gap-3">
+
+                <button
+                    type="button"
+                    class="btn btn-link text-dark p-0 d-lg-none"
+                    id="menu-toggle"
+                    aria-label="Открыть меню"
+                    aria-controls="sidebar"
+                    aria-expanded="false"
+                    style="text-decoration: none;"
+                >
+                    <i class="bi bi-list fs-2"></i>
+                </button>
+
+                <div class="topbar-title">
+                    {% block page_heading %}
+                        Панель управления
+                    {% endblock %}
+                </div>
+
             </div>
-        </div>
 
-        <div class="container-fluid p-3 p-md-4">
-            {% block admin_content %}{% endblock %}
-        </div>
+            <div class="topbar-actions">
+
+                <a
+                    href="/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn btn-sm btn-outline-primary d-none d-sm-inline-flex"
+                >
+                    <i class="bi bi-box-arrow-up-right me-1"></i>
+                    На сайт
+                </a>
+
+                <span class="text-muted small d-none d-md-block">
+                    Администрирование J-LIGA
+                </span>
+
+            </div>
+
+        </header>
+
+        <!-- СОДЕРЖИМОЕ СТРАНИЦЫ -->
+
+        <main class="container-fluid page-container">
+
+            {% block admin_content %}
+            {% endblock %}
+
+        </main>
+
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- =====================================
+         BOOTSTRAP
+    ====================================== -->
 
-    <!-- Скрипт для открытия/закрытия мобильного меню -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+    ></script>
+
+    <!-- =====================================
+         SIDEBAR SCRIPT
+    ====================================== -->
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const toggleBtn = document.getElementById('menu-toggle');
-            const sidebar = document.getElementById('sidebar');
-            const backdrop = document.getElementById('sidebar-backdrop');
-            const navLinks = document.querySelectorAll('.sidebar .nav-link');
+        document.addEventListener("DOMContentLoaded", function () {
+
+            const toggleBtn = document.getElementById(
+                "menu-toggle"
+            );
+
+            const sidebar = document.getElementById(
+                "sidebar"
+            );
+
+            const backdrop = document.getElementById(
+                "sidebar-backdrop"
+            );
+
+            const navLinks = document.querySelectorAll(
+                ".sidebar .nav-link"
+            );
+
+            function openSidebar() {
+                sidebar.classList.add("show");
+                backdrop.classList.add("show");
+
+                toggleBtn?.setAttribute(
+                    "aria-expanded",
+                    "true"
+                );
+            }
+
+            function closeSidebar() {
+                sidebar.classList.remove("show");
+                backdrop.classList.remove("show");
+
+                toggleBtn?.setAttribute(
+                    "aria-expanded",
+                    "false"
+                );
+            }
 
             // Открытие меню
+
             if (toggleBtn) {
-                toggleBtn.addEventListener('click', function() {
-                    sidebar.classList.add('show');
-                    backdrop.classList.add('show');
-                });
+                toggleBtn.addEventListener(
+                    "click",
+                    function () {
+                        if (sidebar.classList.contains("show")) {
+                            closeSidebar();
+                        } else {
+                            openSidebar();
+                        }
+                    }
+                );
             }
 
-            // Закрытие по клику на затемнение
+            // Закрытие по затемнению
+
             if (backdrop) {
-                backdrop.addEventListener('click', function() {
-                    sidebar.classList.remove('show');
-                    backdrop.classList.remove('show');
-                });
+                backdrop.addEventListener(
+                    "click",
+                    closeSidebar
+                );
             }
 
-            // Автоматическое закрытие меню при клике на любую ссылку в нем
+            // Закрытие после перехода
+
             navLinks.forEach(link => {
-                link.addEventListener('click', function() {
-                    sidebar.classList.remove('show');
-                    backdrop.classList.remove('show');
-                });
+                link.addEventListener(
+                    "click",
+                    closeSidebar
+                );
             });
+
+            // Закрытие клавишей Escape
+
+            document.addEventListener(
+                "keydown",
+                function (event) {
+                    if (event.key === "Escape") {
+                        closeSidebar();
+                    }
+                }
+            );
+
+            // =====================================
+            // АКТИВНЫЙ ПУНКТ МЕНЮ
+            // =====================================
+
+            const currentPath =
+                window.location.pathname.replace(/\/+$/, "") ||
+                "/";
+
+            const navigationLinks = [
+                ...document.querySelectorAll(
+                    ".sidebar .nav-link[href]"
+                )
+            ].filter(link => {
+                const href = link.getAttribute("href");
+                return href && href.startsWith("/");
+            });
+
+            let bestMatch = null;
+            let bestLength = -1;
+
+            navigationLinks.forEach(link => {
+                const href = link.getAttribute("href")
+                    .replace(/\/+$/, "") || "/";
+
+                const isMatch =
+                    currentPath === href ||
+                    (
+                        href !== "/" &&
+                        href !== "/admin" &&
+                        currentPath.startsWith(href + "/")
+                    );
+
+                if (isMatch && href.length > bestLength) {
+                    bestMatch = link;
+                    bestLength = href.length;
+                }
+            });
+
+            navigationLinks.forEach(link => {
+                link.classList.remove("active");
+                link.removeAttribute("aria-current");
+            });
+
+            if (bestMatch) {
+                bestMatch.classList.add("active");
+                bestMatch.setAttribute("aria-current", "page");
+            }
+
+            // =====================================
+            // СЧЁТЧИК ЗАЯВОК ТРЕНЕРОВ
+            // =====================================
+
+            const badge = document.getElementById(
+                "pending-applications-badge"
+            );
+
+            /*
+             * Здесь используется отдельный endpoint:
+             *
+             * GET /admin/api/coach-applications/count
+             *
+             * Ожидаемый ответ:
+             *
+             * {
+             *     "pending": 5
+             * }
+             *
+             * Endpoint должен быть защищён
+             * существующей авторизацией администратора.
+             */
+
+            async function updateApplicationsBadge() {
+                if (!badge) return;
+
+                try {
+                    const response = await fetch(
+                        "/admin/api/coach-applications/count",
+                        {
+                            method: "GET",
+                            credentials: "same-origin",
+                            headers: {
+                                "Accept": "application/json"
+                            }
+                        }
+                    );
+
+                    if (!response.ok) {
+                        badge.classList.remove("visible");
+                        return;
+                    }
+
+                    const data = await response.json();
+
+                    const count = Number(data.pending);
+
+                    if (
+                        !Number.isInteger(count) ||
+                        count < 0
+                    ) {
+                        badge.classList.remove("visible");
+                        return;
+                    }
+
+                    if (count > 0) {
+                        badge.textContent = count > 99
+                            ? "99+"
+                            : String(count);
+
+                        badge.classList.add("visible");
+
+                        badge.setAttribute(
+                            "aria-label",
+                            "Заявок на проверке: " + count
+                        );
+                    } else {
+                        badge.textContent = "";
+                        badge.classList.remove("visible");
+                    }
+
+                } catch (error) {
+                    // Если API ещё не подключён,
+                    // остальная админ-панель продолжит работать.
+                    badge.classList.remove("visible");
+                }
+            }
+
+            updateApplicationsBadge();
+
+            // Доступно дочерним шаблонам после модерации.
+            window.updateApplicationsBadge =
+                updateApplicationsBadge;
+
         });
     </script>
+
+    {% block extra_js %}{% endblock %}
+
 </body>
 </html>

@@ -1,71 +1,145 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>J-LIGA | Футбольная лига</title>
+
     <link rel="icon" type="image/png" href="/static/main_logo.png">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet">
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+        rel="stylesheet"
+    >
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap"
+        rel="stylesheet"
+    >
+
     <style>
-        body { background-color: #e9ecef; font-family: 'Roboto Condensed', sans-serif; }
+        :root {
+            --jliga-dark: #0f2537;
+            --jliga-primary: #1a3c56;
+            --jliga-blue: #1a85ad;
+            --jliga-red: #d8232a;
+        }
 
-        /* --- ВЕРХНЯЯ ШАПКА --- */
-        .header-top { background-color: #0f2537; padding: 10px 0; color: white; }
-        .main-logo { height: 150px; object-fit: contain; transition: 0.3s; }
-        .logo-text { font-size: 32px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-left: 15px; white-space: nowrap;}
-        .hover-opacity { transition: opacity 0.2s; }
-        .hover-opacity:hover { opacity: 0.7; }
+        body {
+            background-color: #e9ecef;
+            font-family: 'Roboto Condensed', sans-serif;
+        }
 
-        /* --- ГЛАВНОЕ МЕНЮ --- */
-        .nav-main { background-color: #1a3c56; padding: 0; position: relative; z-index: 1030; }
+        /* Шапка */
+
+        .header-top {
+            background-color: var(--jliga-dark);
+            padding: 10px 0;
+            color: white;
+        }
+
+        .main-logo {
+            height: 150px;
+            object-fit: contain;
+            transition: .3s;
+        }
+
+        .logo-text {
+            font-size: 32px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-left: 15px;
+            white-space: nowrap;
+        }
+
+        .hover-opacity {
+            transition: opacity .2s;
+        }
+
+        .hover-opacity:hover {
+            opacity: .7;
+        }
+
+        /* Главное меню */
+
+        .nav-main {
+            background-color: var(--jliga-primary);
+            padding: 0;
+            position: relative;
+            z-index: 1030;
+        }
+
         .nav-main .nav-link {
             color: white !important;
             text-transform: uppercase;
             font-weight: 700;
             padding: 15px 0;
             font-size: 16px;
-            border-right: 1px solid rgba(255,255,255,0.1);
+            border-right: 1px solid rgba(255, 255, 255, .1);
         }
-        .nav-main .nav-link:hover { background-color: #0f2537; }
 
-        /* Активная красная вкладка (только для ПК) */
+        .nav-main .nav-link:hover {
+            background-color: var(--jliga-dark);
+        }
+
+        .nav-main .nav-link.coach-link {
+            background-color: #146c43;
+        }
+
+        .nav-main .nav-link.coach-link:hover {
+            background-color: #0f5132;
+        }
+
         @media (min-width: 992px) {
             .nav-main .nav-item.active .nav-link {
-                background-color: #d8232a;
-                clip-path: polygon(0 0, 100% 0, 95% 100%, 0% 100%);
+                background-color: var(--jliga-red);
+                clip-path: polygon(
+                    0 0,
+                    100% 0,
+                    95% 100%,
+                    0% 100%
+                );
                 position: relative;
                 z-index: 2;
             }
         }
 
-        /* --- ВЫПАДАЮЩИЕ МЕНЮ --- */
+        /* Выпадающие меню */
+
         .custom-dropdown {
-            background-color: #1a85ad;
+            background-color: var(--jliga-blue);
             border: none;
             border-radius: 0 0 8px 8px;
             min-width: 220px;
             padding: 0;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
             margin-top: 0;
         }
+
         .custom-dropdown .dropdown-item {
             color: white;
             text-transform: uppercase;
             font-weight: 700;
             font-size: 15px;
             padding: 12px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .custom-dropdown .dropdown-item:hover {
-            background-color: #0f2537;
-            color: #d8232a;
+            border-bottom: 1px solid rgba(255, 255, 255, .1);
         }
 
-        /* ========================================= */
-        /* --- MEGA MENU (ЦЕНТРИРОВАННОЕ) --- */
-        /* ========================================= */
+        .custom-dropdown .dropdown-item:hover {
+            background-color: var(--jliga-dark);
+            color: var(--jliga-red);
+        }
+
+        /* Меню турниров */
+
         .mega-menu {
             position: absolute;
             top: 100%;
@@ -73,17 +147,22 @@
             transform: translateX(-50%);
             width: 900px;
             max-width: 95vw;
-            background-color: #1a85ad;
+            background-color: var(--jliga-blue);
             border: none;
             border-radius: 0 0 8px 8px;
             padding: 0;
             margin-top: 0;
-            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, .3);
             display: none;
             z-index: 1050;
         }
 
-        .mega-menu-inner { padding: 30px 40px; display: flex; flex-wrap: wrap; gap: 40px; }
+        .mega-menu-inner {
+            padding: 30px 40px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px;
+        }
 
         .mega-title-box {
             background-color: #7a8b9a;
@@ -93,86 +172,229 @@
             font-weight: 700;
             text-transform: uppercase;
             font-size: 14px;
-            clip-path: polygon(0 0, 100% 0, 85% 100%, 0% 100%);
+            clip-path: polygon(
+                0 0,
+                100% 0,
+                85% 100%,
+                0% 100%
+            );
             margin-bottom: 15px;
             min-width: 200px;
         }
 
-        .mega-list { list-style: none; padding: 0; margin: 0; }
-        .mega-list li { border-bottom: 1px solid rgba(255,255,255,0.15); }
-        .mega-list li:last-child { border-bottom: none; }
-        .mega-list a {
-            color: white; text-decoration: none; font-size: 15px; font-weight: 500;
-            display: block; padding: 10px 0; transition: color 0.2s; white-space: nowrap;
+        .mega-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
         }
-        .mega-list a:hover { color: #ffc107; }
 
-        /* Нижняя панель (для ПК и мобилки) */
+        .mega-list li {
+            border-bottom: 1px solid rgba(255, 255, 255, .15);
+        }
+
+        .mega-list li:last-child {
+            border-bottom: none;
+        }
+
+        .mega-list a {
+            color: white;
+            text-decoration: none;
+            font-size: 15px;
+            font-weight: 500;
+            display: block;
+            padding: 10px 0;
+            transition: color .2s;
+            white-space: nowrap;
+        }
+
+        .mega-list a:hover {
+            color: #ffc107;
+        }
+
         .mega-bottom-bar {
-            background-color: #7a8b9a; padding: 15px 0;
-            display: flex; justify-content: center; flex-wrap: wrap; gap: 30px; width: 100%;
+            background-color: #7a8b9a;
+            padding: 15px 0;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 30px;
+            width: 100%;
             border-radius: 0 0 8px 8px;
         }
-        .mega-bottom-bar a {
-            color: white; text-decoration: none; font-weight: 700; font-size: 14px;
-            text-transform: uppercase; letter-spacing: 0.5px; transition: color 0.2s;
-        }
-        .mega-bottom-bar a:hover { color: #d8232a; }
 
-        /* Показываем меню при наведении ТОЛЬКО НА ПК */
+        .mega-bottom-bar a {
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            transition: color .2s;
+        }
+
+        .mega-bottom-bar a:hover {
+            color: var(--jliga-red);
+        }
+
         @media (min-width: 992px) {
             .nav-main .nav-item.dropdown:hover .custom-dropdown,
-            .nav-main .nav-item.dropdown:hover .mega-menu { display: block !important; }
+            .nav-main .nav-item.dropdown:hover .mega-menu {
+                display: block !important;
+            }
         }
 
-        /* ========================================= */
-        /* --- МОБИЛЬНАЯ ВЕРСИЯ (ЭКРАНЫ < 992px) --- */
-        /* ========================================= */
-        @media (max-width: 991px) {
-            .main-logo { height: 50px; }
-            .logo-text { font-size: 20px; margin-left: 10px; }
-            .header-top { padding: 5px 0; }
-            .social-icons-top { display: none !important; }
+        /* Карточки */
 
-            .navbar-toggler { border: none; box-shadow: none; }
-            .navbar-toggler:focus { box-shadow: none; }
+        .match-card {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, .1);
+            margin-bottom: 15px;
+            padding: 15px;
+        }
+
+        .hover-lift {
+            transition: transform .2s, box-shadow .2s;
+        }
+
+        .hover-lift:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 .5rem 1rem rgba(0, 0, 0, .15) !important;
+        }
+
+        /* Партнёры */
+
+        .partners-scroll-container {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 2rem;
+            align-items: center;
+            padding-bottom: 10px;
+            -webkit-overflow-scrolling: touch;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        .partners-scroll-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .partner-logo {
+            flex-shrink: 0;
+            height: 70px;
+            max-width: 150px;
+            object-fit: contain;
+        }
+
+        /* Футер */
+
+        .site-footer {
+            background-color: var(--jliga-dark);
+            color: white;
+            padding: 30px 0;
+            margin-top: auto;
+        }
+
+        .site-footer .footer-line {
+            border-bottom: 1px solid rgba(255, 255, 255, .1);
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+
+        .site-footer a {
+            color: white;
+            text-decoration: none;
+            transition: color .2s;
+        }
+
+        .site-footer a:hover {
+            color: var(--jliga-red);
+        }
+
+        .footer-auth-links {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .footer-auth-links a {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .footer-auth-links .coach-entry {
+            color: #75e5a4;
+        }
+
+        /* Мобильная версия */
+
+        @media (max-width: 991px) {
+            .main-logo {
+                height: 50px;
+            }
+
+            .logo-text {
+                font-size: 20px;
+                margin-left: 10px;
+            }
+
+            .header-top {
+                padding: 5px 0;
+            }
+
+            .social-icons-top {
+                display: none !important;
+            }
+
+            .navbar-toggler {
+                border: none;
+                box-shadow: none;
+            }
+
+            .navbar-toggler:focus {
+                box-shadow: none;
+            }
 
             .nav-main .nav-link {
                 border-right: none;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
+                border-bottom: 1px solid rgba(255, 255, 255, .1);
                 padding: 12px 15px;
                 text-align: left;
             }
-            .nav-main .nav-fill { display: block; }
 
-            /* На мобилке мега-меню становится просто списком вниз */
+            .nav-main .nav-fill {
+                display: block;
+            }
+
             .mega-menu {
                 position: static !important;
                 transform: none !important;
                 width: 100% !important;
+                max-width: 100%;
                 box-shadow: none;
                 border-radius: 0;
                 background-color: #156f91;
-                display: none; /* Скрыто по умолчанию, открывается по клику через JS */
+                display: none;
             }
 
-            /* СКРЫВАЕМ БОЛЬШОЙ СПИСОК ТУРНИРОВ НА МОБИЛКЕ */
             .mega-menu-inner {
                 display: none !important;
             }
 
-            /* 3 КНОПКИ ВСТАЮТ В СТОЛБИК */
             .mega-bottom-bar {
                 flex-direction: column;
                 align-items: stretch;
                 gap: 0;
                 border-radius: 0;
                 padding: 0;
-                background-color: #1a3c56;
+                background-color: var(--jliga-primary);
             }
+
             .mega-bottom-bar a {
                 padding: 15px 20px;
-                border-bottom: 1px solid rgba(255,255,255,0.1);
+                border-bottom: 1px solid rgba(255, 255, 255, .1);
                 text-align: left;
                 font-size: 15px;
             }
@@ -185,215 +407,523 @@
                 border-radius: 0;
             }
 
-            /* Стили для стрелочек при клике */
             .nav-item.dropdown > .nav-link {
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
             }
+
             .nav-item.dropdown > .nav-link::after {
-                display: none; /* Убираем дефолтную стрелку bootstrap */
+                display: none;
+            }
+
+            .partners-scroll-container {
+                justify-content: flex-start;
+                gap: 1.5rem;
+            }
+
+            .partner-logo {
+                height: 50px;
+            }
+
+            .footer-auth-links {
+                gap: 12px;
             }
         }
 
-        /* --- ОСТАЛЬНЫЕ СТИЛИ --- */
-        .match-card { background: white; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 15px; padding: 15px; }
-        .hover-lift { transition: transform 0.2s, box-shadow 0.2s; }
-        .hover-lift:hover { transform: translateY(-5px); box-shadow: 0 .5rem 1rem rgba(0,0,0,.15)!important; }
-
-        /* --- ПОДВАЛ --- */
-        .site-footer { background-color: #0f2537; color: white; padding: 30px 0; margin-top: auto; }
-        .site-footer .footer-line { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 20px; margin-bottom: 20px; }
-        .site-footer a { color: white; text-decoration: none; transition: color 0.2s; }
-        .site-footer a:hover { color: #d8232a; }
-
-        /* ========================================= */
-        /* --- ПАРТНЕРЫ (В ОДИН РЯД) --- */
-        /* ========================================= */
-        .partners-scroll-container {
-            display: flex;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            gap: 2rem;
-            align-items: center;
-            padding-bottom: 10px;
-            -webkit-overflow-scrolling: touch;
-        }
-        .partners-scroll-container::-webkit-scrollbar { display: none; }
-        .partners-scroll-container { -ms-overflow-style: none; scrollbar-width: none; }
-        .partner-logo { flex-shrink: 0; height: 70px; max-width: 150px; object-fit: contain; }
-
         @media (min-width: 992px) {
-            .partners-scroll-container { justify-content: center; flex-wrap: wrap; overflow-x: visible; }
-        }
-        @media (max-width: 991px) {
-            .partners-scroll-container { justify-content: flex-start; gap: 1.5rem; }
-            .partner-logo { height: 50px; }
+            .partners-scroll-container {
+                justify-content: center;
+                flex-wrap: wrap;
+                overflow-x: visible;
+            }
         }
     </style>
 </head>
+
 <body>
 
-    <!-- Шапка -->
-    <div class="header-top">
+    <!-- Шапка сайта -->
+
+    <header class="header-top">
         <div class="container-fluid px-3 px-xl-5 d-flex justify-content-between align-items-center">
-            <a href="/" class="d-flex align-items-center text-decoration-none text-white hover-opacity">
-                <img src="/static/main_logo.png" alt="J-LIGA" class="main-logo">
+
+            <a
+                href="/"
+                class="d-flex align-items-center text-decoration-none text-white hover-opacity"
+            >
+                <img
+                    src="/static/main_logo.png"
+                    alt="J-LIGA"
+                    class="main-logo"
+                >
+
                 <span class="logo-text">J-LIGA</span>
             </a>
+
             <div class="d-flex align-items-center gap-3 social-icons-top">
-                <a href="https://www.instagram.com/j_liga_" target="_blank" class="text-white hover-opacity"><i class="bi bi-instagram fs-4"></i></a>
-                <a href="https://www.youtube.com/channel/UCbOwln8USfQxGEbWfuZYYFA" target="_blank" class="text-white hover-opacity"><i class="bi bi-youtube fs-4"></i></a>
-                <a href="https://wa.clck.bar/77087232313" target="_blank" class="text-white hover-opacity"><i class="bi bi-whatsapp fs-4"></i></a>
-                <a href="https://www.tiktok.com/@jliga_almaty?_r=1&_t=ZS-98akUq3cftU" target="_blank" class="text-white hover-opacity" title="TikTok"><i class="bi bi-tiktok fs-4"></i></a>
+
+                <a
+                    href="https://www.instagram.com/j_liga_"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-white hover-opacity"
+                    aria-label="Instagram"
+                >
+                    <i class="bi bi-instagram fs-4"></i>
+                </a>
+
+                <a
+                    href="https://www.youtube.com/channel/UCbOwln8USfQxGEbWfuZYYFA"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-white hover-opacity"
+                    aria-label="YouTube"
+                >
+                    <i class="bi bi-youtube fs-4"></i>
+                </a>
+
+                <a
+                    href="https://wa.clck.bar/77087232313"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-white hover-opacity"
+                    aria-label="WhatsApp"
+                >
+                    <i class="bi bi-whatsapp fs-4"></i>
+                </a>
+
+                <a
+                    href="https://www.tiktok.com/@jliga_almaty?_r=1&_t=ZS-98akUq3cftU"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-white hover-opacity"
+                    aria-label="TikTok"
+                >
+                    <i class="bi bi-tiktok fs-4"></i>
+                </a>
+
             </div>
+
         </div>
-    </div>
+    </header>
+
 
     <!-- Главное меню -->
+
     <nav class="navbar navbar-expand-lg nav-main p-0">
         <div class="container-fluid px-0 px-xl-5">
 
-            <button class="navbar-toggler text-white ms-auto me-3 my-2" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu" aria-controls="mobileMenu" aria-expanded="false" aria-label="Toggle navigation">
+            <button
+                class="navbar-toggler text-white ms-auto me-3 my-2"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#mobileMenu"
+                aria-controls="mobileMenu"
+                aria-expanded="false"
+                aria-label="Открыть меню"
+            >
                 <i class="bi bi-list fs-1"></i>
             </button>
 
             <div class="collapse navbar-collapse" id="mobileMenu">
+
                 <ul class="navbar-nav nav-fill w-100">
 
-                    <!-- О ЛИГЕ -->
+                    <!-- О лиге -->
+
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a
+                            class="nav-link dropdown-toggle"
+                            href="#"
+                            role="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
                             О ЛИГЕ
                         </a>
+
                         <ul class="dropdown-menu custom-dropdown">
-                            <li><a class="dropdown-item" href="/stadiums">Стадионы</a></li>
-                            <li><a class="dropdown-item" href="/management">Сотрудники</a></li>
-                            <li><a class="dropdown-item" href="/partners">Партнеры</a></li>
+                            <li>
+                                <a class="dropdown-item" href="/stadiums">
+                                    Стадионы
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item" href="/management">
+                                    Сотрудники
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item" href="/partners">
+                                    Партнеры
+                                </a>
+                            </li>
                         </ul>
                     </li>
 
-                    <!-- ТУРНИРЫ -->
+
+                    <!-- Турниры -->
+
                     <li class="nav-item dropdown custom-mobile-dropdown">
-                        <a class="nav-link dropdown-toggle mobile-toggle-btn" href="/tournaments" role="button" aria-expanded="false">
+
+                        <a
+                            class="nav-link dropdown-toggle mobile-toggle-btn"
+                            href="/tournaments"
+                            role="button"
+                            aria-expanded="false"
+                        >
                             ТУРНИРЫ
-                            <i class="bi bi-caret-down-fill d-lg-none" style="font-size: 14px;"></i>
+
+                            <i
+                                class="bi bi-caret-down-fill d-lg-none"
+                                style="font-size: 14px;"
+                            ></i>
                         </a>
 
-                        <div class="mega-menu" id="tournaments-menu">
-                            <!-- Этот блок виден ТОЛЬКО НА ПК -->
+                        <div
+                            class="mega-menu"
+                            id="tournaments-menu"
+                        >
+
                             <div class="mega-menu-inner">
+
                                 {% if menu_data %}
+
                                     {% for category_name, tournaments_list in menu_data.items() %}
-                                    <div>
-                                        <div class="mega-title-box">{{ category_name }}</div>
-                                        <ul class="mega-list">
-                                            {% for t in tournaments_list %}
-                                            <li><a href="/tournaments/{{ t.id }}">{{ t.name }}</a></li>
-                                            {% endfor %}
-                                        </ul>
-                                    </div>
+
+                                        <div>
+                                            <div class="mega-title-box">
+                                                {{ category_name }}
+                                            </div>
+
+                                            <ul class="mega-list">
+
+                                                {% for t in tournaments_list %}
+
+                                                    <li>
+                                                        <a href="/tournaments/{{ t.id }}">
+                                                            {{ t.name }}
+                                                        </a>
+                                                    </li>
+
+                                                {% endfor %}
+
+                                            </ul>
+                                        </div>
+
                                     {% endfor %}
+
                                 {% endif %}
+
                             </div>
 
-                            <!-- Этот блок виден ВЕЗДЕ (на ПК внизу, на мобилке вместо всего списка) -->
                             <div class="mega-bottom-bar">
                                 <a href="/matches">Матчи</a>
                                 <a href="/tournaments">Турниры</a>
                                 <a href="/disciplinary">Дисквалификации</a>
                             </div>
+
                         </div>
+
                     </li>
 
-                    <!-- УЧАСТНИКИ -->
+
+                    <!-- Участники -->
+
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+
+                        <a
+                            class="nav-link dropdown-toggle"
+                            href="#"
+                            role="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
                             УЧАСТНИКИ
                         </a>
+
                         <ul class="dropdown-menu custom-dropdown">
-                            <li><a class="dropdown-item" href="/participants/teams">КОМАНДЫ</a></li>
-                            <li><a class="dropdown-item" href="/participants/players">ИГРОКИ</a></li>
-                            <li><a class="dropdown-item" href="/participants/hall-of-fame">ЗАЛ СЛАВЫ</a></li>
+
+                            <li>
+                                <a
+                                    class="dropdown-item"
+                                    href="/participants/teams"
+                                >
+                                    КОМАНДЫ
+                                </a>
+                            </li>
+
+                            <li>
+                                <a
+                                    class="dropdown-item"
+                                    href="/participants/players"
+                                >
+                                    ИГРОКИ
+                                </a>
+                            </li>
+
+                            <li>
+                                <a
+                                    class="dropdown-item"
+                                    href="/participants/hall-of-fame"
+                                >
+                                    ЗАЛ СЛАВЫ
+                                </a>
+                            </li>
+
                         </ul>
                     </li>
 
+
+                    <!-- Новости -->
+
                     <li class="nav-item">
-                        <a class="nav-link" href="/news">НОВОСТИ</a>
+                        <a class="nav-link" href="/news">
+                            НОВОСТИ
+                        </a>
                     </li>
+
+
+                    <!-- Медиа -->
+
                     <li class="nav-item">
-                        <a class="nav-link" href="/media">МЕДИА</a>
+                        <a class="nav-link" href="/media">
+                            МЕДИА
+                        </a>
                     </li>
+
+
+                    <!-- Кабинет тренера -->
+
+                    <li class="nav-item">
+                        <a
+                            class="nav-link coach-link"
+                            href="/coach"
+                        >
+                            <i class="bi bi-person-badge me-1"></i>
+                            ТРЕНЕРАМ
+                        </a>
+                    </li>
+
                 </ul>
+
             </div>
         </div>
     </nav>
 
-    <!-- Контент -->
-    <div class="container-fluid px-3 px-xl-5 mt-4 min-vh-100" style="max-width: 1700px; margin: 0 auto;">
-        {% block content %}{% endblock %}
-    </div>
 
-    <!-- Блок с партнерами -->
-    <div class="bg-white py-5 mt-5 border-top">
-        <div class="container" style="max-width: 1200px; margin: 0 auto;">
+    <!-- Контент страницы -->
+
+    <main
+        class="container-fluid px-3 px-xl-5 mt-4 min-vh-100"
+        style="max-width: 1700px; margin: 0 auto;"
+    >
+        {% block content %}{% endblock %}
+    </main>
+
+
+    <!-- Партнёры -->
+
+    <section class="bg-white py-5 mt-5 border-top">
+
+        <div
+            class="container"
+            style="max-width: 1200px; margin: 0 auto;"
+        >
+
             <div class="partners-scroll-container">
+
                 {% for p in partners %}
-                    <a href="{{ p.url or '#' }}" target="_blank" class="hover-opacity" title="{{ p.name }}">
-                        <img src="{{ p.logo_url }}" alt="{{ p.name }}" class="partner-logo">
+
+                    <a
+                        href="{{ p.url or '#' }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="hover-opacity"
+                        title="{{ p.name }}"
+                    >
+                        <img
+                            src="{{ p.logo_url }}"
+                            alt="{{ p.name }}"
+                            class="partner-logo"
+                        >
                     </a>
+
                 {% endfor %}
-                <a href="https://wa.clck.bar/77087232313" target="_blank" class="hover-opacity">
-                    <img src="/static/Partners/void.jpg" alt="Реклама" class="partner-logo">
+
+                <a
+                    href="https://wa.clck.bar/77087232313"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="hover-opacity"
+                >
+                    <img
+                        src="/static/Partners/void.jpg"
+                        alt="Реклама"
+                        class="partner-logo"
+                    >
                 </a>
+
             </div>
+
         </div>
-    </div>
+
+    </section>
+
 
     <!-- Подвал -->
+
     <footer class="site-footer">
-        <div class="container-fluid px-3 px-xl-5" style="max-width: 1700px; margin: 0 auto;">
-            <div class="d-flex justify-content-between align-items-center footer-line flex-wrap gap-3">
-                <div class="small">© 2019 - 2026 J-LIGA</div>
-                {% if current_user %}
-                    <div><a href="/admin" class="btn btn-outline-light btn-sm fw-bold">Вход для админа</a></div>
-                {% else %}
-                    <div><a href="/login" class="text-white text-decoration-none small hover-opacity fw-bold">Вход для админа</a></div>
-                {% endif %}
+
+        <div
+            class="container-fluid px-3 px-xl-5"
+            style="max-width: 1700px; margin: 0 auto;"
+        >
+
+            <div
+                class="d-flex justify-content-between align-items-center footer-line flex-wrap gap-3"
+            >
+
+                <div class="small">
+                    © 2019 - 2026 J-LIGA
+                </div>
+
+                <div class="footer-auth-links">
+
+                    <a
+                        href="/coach"
+                        class="coach-entry hover-opacity"
+                    >
+                        <i class="bi bi-person-badge me-1"></i>
+                        Вход для тренера
+                    </a>
+
+                    {% if current_user %}
+
+                        <a
+                            href="/admin"
+                            class="btn btn-outline-light btn-sm fw-bold"
+                        >
+                            <i class="bi bi-shield-lock me-1"></i>
+                            Админ-панель
+                        </a>
+
+                    {% else %}
+
+                        <a
+                            href="/login"
+                            class="hover-opacity"
+                        >
+                            <i class="bi bi-shield-lock me-1"></i>
+                            Вход для админа
+                        </a>
+
+                    {% endif %}
+
+                </div>
+
             </div>
+
             <div class="d-flex gap-3">
-                <a href="https://www.instagram.com/j_liga_" target="_blank" class="hover-opacity"><i class="bi bi-instagram fs-5"></i></a>
-                <a href="https://www.youtube.com/channel/UCbOwln8USfQxGEbWfuZYYFA" target="_blank" class="hover-opacity"><i class="bi bi-youtube fs-5"></i></a>
-                <a href="https://wa.clck.bar/77087232313" target="_blank" class="hover-opacity"><i class="bi bi-whatsapp fs-5"></i></a>
+
+                <a
+                    href="https://www.instagram.com/j_liga_"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="hover-opacity"
+                    aria-label="Instagram"
+                >
+                    <i class="bi bi-instagram fs-5"></i>
+                </a>
+
+                <a
+                    href="https://www.youtube.com/channel/UCbOwln8USfQxGEbWfuZYYFA"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="hover-opacity"
+                    aria-label="YouTube"
+                >
+                    <i class="bi bi-youtube fs-5"></i>
+                </a>
+
+                <a
+                    href="https://wa.clck.bar/77087232313"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="hover-opacity"
+                    aria-label="WhatsApp"
+                >
+                    <i class="bi bi-whatsapp fs-5"></i>
+                </a>
+
             </div>
+
         </div>
+
     </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- СКРИПТ ДЛЯ ОТКРЫТИЯ МЕНЮ ТУРНИРОВ НА ТЕЛЕФОНЕ -->
+    <!-- JavaScript -->
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+    ></script>
+
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const mobileToggleBtn = document.querySelector('.mobile-toggle-btn');
-            const tournamentsMenu = document.getElementById('tournaments-menu');
+        document.addEventListener(
+            "DOMContentLoaded",
+            function () {
+                const mobileToggleBtn = document.querySelector(
+                    ".mobile-toggle-btn"
+                );
 
-            if (mobileToggleBtn && tournamentsMenu) {
-                mobileToggleBtn.addEventListener('click', function(e) {
-                    if (window.innerWidth < 992) {
-                        e.preventDefault(); // Отменяем переход на /tournaments
+                const tournamentsMenu = document.getElementById(
+                    "tournaments-menu"
+                );
 
-                        // Переключаем видимость
-                        if (tournamentsMenu.style.display === 'block') {
-                            tournamentsMenu.style.display = 'none';
-                            this.querySelector('i').classList.replace('bi-caret-up-fill', 'bi-caret-down-fill');
-                        } else {
-                            tournamentsMenu.style.display = 'block';
-                            this.querySelector('i').classList.replace('bi-caret-down-fill', 'bi-caret-up-fill');
+                if (mobileToggleBtn && tournamentsMenu) {
+                    mobileToggleBtn.addEventListener(
+                        "click",
+                        function (event) {
+                            if (window.innerWidth >= 992) {
+                                return;
+                            }
+
+                            event.preventDefault();
+
+                            const isOpen =
+                                tournamentsMenu.style.display === "block";
+
+                            tournamentsMenu.style.display =
+                                isOpen ? "none" : "block";
+
+                            this.setAttribute(
+                                "aria-expanded",
+                                String(!isOpen)
+                            );
+
+                            const icon = this.querySelector("i");
+
+                            if (icon) {
+                                icon.classList.toggle(
+                                    "bi-caret-up-fill",
+                                    !isOpen
+                                );
+
+                                icon.classList.toggle(
+                                    "bi-caret-down-fill",
+                                    isOpen
+                                );
+                            }
                         }
-                    }
-                });
+                    );
+                }
             }
-        });
+        );
     </script>
+
 </body>
 </html>

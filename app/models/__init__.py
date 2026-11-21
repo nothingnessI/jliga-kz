@@ -15,6 +15,11 @@ from app.models.media import MediaItem, MediaAlbum
 from app.models.coach import Coach
 from app.models.partner import Partner
 from app.models.staff import Staff
+from app.models.registration import (
+    Registration,
+    RegistrationPlayer,
+    RegistrationStatus,
+)
 
 
 __all__ = [
@@ -36,4 +41,7 @@ __all__ = [
     "Coach",
     "Partner",
     "Staff",
+    "Registration",
+    "RegistrationPlayer",
+    "RegistrationStatus",
 ]

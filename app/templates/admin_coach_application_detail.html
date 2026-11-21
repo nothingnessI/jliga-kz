@@ -1,0 +1,1805 @@
+
+{% extends "admin_base.html" %}
+
+{% block title %}Заявка №{{ application.id }} — J-LIGA{% endblock %}
+
+{% block page_heading %}
+Заявка №{{ application.id }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .application-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 310px;
+        gap: 24px;
+        align-items: start;
+    }
+
+    .application-main,
+    .application-sidebar {
+        min-width: 0;
+    }
+
+    .application-section {
+        background: var(--bs-body-bg, #fff);
+        border: 1px solid var(--bs-border-color, #e5e7eb);
+        border-radius: 14px;
+        margin-bottom: 22px;
+        overflow: hidden;
+    }
+
+    .application-section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 17px 20px;
+        border-bottom: 1px solid var(--bs-border-color, #e5e7eb);
+    }
+
+    .application-section-header h2 {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .application-section-body {
+        padding: 20px;
+    }
+
+    .application-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+    }
+
+    .application-meta-label {
+        color: var(--bs-secondary-color, #6b7280);
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    .application-meta-value {
+        font-size: 14px;
+        font-weight: 600;
+        overflow-wrap: anywhere;
+    }
+
+    .application-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 11px;
+        border-radius: 30px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .application-status-draft {
+        color: #475569;
+        background: #e2e8f0;
+    }
+
+    .application-status-submitted {
+        color: #1d4ed8;
+        background: #dbeafe;
+    }
+
+    .application-status-revision {
+        color: #92400e;
+        background: #fef3c7;
+    }
+
+    .application-status-approved {
+        color: #166534;
+        background: #dcfce7;
+    }
+
+    .application-status-rejected {
+        color: #991b1b;
+        background: #fee2e2;
+    }
+
+    .application-photo {
+        width: 110px;
+        height: 135px;
+        object-fit: cover;
+        border-radius: 12px;
+        background: #e5e7eb;
+    }
+
+    .application-coach {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+    }
+
+    .application-player-photo {
+        width: 48px;
+        height: 58px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: #e5e7eb;
+    }
+
+    .application-player-number {
+        display: inline-flex;
+        width: 35px;
+        height: 35px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: #111827;
+        color: white;
+        font-weight: 700;
+    }
+
+    .application-player-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    .application-sidebar {
+        position: sticky;
+        top: 20px;
+    }
+
+    .application-timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .application-timeline-item {
+        border-left: 2px solid var(--bs-border-color, #d1d5db);
+        padding-left: 15px;
+    }
+
+    .application-timeline-title {
+        font-weight: 600;
+        font-size: 13px;
+    }
+
+    .application-timeline-date {
+        color: var(--bs-secondary-color, #6b7280);
+        font-size: 12px;
+        margin-top: 3px;
+    }
+
+    .application-search-results {
+        max-height: 240px;
+        overflow-y: auto;
+    }
+
+    .application-search-result {
+        text-align: left;
+        cursor: pointer;
+    }
+
+    .application-selected-player {
+        display: none;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #dcfce7;
+        color: #166534;
+        font-size: 13px;
+    }
+
+    .application-selected-player.is-visible {
+        display: block;
+    }
+
+    .application-modal-photo {
+        width: 65px;
+        height: 78px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+
+    .application-help {
+        color: var(--bs-secondary-color, #6b7280);
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .application-review-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .application-review-buttons .btn {
+        width: 100%;
+    }
+
+    .application-notice {
+        border-radius: 10px;
+        padding: 13px 15px;
+        font-size: 13px;
+    }
+
+    .application-notice-warning {
+        background: #fffbeb;
+        color: #92400e;
+        border: 1px solid #fde68a;
+    }
+
+    .application-notice-success {
+        background: #f0fdf4;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .application-notice-danger {
+        background: #fef2f2;
+        color: #991b1b;
+        border: 1px solid #fecaca;
+    }
+
+    @media (max-width: 1100px) {
+        .application-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .application-sidebar {
+            position: static;
+        }
+    }
+
+    @media (max-width: 600px) {
+        .application-meta {
+            grid-template-columns: 1fr;
+        }
+
+        .application-section-body {
+            padding: 15px;
+        }
+
+        .application-coach {
+            flex-direction: column;
+        }
+
+        .application-section-header {
+            flex-wrap: wrap;
+        }
+    }
+</style>
+{% endblock %}
+
+
+{% block admin_content %}
+
+{% set can_edit = application.status in ["submitted", "revision"] %}
+{% set can_review = application.status == "submitted" %}
+
+{% set status_labels = {
+    "draft": "Черновик",
+    "submitted": "На проверке",
+    "revision": "На доработке",
+    "approved": "Одобрена",
+    "rejected": "Отклонена"
+} %}
+
+{% set positions = [
+    ("goalkeeper", "Вратарь"),
+    ("defender", "Защитник"),
+    ("midfielder", "Полузащитник"),
+    ("forward", "Нападающий")
+] %}
+
+<div class="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-3">
+    <div>
+        <a href="/admin/coach-applications"
+           class="text-decoration-none text-secondary small">
+            <i class="bi bi-arrow-left me-1"></i>
+            Все заявки
+        </a>
+
+        <h1 class="h4 fw-bold mt-2 mb-1">
+            Заявка команды №{{ application.id }}
+        </h1>
+
+        <div class="text-secondary small">
+            Проверка регистрации команды на турнир
+        </div>
+    </div>
+
+    <span class="application-status application-status-{{ application.status }}">
+        {{ status_labels.get(application.status, application.status) }}
+    </span>
+</div>
+
+
+{% if request.query_params.get("message") %}
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+    {{ request.query_params.get("message") }}
+    <button type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+            aria-label="Закрыть"></button>
+</div>
+{% endif %}
+
+
+<div class="application-layout">
+
+    <!-- ОСНОВНАЯ ЧАСТЬ -->
+
+    <div class="application-main">
+
+        <!-- ИНФОРМАЦИЯ О ЗАЯВКЕ -->
+
+        <section class="application-section">
+
+            <div class="application-section-header">
+                <h2>
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    Информация о заявке
+                </h2>
+            </div>
+
+            <div class="application-section-body">
+
+                <div class="application-meta">
+
+                    <div>
+                        <div class="application-meta-label">
+                            Команда
+                        </div>
+                        <div class="application-meta-value">
+                            {% if team %}
+                                {{ team.name }}
+                            {% else %}
+                                Команда ID {{ application.team_id }}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="application-meta-label">
+                            Турнир
+                        </div>
+                        <div class="application-meta-value">
+                            {% if tournament %}
+                                {{ tournament.name }}
+                            {% else %}
+                                Турнир ID {{ application.tournament_id }}
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="application-meta-label">
+                            Номер заявки
+                        </div>
+                        <div class="application-meta-value">
+                            #{{ application.id }}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="application-meta-label">
+                            Количество игроков
+                        </div>
+                        <div class="application-meta-value">
+                            {{ application.players | length }} / 25
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="application-meta-label">
+                            Дата создания
+                        </div>
+                        <div class="application-meta-value">
+                            {% if application.created_at %}
+                                {{ application.created_at.strftime("%d.%m.%Y %H:%M") }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="application-meta-label">
+                            Дата отправки
+                        </div>
+                        <div class="application-meta-value">
+                            {% if application.submitted_at %}
+                                {{ application.submitted_at.strftime("%d.%m.%Y %H:%M") }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- ДАННЫЕ ТРЕНЕРА -->
+
+        <section class="application-section">
+
+            <div class="application-section-header">
+                <h2>
+                    <i class="bi bi-person-badge me-2"></i>
+                    Данные тренера
+                </h2>
+
+                {% if can_edit %}
+                <button
+                    type="button"
+                    class="btn btn-sm btn-outline-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#editCoachModal">
+                    <i class="bi bi-pencil me-1"></i>
+                    Редактировать
+                </button>
+                {% endif %}
+            </div>
+
+            <div class="application-section-body">
+
+                <div class="application-coach">
+
+                    {% if application.coach_photo_url %}
+                    <img
+                        src="{{ application.coach_photo_url }}"
+                        class="application-photo"
+                        alt="Фотография тренера">
+                    {% else %}
+                    <div class="application-photo d-flex align-items-center justify-content-center">
+                        <i class="bi bi-person fs-1 text-secondary"></i>
+                    </div>
+                    {% endif %}
+
+                    <div class="flex-grow-1">
+
+                        <h3 class="h5 fw-bold mb-3">
+                            {{ application.coach_last_name or "" }}
+                            {{ application.coach_first_name or "" }}
+                        </h3>
+
+                        <div class="application-meta">
+
+                            <div>
+                                <div class="application-meta-label">
+                                    Год рождения
+                                </div>
+                                <div class="application-meta-value">
+                                    {{ application.coach_birth_year or "—" }}
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="application-meta-label">
+                                    Автор заявки
+                                </div>
+                                <div class="application-meta-value">
+                                    {% if author %}
+                                        {{ author.last_name or "" }}
+                                        {{ author.first_name or "" }}
+                                    {% else %}
+                                        ID {{ application.author_id }}
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+
+        <!-- СОСТАВ КОМАНДЫ -->
+
+        <section class="application-section">
+
+            <div class="application-section-header">
+
+                <h2>
+                    <i class="bi bi-people me-2"></i>
+                    Состав команды
+                    <span class="text-secondary">
+                        ({{ application.players | length }}/25)
+                    </span>
+                </h2>
+
+                {% if can_edit %}
+                <button
+                    type="button"
+                    class="btn btn-sm btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#addPlayerModal"
+                    {% if application.players | length >= 25 %}disabled{% endif %}>
+                    <i class="bi bi-plus-lg me-1"></i>
+                    Добавить игрока
+                </button>
+                {% endif %}
+
+            </div>
+
+            <div class="application-section-body">
+
+                {% if application.players %}
+
+                <div class="table-responsive">
+
+                    <table class="table table-hover align-middle">
+
+                        <thead>
+                        <tr>
+                            <th>Фото</th>
+                            <th>№</th>
+                            <th>Футболист</th>
+                            <th>Дата рождения</th>
+                            <th>Позиция</th>
+                            <th>Источник</th>
+
+                            {% if can_edit %}
+                            <th class="text-end">Действия</th>
+                            {% endif %}
+                        </tr>
+                        </thead>
+
+                        <tbody>
+
+                        {% for player in application.players | sort(attribute="jersey_number") %}
+
+                        <tr>
+
+                            <td>
+                                {% if player.photo_url %}
+                                <img
+                                    src="{{ player.photo_url }}"
+                                    class="application-player-photo"
+                                    alt="Фото футболиста">
+                                {% else %}
+                                <div class="application-player-photo d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-person text-secondary"></i>
+                                </div>
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                <span class="application-player-number">
+                                    {{ player.jersey_number }}
+                                </span>
+                            </td>
+
+                            <td>
+                                <div class="fw-semibold">
+                                    {{ player.last_name }}
+                                    {{ player.first_name }}
+                                </div>
+
+                                <div class="small text-secondary">
+                                    ID записи: {{ player.id }}
+                                </div>
+                            </td>
+
+                            <td>
+                                {% if player.birth_date %}
+                                    {{ player.birth_date.strftime("%d.%m.%Y") }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+
+                            <td>
+                                {% set position_name = namespace(value=player.position or "—") %}
+                                {% for code, label in positions %}
+                                    {% if player.position == code %}
+                                        {% set position_name.value = label %}
+                                    {% endif %}
+                                {% endfor %}
+                                {{ position_name.value }}
+                            </td>
+
+                            <td>
+                                {% if player.existing_player_id %}
+                                <span class="badge text-bg-success">
+                                    В базе #{{ player.existing_player_id }}
+                                </span>
+                                {% else %}
+                                <span class="badge text-bg-warning">
+                                    Новый игрок
+                                </span>
+                                {% endif %}
+                            </td>
+
+                            {% if can_edit %}
+                            <td>
+                                <div class="application-player-actions">
+
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-primary"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#editPlayer{{ player.id }}"
+                                        title="Редактировать">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+
+                                    <form
+                                        method="post"
+                                        action="/admin/coach-applications/{{ application.id }}/players/{{ player.id }}/delete"
+                                        class="delete-player-form">
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-outline-danger"
+                                            title="Удалить">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+
+                                    </form>
+
+                                </div>
+                            </td>
+                            {% endif %}
+
+                        </tr>
+
+                        {% endfor %}
+
+                        </tbody>
+                    </table>
+
+                </div>
+
+                {% else %}
+
+                <div class="text-center py-5 text-secondary">
+                    <i class="bi bi-people fs-1 d-block mb-3"></i>
+                    В заявке пока нет футболистов.
+                </div>
+
+                {% endif %}
+
+                {% if can_edit %}
+                <div class="application-notice application-notice-warning mt-3">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Изменения состава сохраняются только в заявке.
+                    В официальный состав турнира игроки попадут
+                    после одобрения администратором.
+                </div>
+                {% endif %}
+
+            </div>
+        </section>
+
+
+        <!-- КОММЕНТАРИЙ АДМИНИСТРАТОРА -->
+
+        {% if application.admin_comment %}
+        <section class="application-section">
+
+            <div class="application-section-header">
+                <h2>
+                    <i class="bi bi-chat-left-text me-2"></i>
+                    Комментарий администратора
+                </h2>
+            </div>
+
+            <div class="application-section-body">
+                <div style="white-space: pre-wrap; overflow-wrap: anywhere;">{{ application.admin_comment }}</div>
+            </div>
+
+        </section>
+        {% endif %}
+
+
+        <!-- СОСТОЯНИЕ ПОСЛЕ ОДОБРЕНИЯ -->
+
+        {% if application.status == "approved" %}
+
+        <div class="application-notice application-notice-success mb-4">
+            <div class="fw-bold mb-2">
+                <i class="bi bi-check-circle me-1"></i>
+                Заявка одобрена
+            </div>
+
+            Официальный состав теперь редактируется только
+            администратором в разделе управления командой.
+
+            <div class="mt-3">
+                <a
+                    href="/admin/teams/{{ application.team_id }}/roster"
+                    class="btn btn-sm btn-success">
+                    <i class="bi bi-people me-1"></i>
+                    Открыть официальный состав
+                </a>
+            </div>
+        </div>
+
+        {% elif application.status == "rejected" %}
+
+        <div class="application-notice application-notice-danger mb-4">
+            <strong>Заявка отклонена.</strong>
+            Изменение состава этой заявки недоступно.
+        </div>
+
+        {% elif application.status == "revision" %}
+
+        <div class="application-notice application-notice-warning mb-4">
+            <strong>Заявка возвращена на доработку.</strong>
+            Тренер может внести исправления и повторно отправить её.
+        </div>
+
+        {% endif %}
+
+    </div>
+
+
+    <!-- БОКОВАЯ ПАНЕЛЬ -->
+
+    <aside class="application-sidebar">
+
+        <!-- РЕШЕНИЕ АДМИНИСТРАТОРА -->
+
+        <section class="application-section">
+
+            <div class="application-section-header">
+                <h2>
+                    <i class="bi bi-shield-check me-2"></i>
+                    Модерация
+                </h2>
+            </div>
+
+            <div class="application-section-body">
+
+                {% if can_review %}
+
+                <form
+                    id="applicationReviewForm"
+                    method="post"
+                    action="/admin/coach-applications/{{ application.id }}/review">
+
+                    <div class="mb-3">
+                        <label
+                            for="reviewComment"
+                            class="form-label fw-semibold">
+                            Комментарий администратора
+                        </label>
+
+                        <textarea
+                            id="reviewComment"
+                            name="comment"
+                            class="form-control"
+                            rows="5"
+                            maxlength="3000"
+                            placeholder="Укажите замечания или причину решения..."></textarea>
+
+                        <div class="application-help">
+                            При возврате на доработку или отклонении
+                            комментарий обязателен.
+                        </div>
+                    </div>
+
+                    <input
+                        type="hidden"
+                        name="action"
+                        id="reviewAction">
+
+                    <div class="application-review-buttons">
+
+                        <button
+                            type="button"
+                            class="btn btn-success"
+                            data-review-action="approve">
+                            <i class="bi bi-check-circle me-1"></i>
+                            Одобрить заявку
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn btn-outline-warning"
+                            data-review-action="revision">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>
+                            На доработку
+                        </button>
+
+                        <button
+                            type="button"
+                            class="btn btn-outline-danger"
+                            data-review-action="reject">
+                            <i class="bi bi-x-circle me-1"></i>
+                            Отклонить заявку
+                        </button>
+
+                    </div>
+
+                </form>
+
+                {% else %}
+
+                <div class="text-center py-3">
+
+                    <span class="application-status application-status-{{ application.status }}">
+                        {{ status_labels.get(application.status, application.status) }}
+                    </span>
+
+                    <p class="small text-secondary mt-3 mb-0">
+                        {% if application.status == "approved" %}
+                            Заявка уже одобрена.
+                        {% elif application.status == "revision" %}
+                            Ожидается исправление заявки тренером.
+                        {% elif application.status == "rejected" %}
+                            Заявка отклонена.
+                        {% else %}
+                            Заявка ещё не отправлена на проверку.
+                        {% endif %}
+                    </p>
+
+                </div>
+
+                {% endif %}
+
+            </div>
+        </section>
+
+
+        <!-- ИСТОРИЯ -->
+
+        <section class="application-section">
+
+            <div class="application-section-header">
+                <h2>
+                    <i class="bi bi-clock-history me-2"></i>
+                    История заявки
+                </h2>
+            </div>
+
+            <div class="application-section-body">
+
+                <div class="application-timeline">
+
+                    <div class="application-timeline-item">
+                        <div class="application-timeline-title">
+                            Заявка создана
+                        </div>
+
+                        <div class="application-timeline-date">
+                            {% if application.created_at %}
+                                {{ application.created_at.strftime("%d.%m.%Y %H:%M") }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if application.submitted_at %}
+                    <div class="application-timeline-item">
+                        <div class="application-timeline-title">
+                            Отправлена на модерацию
+                        </div>
+
+                        <div class="application-timeline-date">
+                            {{ application.submitted_at.strftime("%d.%m.%Y %H:%M") }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if application.reviewed_at %}
+                    <div class="application-timeline-item">
+                        <div class="application-timeline-title">
+                            Решение администратора
+                        </div>
+
+                        <div class="application-timeline-date">
+                            {{ application.reviewed_at.strftime("%d.%m.%Y %H:%M") }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+
+            </div>
+        </section>
+
+    </aside>
+
+</div>
+
+
+<!-- ======================================================
+     МОДАЛЬНЫЕ ОКНА
+====================================================== -->
+
+{% if can_edit %}
+
+
+<!-- РЕДАКТИРОВАНИЕ ТРЕНЕРА -->
+
+<div
+    class="modal fade"
+    id="editCoachModal"
+    tabindex="-1"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <form
+                method="post"
+                enctype="multipart/form-data"
+                action="/admin/coach-applications/{{ application.id }}/coach">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        Редактировать тренера
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Закрыть"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="row g-3">
+
+                        <div class="col-md-6">
+                            <label class="form-label">Фамилия</label>
+                            <input
+                                name="last_name"
+                                class="form-control"
+                                value="{{ application.coach_last_name or '' }}"
+                                maxlength="100"
+                                required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Имя</label>
+                            <input
+                                name="first_name"
+                                class="form-control"
+                                value="{{ application.coach_first_name or '' }}"
+                                maxlength="100"
+                                required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Год рождения</label>
+                            <input
+                                type="number"
+                                name="birth_year"
+                                class="form-control"
+                                value="{{ application.coach_birth_year or '' }}"
+                                min="1900"
+                                max="2100"
+                                required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Новая фотография</label>
+                            <input
+                                type="file"
+                                name="photo"
+                                accept="image/jpeg,image/png,image/webp"
+                                class="form-control">
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+                        Отмена
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+                        Сохранить
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- ДОБАВЛЕНИЕ ИГРОКА -->
+
+<div
+    class="modal fade"
+    id="addPlayerModal"
+    tabindex="-1"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <form
+                method="post"
+                enctype="multipart/form-data"
+                action="/admin/coach-applications/{{ application.id }}/players/add"
+                class="application-player-form"
+                data-is-new="true">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Добавить футболиста
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Закрыть"></button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-4">
+
+                        <label class="form-label fw-semibold">
+                            Поиск существующего игрока
+                        </label>
+
+                        <input
+                            type="search"
+                            class="form-control application-player-search"
+                            placeholder="Введите имя или фамилию"
+                            autocomplete="off">
+
+                        <div class="application-search-results list-group mt-2"></div>
+
+                        <div class="application-selected-player"></div>
+
+                        <div class="application-help">
+                            Если игрок уже есть в J-LIGA,
+                            выберите его из результатов поиска.
+                        </div>
+
+                    </div>
+
+                    <input
+                        type="hidden"
+                        name="existing_player_id"
+                        class="application-existing-id"
+                        value="">
+
+                    <div class="row g-3">
+
+                        <div class="col-md-6">
+                            <label class="form-label">Фамилия</label>
+                            <input
+                                name="last_name"
+                                class="form-control application-last-name"
+                                maxlength="100"
+                                required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Имя</label>
+                            <input
+                                name="first_name"
+                                class="form-control application-first-name"
+                                maxlength="100"
+                                required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Дата рождения</label>
+                            <input
+                                type="date"
+                                name="birth_date"
+                                class="form-control application-birth-date"
+                                required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Позиция</label>
+                            <select
+                                name="position"
+                                class="form-select application-position"
+                                required>
+
+                                <option value="">Выберите позицию</option>
+
+                                {% for code, label in positions %}
+                                <option value="{{ code }}">
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Игровой номер</label>
+                            <input
+                                type="number"
+                                name="jersey_number"
+                                min="1"
+                                max="99"
+                                class="form-control"
+                                required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Фотография</label>
+                            <input
+                                type="file"
+                                name="photo"
+                                accept="image/jpeg,image/png,image/webp"
+                                class="form-control application-photo-input">
+                            <div class="application-help">
+                                Для нового игрока обязательна.
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+                        Отмена
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+                        Добавить игрока
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+
+<!-- РЕДАКТИРОВАНИЕ ИГРОКОВ -->
+
+{% for player in application.players %}
+
+<div
+    class="modal fade"
+    id="editPlayer{{ player.id }}"
+    tabindex="-1"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+
+            <form
+                method="post"
+                enctype="multipart/form-data"
+                action="/admin/coach-applications/{{ application.id }}/players/{{ player.id }}/edit"
+                class="application-player-form"
+                data-is-new="false">
+
+                <div class="modal-header">
+
+                    <h5 class="modal-title">
+                        Редактировать футболиста №{{ player.jersey_number }}
+                    </h5>
+
+                    <button
+                        type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Закрыть"></button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="mb-4">
+
+                        <label class="form-label fw-semibold">
+                            Поиск игрока в основной базе
+                        </label>
+
+                        <input
+                            type="search"
+                            class="form-control application-player-search"
+                            placeholder="Поиск по имени или фамилии"
+                            autocomplete="off">
+
+                        <div class="application-search-results list-group mt-2"></div>
+
+                        <div class="application-selected-player {% if player.existing_player_id %}is-visible{% endif %}">
+                            {% if player.existing_player_id %}
+                                Привязан игрок ID {{ player.existing_player_id }}
+                            {% endif %}
+                        </div>
+
+                    </div>
+
+                    <input
+                        type="hidden"
+                        name="existing_player_id"
+                        class="application-existing-id"
+                        value="{{ player.existing_player_id or '' }}">
+
+                    <div class="row g-3">
+
+                        <div class="col-md-6">
+                            <label class="form-label">Фамилия</label>
+                            <input
+                                name="last_name"
+                                class="form-control application-last-name"
+                                value="{{ player.last_name }}"
+                                maxlength="100"
+                                required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Имя</label>
+                            <input
+                                name="first_name"
+                                class="form-control application-first-name"
+                                value="{{ player.first_name }}"
+                                maxlength="100"
+                                required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Дата рождения</label>
+                            <input
+                                type="date"
+                                name="birth_date"
+                                class="form-control application-birth-date"
+                                value="{{ player.birth_date.isoformat() if player.birth_date else '' }}"
+                                required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Позиция</label>
+                            <select
+                                name="position"
+                                class="form-select application-position"
+                                required>
+
+                                {% for code, label in positions %}
+                                <option
+                                    value="{{ code }}"
+                                    {% if player.position == code %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Игровой номер</label>
+                            <input
+                                type="number"
+                                name="jersey_number"
+                                class="form-control"
+                                value="{{ player.jersey_number }}"
+                                min="1"
+                                max="99"
+                                required>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                Заменить фотографию
+                            </label>
+
+                            <input
+                                type="file"
+                                name="photo"
+                                accept="image/jpeg,image/png,image/webp"
+                                class="form-control application-photo-input">
+                        </div>
+
+                        {% if player.photo_url %}
+                        <div class="col-12">
+                            <div class="d-flex align-items-center gap-3">
+
+                                <img
+                                    src="{{ player.photo_url }}"
+                                    class="application-modal-photo"
+                                    alt="Текущее фото">
+
+                                <div class="small text-secondary">
+                                    Текущая фотография игрока
+                                </div>
+
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="col-12">
+                            <div class="form-check">
+
+                                <input
+                                    type="checkbox"
+                                    class="form-check-input application-unlink"
+                                    id="unlinkPlayer{{ player.id }}">
+
+                                <label
+                                    class="form-check-label"
+                                    for="unlinkPlayer{{ player.id }}">
+                                    Отвязать от существующего игрока
+                                    и считать новой записью
+                                </label>
+
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <button
+                        type="button"
+                        class="btn btn-outline-secondary"
+                        data-bs-dismiss="modal">
+                        Отмена
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+                        Сохранить изменения
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+</div>
+
+{% endfor %}
+
+{% endif %}
+
+{% endblock %}
+
+
+{% block extra_js %}
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+    // ====================================================
+    // УДАЛЕНИЕ ИГРОКА
+    // ====================================================
+
+    document.querySelectorAll(".delete-player-form")
+        .forEach(function (form) {
+
+            form.addEventListener("submit", function (event) {
+
+                const confirmed = confirm(
+                    "Удалить футболиста из заявки?\n\n" +
+                    "Игрок из основной базы J-LIGA удалён не будет."
+                );
+
+                if (!confirmed) {
+                    event.preventDefault();
+                }
+
+            });
+
+        });
+
+
+    // ====================================================
+    // РЕШЕНИЕ АДМИНИСТРАТОРА
+    // ====================================================
+
+    const reviewForm = document.getElementById(
+        "applicationReviewForm"
+    );
+
+    if (reviewForm) {
+
+        const reviewAction = document.getElementById(
+            "reviewAction"
+        );
+
+        const reviewComment = document.getElementById(
+            "reviewComment"
+        );
+
+        const messages = {
+            approve: "Одобрить заявку и опубликовать состав команды?",
+            revision: "Вернуть заявку тренеру на доработку?",
+            reject: "Отклонить заявку?"
+        };
+
+        document.querySelectorAll("[data-review-action]")
+            .forEach(function (button) {
+
+                button.addEventListener("click", function () {
+
+                    const action = button.dataset.reviewAction;
+
+                    if (
+                        (action === "revision" || action === "reject") &&
+                        !reviewComment.value.trim()
+                    ) {
+                        alert(
+                            "Укажите комментарий для тренера."
+                        );
+
+                        reviewComment.focus();
+                        return;
+                    }
+
+                    if (!confirm(messages[action])) {
+                        return;
+                    }
+
+                    reviewAction.value = action;
+
+                    reviewForm.submit();
+
+                });
+
+            });
+
+    }
+
+
+    // ====================================================
+    // ПОИСК И ПРИВЯЗКА СУЩЕСТВУЮЩИХ ИГРОКОВ
+    // ====================================================
+
+    document.querySelectorAll(".application-player-form")
+        .forEach(function (form) {
+
+            const search = form.querySelector(
+                ".application-player-search"
+            );
+
+            const results = form.querySelector(
+                ".application-search-results"
+            );
+
+            const selected = form.querySelector(
+                ".application-selected-player"
+            );
+
+            const existingId = form.querySelector(
+                ".application-existing-id"
+            );
+
+            const firstName = form.querySelector(
+                ".application-first-name"
+            );
+
+            const lastName = form.querySelector(
+                ".application-last-name"
+            );
+
+            const birthDate = form.querySelector(
+                ".application-birth-date"
+            );
+
+            const position = form.querySelector(
+                ".application-position"
+            );
+
+            const photo = form.querySelector(
+                ".application-photo-input"
+            );
+
+            const unlink = form.querySelector(
+                ".application-unlink"
+            );
+
+            let debounceTimer = null;
+            let searchVersion = 0;
+
+            // Поля должны оставаться доступными для POST.
+            // Используем readOnly для текстовых полей,
+            // а select блокируем отдельно.
+
+            function setLinkedMode(linked) {
+
+                firstName.readOnly = linked;
+                lastName.readOnly = linked;
+                birthDate.readOnly = linked;
+
+                position.disabled = linked;
+
+            }
+
+            function showSelected(text) {
+
+                selected.textContent = text;
+                selected.classList.add("is-visible");
+
+            }
+
+            function clearSelected() {
+
+                selected.textContent = "";
+                selected.classList.remove("is-visible");
+
+            }
+
+            function unlinkPlayer() {
+
+                existingId.value = "";
+
+                setLinkedMode(false);
+                clearSelected();
+
+            }
+
+            if (existingId.value) {
+                setLinkedMode(true);
+            }
+
+            if (unlink) {
+
+                unlink.addEventListener("change", function () {
+
+                    if (unlink.checked) {
+                        unlinkPlayer();
+                    } else if (existingId.value) {
+                        setLinkedMode(true);
+                    }
+
+                });
+
+            }
+
+            // Если пользователь вручную изменяет данные
+            // нового игрока, существующая привязка
+            // не должна оставаться случайно.
+
+            search.addEventListener("input", function () {
+
+                clearTimeout(debounceTimer);
+
+                const query = search.value.trim();
+
+                const currentVersion = ++searchVersion;
+
+                results.replaceChildren();
+
+                if (query.length < 2) {
+                    return;
+                }
+
+                debounceTimer = setTimeout(async function () {
+
+                    try {
+
+                        const url =
+                            "/admin/api/registration-players/search?q=" +
+                            encodeURIComponent(query);
+
+                        const response = await fetch(url, {
+                            credentials: "same-origin"
+                        });
+
+                        if (!response.ok) {
+                            throw new Error("Search failed");
+                        }
+
+                        const players = await response.json();
+
+                        if (currentVersion !== searchVersion) {
+                            return;
+                        }
+
+                        results.replaceChildren();
+
+                        if (!players.length) {
+
+                            const empty = document.createElement("div");
+
+                            empty.className =
+                                "list-group-item text-secondary small";
+
+                            empty.textContent =
+                                "Футболисты не найдены";
+
+                            results.appendChild(empty);
+
+                            return;
+                        }
+
+                        players.forEach(function (player) {
+
+                            const button = document.createElement("button");
+
+                            button.type = "button";
+
+                            button.className =
+                                "list-group-item list-group-item-action " +
+                                "application-search-result";
+
+                            const fullName =
+                                player.last_name + " " +
+                                player.first_name;
+
+                            const birth = player.birth_date
+                                ? " · " + player.birth_date
+                                : "";
+
+                            button.textContent =
+                                fullName +
+                                " · ID " + player.id +
+                                birth;
+
+                            button.addEventListener("click", function () {
+
+                                if (
+                                    !player.birth_date ||
+                                    !player.position ||
+                                    !player.photo_url
+                                ) {
+
+                                    alert(
+                                        "У выбранного игрока неполные данные. " +
+                                        "Сначала заполните дату рождения, " +
+                                        "позицию и фотографию в основной базе."
+                                    );
+
+                                    return;
+                                }
+
+                                // Проверяем, что позиция игрока
+                                // есть среди доступных значений.
+
+                                const optionExists = Array.from(
+                                    position.options
+                                ).some(function (option) {
+                                    return option.value === player.position;
+                                });
+
+                                if (!optionExists) {
+
+                                    alert(
+                                        "Позиция выбранного игрока " +
+                                        "не поддерживается формой. " +
+                                        "Проверьте значения PlayerPosition."
+                                    );
+
+                                    return;
+                                }
+
+                                existingId.value = player.id;
+
+                                firstName.value = player.first_name;
+                                lastName.value = player.last_name;
+                                birthDate.value = player.birth_date;
+                                position.value = player.position;
+
+                                if (unlink) {
+                                    unlink.checked = false;
+                                }
+
+                                setLinkedMode(true);
+
+                                showSelected(
+                                    "Выбран существующий игрок: " +
+                                    fullName + " (ID " + player.id + ")"
+                                );
+
+                                search.value = fullName;
+
+                                results.replaceChildren();
+
+                            });
+
+                            results.appendChild(button);
+
+                        });
+
+                    } catch (error) {
+
+                        if (currentVersion !== searchVersion) {
+                            return;
+                        }
+
+                        results.replaceChildren();
+
+                        const errorItem = document.createElement("div");
+
+                        errorItem.className =
+                            "list-group-item text-danger small";
+
+                        errorItem.textContent =
+                            "Ошибка поиска футболистов";
+
+                        results.appendChild(errorItem);
+
+                    }
+
+                }, 300);
+
+            });
+
+
+            // ====================================================
+            // ПРОВЕРКА ФОРМЫ ПЕРЕД ОТПРАВКОЙ
+            // ====================================================
+
+            form.addEventListener("submit", function (event) {
+
+                const linked = Boolean(existingId.value);
+
+                const isNew = form.dataset.isNew === "true";
+
+                if (!linked && isNew) {
+
+                    if (!photo.files.length) {
+
+                        event.preventDefault();
+
+                        alert(
+                            "Для нового футболиста необходимо " +
+                            "загрузить фотографию."
+                        );
+
+                        return;
+                    }
+
+                }
+
+                if (!linked && !isNew && unlink && unlink.checked) {
+
+                    const confirmed = confirm(
+                        "Вы отвязали игрока от основной базы.\n\n" +
+                        "При одобрении заявки для него может быть " +
+                        "создана новая карточка футболиста.\n\n" +
+                        "Продолжить?"
+                    );
+
+                    if (!confirmed) {
+                        event.preventDefault();
+                        return;
+                    }
+
+                }
+
+                // Disabled select не отправляется
+                // в multipart/form-data.
+                // Перед POST возвращаем его в активное состояние.
+
+                position.disabled = false;
+
+            });
+
+        });
+
+});
+</script>
+
+{% endblock %}

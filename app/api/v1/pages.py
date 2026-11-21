@@ -4,6 +4,7 @@ import shutil
 import uuid
 from typing import Optional
 
+
 from fastapi import APIRouter, Request, Depends, HTTPException, Form, UploadFile, File
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -46,6 +47,8 @@ from app.models.player import Player
 from app.models.disqualification import Disqualification
 from app.services.stats_recalc import StatsRecalculator
 from app.services.schedule_generator import generate_round_robin
+from app.services.registration_approval import approve_registration
+from sqlalchemy.exc import IntegrityError
 
 
 router = APIRouter()
@@ -107,7 +110,6 @@ def to_local_time(dt):
         local_tz = timezone(timedelta(hours=5))
 
     if dt.tzinfo is None:
-        # Если время пришло без пояса, считаем, что оно в UTC
         dt = dt.replace(tzinfo=timezone.utc)
 
     return dt.astimezone(local_tz)
@@ -144,7 +146,6 @@ async def get_mega_menu_context(db: AsyncSession):
     latest_season_result = await db.execute(latest_season_stmt)
     current_year = latest_season_result.scalar() or str(datetime.now().year)
 
-    # Берем только те турниры, где заполнена категория меню и стоит галочка
     stmt = select(Tournament).where(
         Tournament.season == current_year,
         Tournament.show_in_menu == True,
@@ -158,7 +159,6 @@ async def get_mega_menu_context(db: AsyncSession):
     for t in tournaments:
         category = t.menu_category
 
-        # Если такой категории еще нет в словаре, создаем для нее список
         if category not in menu_data:
             menu_data[category] = []
 
@@ -194,7 +194,6 @@ async def render_page(request: Request, db: AsyncSession, name: str, context: di
     context["current_user"] = current_user
     context["user"] = current_user
 
-    # Получаем партнеров для футера (только активных, по порядку)
     partners = (await db.execute(
         select(Partner).where(Partner.is_active == True).order_by(Partner.sort_order, Partner.id)
     )).scalars().all()
@@ -237,6 +236,8 @@ async def save_upload_file(upload_file: UploadFile, folder: str) -> str | None:
 from sqlalchemy import select, or_, desc, case, update, delete
 
 
+# Публичные страницы
+
 @router.get("/")
 async def home_page(request: Request, tournament_id: int = None, db: AsyncSession = Depends(get_db)):
     await check_and_finish_expired_tournaments(db)
@@ -251,19 +252,16 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     from app.models.tournament_team import TournamentTeam
     from types import SimpleNamespace
 
-    # Определяем часовой пояс
     try:
         from zoneinfo import ZoneInfo
         local_tz = ZoneInfo("Asia/Almaty")
     except Exception:
         local_tz = timezone(timedelta(hours=5))
 
-    # 1. ПОСЛЕДНИЙ СЕЗОН
     latest_season = await db.scalar(select(Tournament.season).order_by(Tournament.season.desc()).limit(1))
     if not latest_season:
         latest_season = str(datetime.now().year)
 
-    # 2. ТУРНИРЫ
     keywords = ["примера", "сегунда", "терсера", "региональ", "junior", "primera", "segunda", "tersera", "regional"]
     conditions = [Tournament.name.ilike(f"%{kw}%") for kw in keywords]
 
@@ -276,14 +274,12 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     )
     tournaments = (await db.execute(stmt_tournaments)).scalars().all()
 
-    # 3. АКТИВНЫЙ ТУРНИР
     active_tournament = None
     if tournament_id:
         active_tournament = next((t for t in tournaments if t.id == tournament_id), None)
     if not active_tournament and tournaments:
         active_tournament = tournaments[0]
 
-    # 4. БЛИЖАЙШИЕ МАТЧИ (Сегодня и Завтра, только с проставленной датой)
     now_local = datetime.now(local_tz)
     start_of_day = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
     end_of_day = start_of_day + timedelta(days=2)  # Захватываем сегодня и завтра
@@ -308,13 +304,11 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
         if m.match_date:
             m.match_date = m.match_date.astimezone(local_tz)
 
-    # 5. ТАБЛИЦА, БОМБАРДИРЫ, ДИСКВАЛИФИКАЦИИ
     standings = []
     top_scorers = []
     active_disqualifications = []
 
     if active_tournament:
-        # 👇 ДИНАМИЧЕСКИЙ РАСЧЕТ ТАБЛИЦЫ (ВМЕСТО ЗАПРОСА К TournamentStanding) 👇
         stmt_matches_table = select(Match).where(Match.tournament_id == active_tournament.id)
         matches_for_table = (await db.execute(stmt_matches_table)).scalars().all()
 
@@ -325,7 +319,6 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
 
         is_cup = active_tournament.division == "CUP" or any(m.group_name for m in matches_for_table)
 
-        # Считаем прямо из матчей
         standings_dict = {}
         for t in teams_for_table:
             standings_dict[t.id] = {
@@ -369,7 +362,6 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
             standings.sort(key=lambda x: (x.group_name or 'ZZZ', -x.points, -x.goals_for))
         else:
             standings.sort(key=lambda x: (-x.points, -(x.goals_for - x.goals_against), -x.goals_for))
-        # 👆 КОНЕЦ ДИНАМИЧЕСКОГО РАСЧЕТА 👆
 
         stmt_scorers = select(TeamPlayer).join(Player).join(Team).where(
             TeamPlayer.tournament_id == active_tournament.id,
@@ -402,7 +394,6 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
         )
         active_disqualifications = (await db.execute(stmt_disq)).scalars().all()
 
-    # 6. НОВОСТИ
     stmt_news = select(News).where(News.is_published == True).order_by(
         News.sort_order.asc(),
         News.published_at.desc(),
@@ -410,7 +401,6 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
     ).limit(4)
     latest_news = (await db.execute(stmt_news)).scalars().all()
 
-    # 7. СБОРКА СЛОВАРЯ ДЛЯ МИНИ-ОКОН
     matches_dict = {}
     for m in upcoming_matches:
         events_list = []
@@ -418,10 +408,7 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
             sorted_events = sorted(m.events, key=lambda x: x.minute)
             for e in sorted_events:
                 event_str = str(e.event_type).upper()
-                # ← NEW: SECOND_YELLOW проверяем ПЕРВЫМ, т.к. содержит "YELLOW"
-                if "SECOND_YELLOW" in event_str:
-                    etype = "SECOND_YELLOW"
-                elif "YELLOW" in event_str:
+                if "YELLOW" in event_str:
                     etype = "YELLOW"
                 elif "RED" in event_str:
                     etype = "RED"
@@ -489,19 +476,16 @@ async def matches_page(
     limit = 20
     skip = (page - 1) * limit
 
-    # 1. Получаем доступные года
     years_result = await db.execute(select(Tournament.season).distinct().order_by(Tournament.season.desc()))
     available_years = [y[0] for y in years_result.all() if y[0]]
 
     if not year and available_years:
         year = available_years[0]
 
-    # 2. Получаем турниры для выбранного года
     tournaments = (
         await db.execute(select(Tournament).where(Tournament.season == year).order_by(Tournament.name))
     ).scalars().all()
 
-    # 3. БЕЗОПАСНЫЙ ПАРСИНГ ФИЛЬТРОВ
     t_id = int(tournament_id) if tournament_id and tournament_id.strip().isdigit() else None
 
     parsed_date = None
@@ -514,7 +498,6 @@ async def matches_page(
 
     y_filter = year.strip() if year and year.strip() else None
 
-    # 4. Базовый запрос
     stmt = select(Match).join(Tournament).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
@@ -523,7 +506,6 @@ async def matches_page(
     )
     count_stmt = select(func.count()).select_from(Match).join(Tournament)
 
-    # 5. Применяем фильтры
     if y_filter:
         stmt = stmt.where(Tournament.season == y_filter)
         count_stmt = count_stmt.where(Tournament.season == y_filter)
@@ -536,7 +518,6 @@ async def matches_page(
         stmt = stmt.where(func.date(Match.match_date) == parsed_date)
         count_stmt = count_stmt.where(func.date(Match.match_date) == parsed_date)
 
-    # 6. УМНАЯ СОРТИРОВКА ПО ДАТЕ
     now = datetime.now(timezone.utc)
 
     time_group = case(
@@ -552,7 +533,6 @@ async def matches_page(
         Match.id.desc()
     )
 
-    # 7. Пагинация
     total_matches = await db.scalar(count_stmt) or 0
     stmt = stmt.offset(skip).limit(limit)
     matches = (await db.execute(stmt)).scalars().all()
@@ -560,14 +540,12 @@ async def matches_page(
     for m in matches:
         m.match_date = to_local_time(m.match_date)
 
-    # --- ИСПРАВЛЕНИЕ: Конвертируем время в Алматы ---
     for m in matches:
         if m.match_date:
             m.match_date = m.match_date.astimezone(local_tz)
 
     total_pages = (total_matches + limit - 1) // limit if total_matches > 0 else 1
 
-    # 8. СБОРКА СЛОВАРЯ ДЛЯ МИНИ-ОКОН
     matches_dict = {}
     for m in matches:
         events_list = []
@@ -575,10 +553,7 @@ async def matches_page(
             sorted_events = sorted(m.events, key=lambda x: x.minute)
             for e in sorted_events:
                 event_str = str(e.event_type).upper()
-                # ← NEW: SECOND_YELLOW проверяем ПЕРВЫМ, т.к. содержит "YELLOW"
-                if "SECOND_YELLOW" in event_str:
-                    etype = "SECOND_YELLOW"
-                elif "YELLOW" in event_str:
+                if "YELLOW" in event_str:
                     etype = "YELLOW"
                 elif "RED" in event_str:
                     etype = "RED"
@@ -608,7 +583,6 @@ async def matches_page(
             "stadium": m.stadium or 'Стадион TBA', "events": events_list,
         }
 
-    # 9. Рендер страницы
     return await render_page(request, db, "matches.html", context={
         "matches": matches,
         "page": page,
@@ -633,15 +607,12 @@ async def tournaments_list_page(request: Request, season: str = None, db: AsyncS
 
 
     await check_and_finish_expired_tournaments(db)
-    # 1. Получаем все доступные сезоны
     seasons_result = await db.execute(select(Tournament.season).distinct().order_by(Tournament.season.desc()))
     available_seasons = [s[0] for s in seasons_result.all() if s[0]]
 
-    # 2. Если сезон не выбран, берем последний
     if not season and available_seasons:
         season = available_seasons[0]
 
-    # 3. Достаем ВСЕ турниры за этот год и СОРТИРУЕМ по sort_order
     stmt = select(Tournament).where(Tournament.season == season).order_by(
         Tournament.sort_order.asc(), # <--- ДОБАВИЛИ ЭТО
         Tournament.name.asc()
@@ -676,7 +647,6 @@ from types import SimpleNamespace
 
 
 def calculate_standings(matches: list, teams: list, is_cup: bool = False) -> list:
-    # Инициализируем нулями все команды турнира
     stats = {}
     for t in teams:
         stats[t.id] = {
@@ -686,9 +656,7 @@ def calculate_standings(matches: list, teams: list, is_cup: bool = False) -> lis
             "goals_for": 0, "goals_against": 0, "points": 0
         }
 
-    # Проходим по всем матчам и считаем
     for m in matches:
-        # Берем ТОЛЬКО матчи, где введен счет
         if m.home_score is None or m.away_score is None:
             continue
 
@@ -697,7 +665,6 @@ def calculate_standings(matches: list, teams: list, is_cup: bool = False) -> lis
         if not h or not a:
             continue
 
-        # Записываем группу (если есть)
         if m.group_name:
             h["group_name"] = m.group_name
             a["group_name"] = m.group_name
@@ -710,7 +677,6 @@ def calculate_standings(matches: list, teams: list, is_cup: bool = False) -> lis
         a["goals_for"] += m.away_score
         a["goals_against"] += m.home_score
 
-        # Начисляем очки
         if m.home_score > m.away_score:
             h["wins"] += 1;
             h["points"] += 3;
@@ -725,14 +691,11 @@ def calculate_standings(matches: list, teams: list, is_cup: bool = False) -> lis
             h["points"] += 1;
             a["points"] += 1
 
-    # Превращаем в объекты и сортируем
     result = [SimpleNamespace(**v) for v in stats.values()]
 
     if is_cup:
-        # Сортировка для кубка/групп: Группа -> Очки -> Забитые
         result.sort(key=lambda x: (x.group_name or 'ZZZ', -x.points, -x.goals_for))
     else:
-        # Сортировка для лиги: Очки -> Разница -> Забитые
         result.sort(key=lambda x: (-x.points, -(x.goals_for - x.goals_against), -x.goals_for))
 
     return result
@@ -763,14 +726,10 @@ async def tournament_page(
     from app.models.tournament_team import TournamentTeam
     from app.models.team import Team
 
-    # 1. ПОЛУЧАЕМ ТУРНИР
     tournament = await db.get(Tournament, tournament_id)
     if not tournament:
         raise HTTPException(status_code=404, detail="Турнир не найден")
 
-    # =========================================================================
-    # 2. МАТЧИ И КОМАНДЫ
-    # =========================================================================
     stmt_matches = select(Match).where(Match.tournament_id == tournament_id).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
@@ -778,15 +737,11 @@ async def tournament_page(
     )
     matches_raw = (await db.execute(stmt_matches)).scalars().all()
 
-    # Получаем все команды, заявленные на турнир
     stmt_teams = select(Team).join(TournamentTeam, Team.id == TournamentTeam.team_id).where(
         TournamentTeam.tournament_id == tournament_id
     )
     teams_raw = (await db.execute(stmt_teams)).scalars().all()
 
-    # =========================================================================
-    # 3. ДИНАМИЧЕСКИЙ РАСЧЕТ ТАБЛИЦЫ (НА ОСНОВЕ МАТЧЕЙ)
-    # =========================================================================
     standings_dict = {}
     for t in teams_raw:
         standings_dict[t.id] = {
@@ -797,7 +752,6 @@ async def tournament_page(
         }
 
     for m in matches_raw:
-        # Берем только матчи с введенным счетом
         if m.home_score is None or m.away_score is None:
             continue
 
@@ -806,7 +760,6 @@ async def tournament_page(
         if not h or not a:
             continue
 
-        # Если матч в группе, проставляем группу командам
         if m.group_name:
             h["group_name"] = m.group_name
             a["group_name"] = m.group_name
@@ -819,7 +772,6 @@ async def tournament_page(
         a["goals_for"] += m.away_score
         a["goals_against"] += m.home_score
 
-        # Начисление очков
         if m.home_score > m.away_score:
             h["wins"] += 1; h["points"] += 3; a["losses"] += 1
         elif m.home_score < m.away_score:
@@ -828,16 +780,13 @@ async def tournament_page(
             h["draws"] += 1; a["draws"] += 1
             h["points"] += 1; a["points"] += 1
 
-    # Превращаем словарь в список объектов
     standings = [SimpleNamespace(**v) for v in standings_dict.values()]
 
     is_cup = tournament.division == "CUP" or any(s.group_name for s in standings)
 
     if is_cup:
-        # Сортировка: Группа -> Очки -> Забитые
         standings.sort(key=lambda x: (x.group_name or 'ZZZ', -x.points, -x.goals_for))
     else:
-        # Сортировка: Очки -> Разница -> Забитые
         standings.sort(key=lambda x: (-x.points, -(x.goals_for - x.goals_against), -x.goals_for))
 
     grouped_standings = {}
@@ -849,9 +798,6 @@ async def tournament_page(
 
     teams_list = [s.team for s in standings]
 
-    # =========================================================================
-    # 4. СОРТИРОВКА МАТЧЕЙ И СЕТКА
-    # =========================================================================
     for m in matches_raw:
         m.match_date = to_local_time(m.match_date)
 
@@ -895,9 +841,6 @@ async def tournament_page(
 
     round_names = {1: "1/8 ФИНАЛА", 2: "1/4 ФИНАЛА", 3: "1/2 ФИНАЛА", 4: "ФИНАЛ", 5: "ЗА 3 МЕСТО"}
 
-    # =========================================================================
-    # 5. ШАХМАТКА
-    # =========================================================================
     matrix_data = {}
     for m in matches:
         is_finished = m.home_score is not None and m.away_score is not None
@@ -922,9 +865,6 @@ async def tournament_page(
             "score": score_away, "match_id": m.id, "result": res_away
         }
 
-    # =========================================================================
-    # 6. ПРОГРЕСС
-    # =========================================================================
     progress_data = {}
     for team in teams_list:
         team_matches = [m for m in matches if m.home_team_id == team.id or m.away_team_id == team.id]
@@ -940,9 +880,6 @@ async def tournament_page(
                 form_all.append({"result": res, "match_id": m.id})
         progress_data[team.id] = form_all
 
-    # =========================================================================
-    # 7. ДАННЫЕ ДЛЯ ПОПАПОВ
-    # =========================================================================
     matches_dict = {}
     for m in matches:
         events_list = []
@@ -950,19 +887,11 @@ async def tournament_page(
             sorted_events = sorted(m.events, key=lambda x: x.minute)
             for e in sorted_events:
                 event_str = str(e.event_type).upper()
-                # ← NEW: SECOND_YELLOW проверяем ПЕРВЫМ, т.к. содержит "YELLOW"
-                if "SECOND_YELLOW" in event_str:
-                    etype = "SECOND_YELLOW"
-                elif "YELLOW" in event_str:
-                    etype = "YELLOW"
-                elif "RED" in event_str:
-                    etype = "RED"
-                elif "OWN" in event_str:
-                    etype = "OWN_GOAL"
-                elif "PENALTY" in event_str:
-                    etype = "PENALTY"
-                else:
-                    etype = "GOAL"
+                if "YELLOW" in event_str: etype = "YELLOW"
+                elif "RED" in event_str: etype = "RED"
+                elif "OWN" in event_str: etype = "OWN_GOAL"
+                elif "PENALTY" in event_str: etype = "PENALTY"
+                else: etype = "GOAL"
 
                 events_list.append({
                     "minute": e.minute, "team_id": e.team_id,
@@ -990,9 +919,6 @@ async def tournament_page(
             "status": m.status.value if hasattr(m.status, 'value') else str(m.status)
         }
 
-    # =========================================================================
-    # 8. КАЛЕНДАРЬ
-    # =========================================================================
     matches_by_round = defaultdict(list)
     matches_by_date = defaultdict(list)
 
@@ -1040,9 +966,6 @@ async def tournament_page(
 
     matches_by_round = dict(sorted(matches_by_round.items(), key=group_sort_key))
 
-    # =========================================================================
-    # 9. СТАТИСТИКА ИГРОКОВ
-    # =========================================================================
     stmt_stats_goals = select(TeamPlayer).join(Player).where(
         TeamPlayer.tournament_id == tournament_id, func.coalesce(TeamPlayer.stats_goals, 0) > 0
     ).options(selectinload(TeamPlayer.player), selectinload(TeamPlayer.team)).order_by(
@@ -1058,9 +981,6 @@ async def tournament_page(
     )
     tournament_stats_cards = (await db.execute(stmt_stats_cards)).scalars().all()
 
-    # =========================================================================
-    # 10. ДИСКВАЛИФИКАЦИИ
-    # =========================================================================
     stmt_disq = select(Disqualification).where(Disqualification.tournament_id == tournament_id).options(
         selectinload(Disqualification.player), selectinload(Disqualification.team)
     ).order_by(Disqualification.decision_date.desc())
@@ -1068,9 +988,6 @@ async def tournament_page(
     active_disq = [d for d in all_disq if d.matches_remaining and d.matches_remaining > 0]
     completed_disq = [d for d in all_disq if not d.matches_remaining or d.matches_remaining == 0]
 
-    # =========================================================================
-    # 11. НОВОСТИ ТУРНИРА
-    # =========================================================================
     stmt_news = select(News).where(
         News.is_published == True, News.tournament_id == tournament_id
     ).order_by(News.published_at.desc()).limit(9)
@@ -1111,7 +1028,6 @@ async def participants_teams_page(
     limit = 20
     skip = (page - 1) * limit
 
-    # 1. Получаем доступные сезоны
     seasons_result = await db.execute(select(Tournament.season).distinct().order_by(Tournament.season.desc()))
     available_seasons = [s[0] for s in seasons_result.all() if s[0]]
 
@@ -1120,13 +1036,11 @@ async def participants_teams_page(
     elif not season:
         season = "all"
 
-    # 2. Запрос матчей
     stmt = select(Match).where(Match.status == MatchStatus.FINISHED)
     if season != "all":
         stmt = stmt.join(Tournament).where(Tournament.season == season)
     all_matches = (await db.execute(stmt)).scalars().all()
 
-    # 3. Считаем статистику
     team_stats = {}
     for m in all_matches:
         if m.home_team_id not in team_stats:
@@ -1149,7 +1063,6 @@ async def participants_teams_page(
         elif (m.away_score or 0) > (m.home_score or 0):
             a['wins'] += 1
 
-    # 4. Получаем команды (с фильтром поиска)
     stmt_teams = select(Team)
     if search:
         stmt_teams = stmt_teams.where(Team.name.ilike(f"%{search}%"))
@@ -1157,7 +1070,6 @@ async def participants_teams_page(
 
     teams_data = []
     for t in all_teams:
-        # ДОБАВЛЯЕМ ТОЛЬКО ТЕ КОМАНДЫ, У КОТОРЫХ ЕСТЬ МАТЧИ (ИГРЫ > 0)
         if t.id in team_stats and team_stats[t.id]['games'] > 0:
             stats = team_stats[t.id]
             teams_data.append({
@@ -1168,12 +1080,8 @@ async def participants_teams_page(
                 "goals": stats['goals']
             })
 
-    # =========================================================================
-    # 5. СОРТИРОВКА ПО АЛФАВИТУ
-    # =========================================================================
     teams_data = sorted(teams_data, key=lambda x: x['team'].name.lower())
 
-    # 6. ПАГИНАЦИЯ
     total_teams = len(teams_data)
     total_pages = (total_teams + limit - 1) // limit if total_teams > 0 else 1
     paginated_teams = teams_data[skip:skip + limit]
@@ -1198,7 +1106,6 @@ async def participants_players_page(
     limit = 50  # По сколько игроков выводить на страницу
     skip = (page - 1) * limit
 
-    # 1. Подзапрос: Базовая статистика из TeamPlayer
     stats_subq = select(
         TeamPlayer.player_id,
         func.coalesce(func.sum(TeamPlayer.stats_games), 0).label('games'),
@@ -1208,13 +1115,11 @@ async def participants_players_page(
         func.coalesce(func.sum(TeamPlayer.stats_red_cards), 0).label('rc')
     ).group_by(TeamPlayer.player_id).subquery()
 
-    # 2. Подзапрос: Голы с пенальти из MatchEvent
     pen_subq = select(
         MatchEvent.player_id,
         func.count(MatchEvent.id).label('pen_goals')
     ).where(MatchEvent.event_type == MatchEventType.PENALTY_GOAL).group_by(MatchEvent.player_id).subquery()
 
-    # 3. Считаем общее количество игроков для пагинации
     count_stmt = select(func.count()).select_from(Player)
     if search:
         count_stmt = count_stmt.where(
@@ -1223,7 +1128,6 @@ async def participants_players_page(
     total_players = await db.scalar(count_stmt)
     total_pages = (total_players + limit - 1) // limit if total_players > 0 else 1
 
-    # 4. Основной запрос с JOIN'ами
     stmt = select(
         Player,
         stats_subq.c.games,
@@ -1238,16 +1142,13 @@ async def participants_players_page(
         pen_subq, Player.id == pen_subq.c.player_id
     )
 
-    # Фильтр поиска
     if search:
         stmt = stmt.where(or_(Player.last_name.ilike(f"%{search}%"), Player.first_name.ilike(f"%{search}%")))
 
-    # Сортировка и пагинация
     stmt = stmt.order_by(func.coalesce(stats_subq.c.games, 0).desc()).offset(skip).limit(limit)
 
     results = (await db.execute(stmt)).all()
 
-    # 5. Формируем список данных для шаблона
     players_data = []
     for row in results:
         p = row[0]
@@ -1295,7 +1196,6 @@ async def player_profile_page(player_id: int, request: Request, db: AsyncSession
     total_yc = sum(tp.stats_yellow_cards or 0 for tp in tps)
     total_rc = sum(tp.stats_red_cards or 0 for tp in tps)
 
-    # СОБИРАЕМ СПИСОК КОМАНД (КЛУБОВ)
     team_ids = list(set(tp.team_id for tp in tps))
     player_teams = []
     if team_ids:
@@ -1381,7 +1281,6 @@ async def player_profile_page(player_id: int, request: Request, db: AsyncSession
     })
 
 
-
 from app.models.coach import Coach
 @router.get("/participants/coaches")
 async def participants_coaches_page(request: Request, search: str = None, db: AsyncSession = Depends(get_db)):
@@ -1394,7 +1293,6 @@ async def participants_coaches_page(request: Request, search: str = None, db: As
     stmt = stmt.order_by(Coach.last_name)
     coaches = (await db.execute(stmt)).scalars().all()
 
-    # Считаем статистику команд, к которым привязаны тренеры
     coaches_data = []
     for c in coaches:
         if c.team:
@@ -1434,22 +1332,18 @@ async def news_page(
     team_id: str = None,
     db: AsyncSession = Depends(get_db)
 ):
-    # Безопасно парсим ID (если строка пустая или не число, будет None)
     t_id = int(tournament_id) if tournament_id and tournament_id.isdigit() else None
     tm_id = int(team_id) if team_id and team_id.isdigit() else None
 
     limit = 10
     skip = (page - 1) * limit
 
-    # Получаем списки для фильтров
     tournaments = (await db.execute(select(Tournament).order_by(Tournament.name))).scalars().all()
     teams = (await db.execute(select(Team).order_by(Team.name))).scalars().all()
 
-    # Базовый запрос
     stmt = select(News).where(News.is_published == True)
     count_stmt = select(func.count()).select_from(News).where(News.is_published == True)
 
-    # Применяем фильтры
     if t_id:
         stmt = stmt.where(News.tournament_id == t_id)
         count_stmt = count_stmt.where(News.tournament_id == t_id)
@@ -1458,7 +1352,6 @@ async def news_page(
         stmt = stmt.join(News.teams).where(Team.id == tm_id)
         count_stmt = count_stmt.join(News.teams).where(Team.id == tm_id)
 
-    # Загружаем связи и сортируем
     stmt = stmt.options(
         selectinload(News.teams),
         selectinload(News.tournament)
@@ -1506,7 +1399,6 @@ async def media_page(
     stmt = select(MediaAlbum).options(selectinload(MediaAlbum.items)).order_by(MediaAlbum.created_at.desc())
 
     tournament = None
-    # Если передан ID турнира, фильтруем альбомы
     if tournament_id:
         stmt = stmt.where(MediaAlbum.tournament_id == tournament_id)
         tournament = await db.get(Tournament, tournament_id)
@@ -1521,7 +1413,6 @@ async def media_page(
 
 @router.get("/matches/{match_id}")
 async def match_protocol_page(match_id: int, request: Request, db: AsyncSession = Depends(get_db)):
-    # 1. Загружаем матч со всеми связями
     stmt = select(Match).where(Match.id == match_id).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
@@ -1534,11 +1425,9 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
     if not match:
         raise HTTPException(status_code=404, detail="Матч не найден")
 
-    # Сортируем события по минутам
     if match.events:
         match.events.sort(key=lambda e: e.minute)
 
-    # 2. Загружаем составы команд (заявки на турнир)
     home_roster = await crud_team_player.get_by_tournament_and_team(
         db, tournament_id=match.tournament_id, team_id=match.home_team_id
     )
@@ -1546,23 +1435,19 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
         db, tournament_id=match.tournament_id, team_id=match.away_team_id
     )
 
-    # 3. Загружаем турнирную таблицу для расчета позиций
     stmt_standings = select(TournamentStanding).where(
         TournamentStanding.tournament_id == match.tournament_id
     ).order_by(TournamentStanding.points.desc(), TournamentStanding.goals_for.desc())
     standings = (await db.execute(stmt_standings)).scalars().all()
 
-    # Ищем позиции и данные команд в таблице
     home_pos = next((i + 1 for i, s in enumerate(standings) if s.team_id == match.home_team_id), None)
     away_pos = next((i + 1 for i, s in enumerate(standings) if s.team_id == match.away_team_id), None)
     home_standing = next((s for s in standings if s.team_id == match.home_team_id), None)
     away_standing = next((s for s in standings if s.team_id == match.away_team_id), None)
 
-    # 4. Топ бомбардир турнира
     top_scorers = await StatsService.get_top_scorers(db, match.tournament_id, limit=1)
     top_scorer = top_scorers[0] if top_scorers else None
 
-    # 5. Личные встречи (Head-to-Head)
     h2h_stmt = select(Match).where(
         or_(
             and_(Match.home_team_id == match.home_team_id, Match.away_team_id == match.away_team_id),
@@ -1576,7 +1461,6 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
     ).order_by(Match.match_date.desc()).limit(5)
     h2h_matches = (await db.execute(h2h_stmt)).scalars().all()
 
-    # 6. Последние 5 матчей для домашней команды (строго ДО текущего матча)
     home_recent_query = select(Match).where(
         or_(Match.home_team_id == match.home_team_id, Match.away_team_id == match.home_team_id),
         Match.status == MatchStatus.FINISHED,
@@ -1591,7 +1475,6 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
     ).order_by(Match.match_date.desc()).limit(5)
     home_recent_matches = (await db.execute(home_recent_stmt)).scalars().all()
 
-    # 7. Последние 5 матчей для гостевой команды (строго ДО текущего матча)
     away_recent_query = select(Match).where(
         or_(Match.home_team_id == match.away_team_id, Match.away_team_id == match.away_team_id),
         Match.status == MatchStatus.FINISHED,
@@ -1606,7 +1489,6 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
     ).order_by(Match.match_date.desc()).limit(5)
     away_recent_matches = (await db.execute(away_recent_stmt)).scalars().all()
 
-    # 8. Игроки, которые когда-либо играли за обе команды
     home_players_subq = select(TeamPlayer.player_id).where(TeamPlayer.team_id == match.home_team_id)
     away_players_subq = select(TeamPlayer.player_id).where(TeamPlayer.team_id == match.away_team_id)
 
@@ -1616,7 +1498,6 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
     ).order_by(Player.last_name)
     common_players = (await db.execute(common_players_stmt)).scalars().all()
 
-    # 9. ГРУППИРОВКА СОБЫТИЙ ПО ИГРОКАМ
     events_by_player = {}
     if match.events:
         for e in match.events:
@@ -1625,7 +1506,6 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
                     events_by_player[e.player_id] = []
                 events_by_player[e.player_id].append(e)
 
-    # 10. РЕНДЕР СТРАНИЦЫ
     return await render_page(request, db, "match_detail.html", context={
         "match": match,
         "home_roster": home_roster,
@@ -1644,7 +1524,6 @@ async def match_protocol_page(match_id: int, request: Request, db: AsyncSession 
     })
 
 
-
 @router.get("/stadiums")
 async def stadiums_page(request: Request, db: AsyncSession = Depends(get_db)):
     stadiums = await crud_stadium.get_multi(db, limit=100)
@@ -1656,16 +1535,12 @@ from app.models.staff import Staff
 from collections import OrderedDict
 
 
-# ==========================================
-# ПУБЛИЧНАЯ СТРАНИЦА СОТРУДНИКОВ
-# ==========================================
 @router.get("/management")
 async def management_page(request: Request, db: AsyncSession = Depends(get_db)):
     staff_list = (await db.execute(
         select(Staff).where(Staff.is_active == True).order_by(Staff.sort_order.asc(), Staff.id.asc())
     )).scalars().all()
 
-    # Группируем по РАНГУ (а не по должности)
     grouped_staff = OrderedDict()
     for person in staff_list:
         if person.rank not in grouped_staff:
@@ -1675,9 +1550,8 @@ async def management_page(request: Request, db: AsyncSession = Depends(get_db)):
     return await render_page(request, db, "management.html", context={"grouped_staff": grouped_staff})
 
 
-# ==========================================
-# АДМИНКА: СПИСОК
-# ==========================================
+# Сотрудники
+
 @router.get("/admin/staff")
 async def admin_staff_list(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -1687,7 +1561,6 @@ async def admin_staff_list(request: Request, db: AsyncSession = Depends(get_db))
         select(Staff).order_by(Staff.sort_order.asc(), Staff.id.asc())
     )).scalars().all()
 
-    # Собираем уникальные значения для подсказок
     all_ranks = sorted(list(set(s.rank for s in staff_list)))
     all_positions = sorted(list(set(s.position for s in staff_list)))
 
@@ -1699,9 +1572,6 @@ async def admin_staff_list(request: Request, db: AsyncSession = Depends(get_db))
     })
 
 
-# ==========================================
-# АДМИНКА: СОЗДАНИЕ И РЕДАКТИРОВАНИЕ
-# ==========================================
 @router.get("/admin/staff/create")
 async def admin_staff_create_form(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -1807,6 +1677,8 @@ async def admin_staff_delete(staff_id: int, request: Request, db: AsyncSession =
     return RedirectResponse(url="/admin/staff", status_code=303)
 
 
+# Публичные страницы
+
 @router.get("/partners")
 async def partners_page(request: Request, db: AsyncSession = Depends(get_db)):
     return await render_page(request, db, "partners.html")
@@ -1828,7 +1700,6 @@ async def disciplinary_page(request: Request, db: AsyncSession = Depends(get_db)
     from sqlalchemy.orm import selectinload
     from sqlalchemy import select
 
-    # Ищем только активные дисквалификации (где осталось отбывать > 0 матчей)
     stmt = select(Disqualification).where(
         Disqualification.matches_remaining > 0
     ).options(
@@ -1846,6 +1717,8 @@ async def disciplinary_page(request: Request, db: AsyncSession = Depends(get_db)
         "active_disq": active_disq
     })
 
+
+# Авторизация
 
 @router.get("/login")
 async def login_page(request: Request, db: AsyncSession = Depends(get_db)):
@@ -1867,10 +1740,8 @@ async def web_login(
     access_token = create_access_token(subject=user.email)
     response = RedirectResponse(url="/admin", status_code=303)
 
-    # Определяем, HTTPS ли соединение (на localhost будет False, на проде — True)
     is_secure = request.url.scheme == "https"
 
-    # Устанавливаем cookie с защитой от CSRF (samesite) и XSS (httponly)
     response.set_cookie(
         key="access_token",
         value=access_token,
@@ -1890,6 +1761,8 @@ async def logout():
     return response
 
 
+# Административная панель
+
 @router.get("/admin")
 async def admin_panel(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -1899,7 +1772,6 @@ async def admin_panel(request: Request, db: AsyncSession = Depends(get_db)):
     from sqlalchemy import func
     from app.models.disqualification import Disqualification
 
-    # 1. СБОР СТАТИСТИКИ (Дашборд)
     total_tournaments = await db.scalar(select(func.count()).select_from(Tournament))
     total_teams = await db.scalar(select(func.count()).select_from(Team))
 
@@ -1912,8 +1784,6 @@ async def admin_panel(request: Request, db: AsyncSession = Depends(get_db)):
         select(func.count()).select_from(Disqualification).where(Disqualification.matches_remaining > 0)
     )
 
-    # 2. МАТЧИ НА СЕГОДНЯ (ИЛИ БЛИЖАЙШИЕ)
-    # Ищем матчи, которые еще не завершены и дата >= сегодня
     stmt_matches = select(Match).where(
         Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE]),
         func.date(Match.match_date) >= today
@@ -1925,7 +1795,6 @@ async def admin_panel(request: Request, db: AsyncSession = Depends(get_db)):
 
     upcoming_matches = (await db.execute(stmt_matches)).scalars().all()
 
-    # 3. АКТИВНЫЕ ТУРНИРЫ (Топ 5)
     stmt_tours = select(Tournament).where(
         Tournament.status == TournamentStatus.ACTIVE
     ).order_by(Tournament.sort_order).limit(5)
@@ -1941,6 +1810,8 @@ async def admin_panel(request: Request, db: AsyncSession = Depends(get_db)):
         "active_tournaments": active_tournaments
     })
 
+
+# Партнёры
 
 @router.get("/admin/partners")
 async def admin_partners_list(request: Request, db: AsyncSession = Depends(get_db)):
@@ -2026,6 +1897,8 @@ async def admin_partner_delete(partner_id: int, request: Request, db: AsyncSessi
     return RedirectResponse(url="/admin/partners", status_code=303)
 
 
+# Стадионы
+
 @router.get("/admin/stadiums")
 async def admin_stadiums_list(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -2096,6 +1969,8 @@ async def admin_stadium_delete(stadium_id: int, request: Request, db: AsyncSessi
     return RedirectResponse(url="/admin/stadiums", status_code=303)
 
 
+# Команды
+
 @router.get("/admin/teams")
 async def admin_teams_list(
         request: Request,
@@ -2109,24 +1984,19 @@ async def admin_teams_list(
     from app.models.tournament import Tournament
     from app.models.enums import TournamentStatus
 
-    # 1. СИНХРОНИЗАЦИЯ СТАТУСОВ (Обновляем флаги is_active)
-    # Находим ID всех команд, которые играют в активных турнирах
     active_tt_stmt = select(TournamentTeam.team_id).join(Tournament).where(
         Tournament.status == TournamentStatus.ACTIVE
     )
     active_team_ids = (await db.execute(active_tt_stmt)).scalars().all()
 
-    # Сбрасываем флаг у всех, затем ставим True только участникам активных турниров
     await db.execute(update(Team).values(is_active=False))
     if active_team_ids:
         await db.execute(update(Team).where(Team.id.in_(active_team_ids)).values(is_active=True))
     await db.commit()
 
-    # 2. ЗАПРАШИВАЕМ КОМАНДЫ С УЧЕТОМ ФИЛЬТРА
     stmt = select(Team)
 
     if not show_all:
-        # Если фильтр включен, берем только тех, у кого флаг стал True
         stmt = stmt.where(Team.is_active == True)
 
     stmt = stmt.order_by(Team.name).limit(100)
@@ -2243,19 +2113,15 @@ async def admin_teams_merge(
     if not source or not target:
         raise HTTPException(status_code=404, detail="Команда не найдена")
 
-    # 1. Матчи (домашние и гостевые)
     await db.execute(update(Match).where(Match.home_team_id == source_id).values(home_team_id=target_id))
     await db.execute(update(Match).where(Match.away_team_id == source_id).values(away_team_id=target_id))
 
-    # 2. События (голы, ассисты, карточки)
     await db.execute(update(MatchEvent).where(MatchEvent.team_id == source_id).values(team_id=target_id))
 
-    # 3. Дисквалификации
     await db.execute(
         update(Disqualification).where(Disqualification.team_id == source_id).values(team_id=target_id)
     )
 
-    # 4. Заявки игроков — при дублях СУММИРУЕМ статистику, а не теряем
     source_tps = (
         await db.execute(select(TeamPlayer).where(TeamPlayer.team_id == source_id))
     ).scalars().all()
@@ -2277,7 +2143,6 @@ async def admin_teams_merge(
         else:
             tp.team_id = target_id
 
-    # 5. Участие в турнирах (с защитой от дублей)
     source_tts = (
         await db.execute(select(TournamentTeam).where(TournamentTeam.team_id == source_id))
     ).scalars().all()
@@ -2294,13 +2159,10 @@ async def admin_teams_merge(
         else:
             tt.team_id = target_id
 
-    # 6. Тренеры
     await db.execute(update(Coach).where(Coach.team_id == source_id).values(team_id=target_id))
 
-    # 7. Капитаны (User.team_id)
     await db.execute(update(User).where(User.team_id == source_id).values(team_id=target_id))
 
-    # 8. Привязка новостей (M2M news_teams)
     existing_news_ids = {
         row[0] for row in (
             await db.execute(select(news_teams.c.news_id).where(news_teams.c.team_id == target_id))
@@ -2313,7 +2175,6 @@ async def admin_teams_merge(
     ]
     for news_id in source_news_ids:
         if news_id in existing_news_ids:
-            # у target уже есть эта новость — просто снимаем дубль
             await db.execute(news_teams.delete().where(
                 (news_teams.c.news_id == news_id) & (news_teams.c.team_id == source_id)
             ))
@@ -2322,21 +2183,17 @@ async def admin_teams_merge(
                 (news_teams.c.news_id == news_id) & (news_teams.c.team_id == source_id)
             ).values(team_id=target_id))
 
-    # 9. Удаляем старые строки таблицы (пересчитаются)
     await db.execute(delete(TournamentStanding).where(TournamentStanding.team_id == source_id))
 
-    # 10. Удаляем саму команду-источник
     await db.execute(delete(Team).where(Team.id == source_id))
 
     await db.commit()
 
-    # 11. Пересчёт таблиц во всех затронутых турнирах
     from app.services.stats_recalc import StatsRecalculator
     for t_id in affected_tournaments:
         await StatsRecalculator.recalculate_all(db, t_id)
 
     return RedirectResponse(url="/admin/teams", status_code=303)
-
 
 
 @router.get("/admin/teams/{team_id}/edit")
@@ -2383,6 +2240,8 @@ async def admin_team_delete(team_id: int, request: Request, db: AsyncSession = D
     return RedirectResponse(url="/admin/teams", status_code=303)
 
 
+# Турниры
+
 @router.get("/admin/tournaments")
 async def admin_tournaments_list(
         request: Request,
@@ -2395,7 +2254,6 @@ async def admin_tournaments_list(
 
     await check_and_finish_expired_tournaments(db)
 
-    # 1. Базовый запрос с ЖАДНОЙ ЗАГРУЗКОЙ матчей
     from sqlalchemy.orm import selectinload
     stmt = select(Tournament).options(
         selectinload(Tournament.matches).selectinload(Match.home_team),
@@ -2407,10 +2265,8 @@ async def admin_tournaments_list(
     if season:
         stmt = stmt.where(Tournament.season == season)
 
-    # Получаем данные
     tournaments = (await db.execute(stmt)).unique().scalars().all()
 
-    # 2. ЖЕЛЕЗОБЕТОННАЯ СОРТИРОВКА ТУРНИРОВ В PYTHON
     def sort_key(t):
         try:
             season_num = int(t.season)
@@ -2420,7 +2276,6 @@ async def admin_tournaments_list(
 
     tournaments = sorted(tournaments, key=sort_key)
 
-    # 3. БЕЗОПАСНАЯ СОРТИРОВКА МАТЧЕЙ ВНУТРИ ТУРНИРОВ (ИСПРАВЛЕНИЕ TZ ERROR)
     from datetime import datetime, timezone
 
     def safe_timestamp(dt):
@@ -2432,7 +2287,6 @@ async def admin_tournaments_list(
         return dt.timestamp()
 
     for t in tournaments:
-        # Сначала по дате (новые сверху), затем по туру (по убыванию), затем по ID
         t.matches.sort(
             key=lambda m: (
                 safe_timestamp(m.match_date),
@@ -2442,7 +2296,6 @@ async def admin_tournaments_list(
             reverse=True
         )
 
-    # 4. Получаем список сезонов
     seasons_result = await db.execute(
         select(Tournament.season).distinct().order_by(Tournament.season.desc())
     )
@@ -2462,7 +2315,6 @@ async def admin_tournament_create_form(request: Request, db: AsyncSession = Depe
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Получаем список уже существующих заголовков для подсказки
     stmt_cats = select(Tournament.menu_category).where(
         Tournament.menu_category.isnot(None),
         Tournament.menu_category != ""
@@ -2502,10 +2354,8 @@ async def admin_tournament_create(
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # 1. Загружаем логотип
     logo_url = await save_upload_file(logo, "tournaments")
 
-    # 2. Парсим даты (с учетом часового пояса Алматы UTC+5)
     try:
         from zoneinfo import ZoneInfo
         local_tz = ZoneInfo("Asia/Almaty")
@@ -2529,7 +2379,6 @@ async def admin_tournament_create(
         except ValueError:
             pass
 
-    # 4. Создаем турнир
     tournament_in = TournamentCreate(
         name=name, short_name=short_name, menu_category=menu_category,
         show_in_menu=show_in_menu, description=description,
@@ -2544,7 +2393,6 @@ async def admin_tournament_create(
     return RedirectResponse(url="/admin/tournaments", status_code=303)
 
 
-
 @router.get("/admin/tournaments/{tournament_id}/edit")
 async def admin_tournament_edit_form(tournament_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -2554,7 +2402,6 @@ async def admin_tournament_edit_form(tournament_id: int, request: Request, db: A
     if not tournament:
         return RedirectResponse(url="/admin/tournaments", status_code=303)
 
-    # Получаем список уже существующих заголовков для подсказки
     stmt_cats = select(Tournament.menu_category).where(
         Tournament.menu_category.isnot(None),
         Tournament.menu_category != ""
@@ -2594,20 +2441,16 @@ async def admin_tournament_edit(
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # 1. Получаем турнир
     tournament = await crud_tournament.get(db, tournament_id)
     if not tournament:
         return RedirectResponse(url="/admin/tournaments", status_code=303)
 
-    # 2. Обновляем логотип (если загружен новый)
     new_logo_url = await save_upload_file(logo, "tournaments")
     final_logo_url = new_logo_url if new_logo_url else tournament.logo_url
 
-    # 3. Парсим даты
     start_date = datetime.fromisoformat(start_at) if start_at else None
     end_date = datetime.fromisoformat(end_at) if end_at else None
 
-    # 4. Обрабатываем Enum формат
     fmt = None
     if tournament_format:
         try:
@@ -2615,7 +2458,6 @@ async def admin_tournament_edit(
         except ValueError:
             pass
 
-    # 5. Обновляем данные
     tournament_in = TournamentUpdate(
         name=name, short_name=short_name, menu_category=menu_category,
         show_in_menu=show_in_menu, description=description,
@@ -2627,17 +2469,12 @@ async def admin_tournament_edit(
     )
     await crud_tournament.update(db, db_obj=tournament, obj_in=tournament_in)
 
-    # =========================================================================
-    # ЛОГИКА ДЛЯ НОВОСТЕЙ О ЧЕМПИОНЕ (ЕСЛИ ТУРНИР ЗАВЕРШЕН)
-    # =========================================================================
     if status == TournamentStatus.FINISHED:
-        # Проверяем, нет ли уже новости о чемпионе
         existing_news = await db.scalar(
             select(News).where(News.tournament_id == tournament_id, News.title.ilike("%Чемпион%"))
         )
 
         if not existing_news:
-            # Находим победителя (1-е место)
             stmt = select(TournamentStanding).where(
                 TournamentStanding.tournament_id == tournament_id
             ).options(selectinload(TournamentStanding.team)).order_by(
@@ -2652,17 +2489,14 @@ async def admin_tournament_edit(
                 winner_team = winner_standing.team
                 card_url = None
 
-                # Пытаемся сгенерировать AI-карточку
                 try:
                     from app.services.champion_card import generate_champion_card
                     card_url = await generate_champion_card(db, tournament_id, prompt_index=0)
                 except Exception as e:
                     print(f"  ⚠️ AI-карточка не сгенерирована: {e}")
 
-                # Формируем новость
                 news_title = f"{winner_team.name} - Чемпион {tournament.name}"
 
-                # Генерируем slug
                 import re
                 slug = re.sub(r'[^a-z0-9]+', '-', news_title.lower()).strip('-')
                 if not slug:
@@ -2692,7 +2526,6 @@ async def admin_tournament_edit(
                 await db.commit()
 
     return RedirectResponse(url="/admin/tournaments", status_code=303)
-
 
 
 @router.post("/admin/tournaments/{tournament_id}/delete")
@@ -2731,6 +2564,8 @@ async def admin_generate_calendar(tournament_id: int, request: Request, db: Asyn
     return RedirectResponse(url="/admin/tournaments", status_code=303)
 
 
+# Матчи
+
 @router.get("/admin/matches")
 async def admin_matches_list(
         request: Request,
@@ -2747,17 +2582,14 @@ async def admin_matches_list(
     from datetime import datetime, timezone, timedelta
     from zoneinfo import ZoneInfo
 
-    # Получаем текущую дату и время для сравнения
     now = datetime.now(timezone.utc)
 
-    # 1. Базовый запрос
     stmt = select(Match).join(Tournament).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
         selectinload(Match.tournament)
     )
 
-    # 2. Применяем фильтры
     if search:
         stmt = stmt.where(
             or_(
@@ -2769,7 +2601,6 @@ async def admin_matches_list(
     if tournament_id and tournament_id.strip().isdigit():
         stmt = stmt.where(Match.tournament_id == int(tournament_id))
 
-    # --- НОВЫЙ БЛОК: ФИЛЬТРАЦИЯ ПО ДАТАМ С УЧЕТОМ ЧАСОВОГО ПОЯСА ---
     try:
         local_tz = ZoneInfo("Asia/Almaty")
     except Exception:
@@ -2777,7 +2608,6 @@ async def admin_matches_list(
 
     if date_from:
         try:
-            # 00:00:00 по Алматы -> в UTC для БД
             dt_from = datetime.strptime(date_from, "%Y-%m-%d").replace(hour=0, minute=0, second=0, tzinfo=local_tz)
             stmt = stmt.where(Match.match_date >= dt_from.astimezone(timezone.utc))
         except ValueError:
@@ -2785,40 +2615,32 @@ async def admin_matches_list(
 
     if date_to:
         try:
-            # 23:59:59 по Алматы -> в UTC для БД
             dt_to = datetime.strptime(date_to, "%Y-%m-%d").replace(hour=23, minute=59, second=59, tzinfo=local_tz)
             stmt = stmt.where(Match.match_date <= dt_to.astimezone(timezone.utc))
         except ValueError:
             pass
-    # --- КОНЕЦ БЛОКА ---
 
-    # 3. УМНАЯ СОРТИРОВКА (Незавершенные и TBA — наверх)
 
-    # Шаг А: Группируем по статусу (0 - незавершенные, 1 - завершенные/отмененные)
     status_group = case(
         (Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE]), 0),
         else_=1
     )
 
-    # Шаг Б: Группируем по наличию даты (0 - без даты (TBA), 1 - с датой)
     date_group = case(
         (Match.match_date.is_(None), 0),
         else_=1
     )
 
-    # Шаг В: Для незавершенных матчей с датой сортируем по возрастанию (ближайшие)
     active_date_asc = case(
         (Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE]), Match.match_date),
         else_=None
     ).asc().nullslast()
 
-    # Шаг Г: Для завершенных матчей с датой сортируем по убыванию (свежие сверху)
     finished_date_desc = case(
         (Match.match_date.isnot(None) & ~Match.status.in_([MatchStatus.SCHEDULED, MatchStatus.LIVE]), Match.match_date),
         else_=None
     ).desc().nullslast()
 
-    # Применяем итоговую сортировку
     stmt = stmt.order_by(
         status_group,
         date_group,
@@ -2831,7 +2653,6 @@ async def admin_matches_list(
 
     matches = (await db.execute(stmt)).unique().scalars().all()
 
-    # Конвертируем время обратно в Алматы для отображения
     for m in matches:
         m.match_date = to_local_time(m.match_date)
 
@@ -2877,7 +2698,6 @@ async def admin_match_create(
     if home_team_id == away_team_id:
         raise HTTPException(status_code=400, detail="Команда не может играть сама с собой")
 
-    # --- ИСПРАВЛЕНИЕ ВРЕМЕНИ ---
     from zoneinfo import ZoneInfo
     from datetime import datetime, timezone, timedelta
 
@@ -2887,13 +2707,10 @@ async def admin_match_create(
         local_tz = timezone(timedelta(hours=5))
 
     if match_date:
-        # Берем время из формы и жестко прикрепляем к нему пояс Алматы
         parsed_date = datetime.fromisoformat(match_date).replace(tzinfo=local_tz)
     else:
         parsed_date = None
-    # ---------------------------
 
-    # Парсим стадию
     match_stage = None
     if stage:
         from app.models.enums import MatchStage
@@ -2969,7 +2786,6 @@ async def admin_match_edit(
 
     old_status = match.status
 
-    # --- ИСПРАВЛЕНИЕ ВРЕМЕНИ ---
     from zoneinfo import ZoneInfo
     from datetime import datetime, timezone, timedelta
 
@@ -2979,11 +2795,9 @@ async def admin_match_edit(
         local_tz = timezone(timedelta(hours=5))
 
     if match_date:
-        # Берем время из формы и прикрепляем пояс Алматы
         parsed_date = datetime.fromisoformat(match_date).replace(tzinfo=local_tz)
     else:
         parsed_date = None
-    # ---------------------------
 
     match_stage = None
     if stage:
@@ -3002,7 +2816,6 @@ async def admin_match_edit(
     )
     await crud_match.update(db, db_obj=match, obj_in=match_in)
 
-    # УМНАЯ ЛОГИКА ПЕРЕСЧЕТА (как была)
     from app.services.stats_recalc import StatsRecalculator
     from app.services.disqualifications import DisqualificationService
 
@@ -3037,15 +2850,15 @@ async def admin_match_delete(match_id: int, request: Request, db: AsyncSession =
     return RedirectResponse(url="/admin/matches", status_code=303)
 
 
+# Игроки
+
 @router.get("/admin/players")
 async def admin_players_list(request: Request, search: str = None, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Базовый запрос с сортировкой по фамилии
     stmt = select(Player).order_by(Player.last_name, Player.first_name)
 
-    # Если ввели поиск — фильтруем по фамилии ИЛИ имени
     if search:
         stmt = stmt.where(
             or_(
@@ -3140,11 +2953,8 @@ async def admin_player_delete(player_id: int, request: Request, db: AsyncSession
     return RedirectResponse(url="/admin/players", status_code=303)
 
 
-# ============================================================
-# УПРАВЛЕНИЕ ЗАЯВКОЙ (РОСТЕРОМ) КОМАНДЫ
-# ============================================================
+# Команды
 
-# 1. ОТКРЫТИЕ СТРАНИЦЫ (Показывает всех, если не выбран турнир)
 @router.get("/admin/teams/{team_id}/roster")
 async def admin_team_roster(
         request: Request,
@@ -3159,13 +2969,10 @@ async def admin_team_roster(
     if not team:
         raise HTTPException(404, "Команда не найдена")
 
-    # Список турниров для выпадающего списка
     all_tournaments = (await db.execute(
         select(Tournament).order_by(Tournament.season.desc(), Tournament.name)
     )).scalars().all()
 
-    # Делаем JOIN с таблицей Tournament, чтобы получить данные турнира
-    # (так как в модели TeamPlayer нет связи tournament)
     stmt = select(TeamPlayer, Tournament).join(
         Tournament, TeamPlayer.tournament_id == Tournament.id
     ).where(TeamPlayer.team_id == team_id).options(
@@ -3175,13 +2982,11 @@ async def admin_team_roster(
         TeamPlayer.jersey_number.asc().nullslast()
     )
 
-    # Фильтрация по турниру, если выбран
     if tournament_id:
         stmt = stmt.where(TeamPlayer.tournament_id == tournament_id)
 
     result = (await db.execute(stmt)).all()
 
-    # Собираем список словарей для шаблона
     roster = []
     for tp, t in result:
         roster.append({
@@ -3202,12 +3007,9 @@ async def admin_team_roster(
     })
 
 
-# 2. ДОБАВЛЕНИЕ НОВОГО ИГРОКА (Создает игрока и кидает в заявку)
-# ... импорты в начале файла ...
 from fastapi import UploadFile, File  # Убедись, что это импортировано
 
 
-# 2. ДОБАВЛЕНИЕ НОВОГО ИГРОКА (с фото)
 @router.post("/admin/teams/{team_id}/roster/add")
 async def admin_team_roster_add(
         team_id: int,
@@ -3231,12 +3033,10 @@ async def admin_team_roster_add(
         except ValueError:
             pass
 
-    # Сохраняем фото, если загружено
     photo_url = None
     if photo and photo.filename:
         photo_url = await save_upload_file(photo, "players")
 
-    # 1. Создаем игрока в базе
     new_player = Player(
         first_name=first_name.strip(),
         last_name=last_name.strip(),
@@ -3247,7 +3047,6 @@ async def admin_team_roster_add(
     db.add(new_player)
     await db.flush()
 
-    # 2. Добавляем в заявку
     obj_in = TeamPlayerCreate(
         team_id=team_id,
         tournament_id=tournament_id,
@@ -3261,7 +3060,6 @@ async def admin_team_roster_add(
     return RedirectResponse(url=f"/admin/teams/{team_id}/roster?tournament_id={tournament_id}", status_code=303)
 
 
-# 3. РЕДАКТИРОВАНИЕ ИГРОКА (с фото)
 @router.post("/admin/teams/{team_id}/roster/edit/{roster_id}")
 async def admin_team_roster_edit(
         team_id: int,
@@ -3295,7 +3093,6 @@ async def admin_team_roster_edit(
             else:
                 player.date_of_birth = None
 
-            # Обновляем фото
             if photo and photo.filename:
                 player.photo_url = await save_upload_file(photo, "players")
             elif remove_photo == "1":
@@ -3309,8 +3106,8 @@ async def admin_team_roster_edit(
     return RedirectResponse(url=url, status_code=303)
 
 
+# Административная панель
 
-# 4. УДАЛЕНИЕ (Твой вариант, просто оставляем)
 @router.post("/admin/roster/{roster_id}/delete")
 async def admin_roster_delete(
         roster_id: int, request: Request, team_id: int = Form(...), tournament_id: int = Form(...),
@@ -3339,7 +3136,6 @@ async def recalculate_match_score(match: Match, db: AsyncSession):
             elif e.team_id == match.away_team_id:
                 away_goals += 1
         elif e.event_type == MatchEventType.OWN_GOAL:
-            # Автогол: игрок одной команды забивает в свои ворота
             if e.team_id == match.home_team_id:
                 away_goals += 1
             elif e.team_id == match.away_team_id:
@@ -3350,16 +3146,16 @@ async def recalculate_match_score(match: Match, db: AsyncSession):
     db.add(match)
     await db.commit()
 
-    # ВАЖНО: Пересчитываем таблицу после каждого изменения счета
     await StandingsService.recalculate_standings(db, match.tournament_id)
 
+
+# Матчи
 
 @router.get("/admin/matches/{match_id}/events")
 async def admin_match_events(match_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # 1. Явно подгружаем матч со всеми связями, включая турнир
     stmt = select(Match).where(Match.id == match_id).options(
         selectinload(Match.home_team),
         selectinload(Match.away_team),
@@ -3370,8 +3166,6 @@ async def admin_match_events(match_id: int, request: Request, db: AsyncSession =
     if not match:
         return RedirectResponse(url="/admin/matches", status_code=303)
 
-    # 2. Делаем прямой запрос к событиям с ЖАДНОЙ ЗАГРУЗКОЙ (selectinload) игроков и команд
-    # Это решает ошибку MissingGreenlet
     stmt_events = select(MatchEvent).where(MatchEvent.match_id == match_id).options(
         selectinload(MatchEvent.player),
         selectinload(MatchEvent.team)
@@ -3379,7 +3173,6 @@ async def admin_match_events(match_id: int, request: Request, db: AsyncSession =
 
     events = (await db.execute(stmt_events)).scalars().all()
 
-    # 3. Загружаем заявки команд (для выпадающих списков в форме)
     home_players = await crud_team_player.get_by_tournament_and_team(
         db, tournament_id=match.tournament_id, team_id=match.home_team_id
     )
@@ -3416,25 +3209,20 @@ async def admin_match_event_add(
     if not match:
         return RedirectResponse(url="/admin/matches", status_code=303)
 
-    # --- ИСПРАВЛЕНИЕ: Умная конвертация строки в Enum ---
     try:
-        # Пытаемся найти по значению ('goal'), но если не выходит - ищем по имени ('GOAL')
         try:
             e_type = MatchEventType(event_type.lower())
         except ValueError:
             e_type = MatchEventType[event_type.upper()]
     except (ValueError, KeyError):
-        # Если вообще непонятное значение, ставим дефолт (или выдаем ошибку)
         raise HTTPException(status_code=400, detail=f"Неверный тип события: {event_type}")
 
-    # 1. Добавляем основное событие
     event_in = MatchEventCreate(
         match_id=match_id, team_id=team_id, player_id=player_id,
         event_type=e_type, minute=minute, comment=comment
     )
     await crud_match_event.create(db, obj_in=event_in)
 
-    # 2. Если это гол и выбран ассистент — добавляем событие ассиста
     if e_type in [MatchEventType.GOAL, MatchEventType.PENALTY_GOAL] and assist_player_id:
         assist_in = MatchEventCreate(
             match_id=match_id, team_id=team_id, player_id=assist_player_id,
@@ -3442,10 +3230,8 @@ async def admin_match_event_add(
         )
         await crud_match_event.create(db, obj_in=assist_in)
 
-    # 3. Пересчитываем счет матча
     await recalculate_match_score(match, db)
 
-    # 4. Запускаем полный пересчет всей статистики
     from app.services.stats_recalc import StatsRecalculator
     await StatsRecalculator.recalculate_all(db, match.tournament_id)
 
@@ -3464,19 +3250,19 @@ async def admin_match_event_delete(match_id: int, event_id: int, request: Reques
         if match:
             await recalculate_match_score(match, db)
 
-            # ДОБАВИТЬ ВОТ ЭТО:
             from app.services.stats_recalc import StatsRecalculator
             await StatsRecalculator.recalculate_all(db, match.tournament_id)
 
     return RedirectResponse(url=f"/admin/matches/{match_id}/events", status_code=303)
 
 
+# Новости
+
 @router.get("/admin/news")
 async def admin_news_list(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Сортируем по sort_order, а затем по дате
     stmt = select(News).order_by(News.sort_order.asc(), News.published_at.desc(), News.id.desc())
     news_list = (await db.execute(stmt)).scalars().all()
 
@@ -3505,7 +3291,6 @@ async def admin_news_reorder_save(request: Request, db: AsyncSession = Depends(g
         return {"status": "ok", "message": "Порядок сохранен"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
-
 
 
 @router.get("/admin/news/create")
@@ -3584,6 +3369,8 @@ async def admin_news_delete(news_id: int, request: Request, db: AsyncSession = D
 from datetime import datetime
 
 
+# Публичные страницы
+
 @router.get("/matches/{match_id}/print")
 async def match_protocol_print(match_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     stmt = select(Match).where(Match.id == match_id).options(
@@ -3627,7 +3414,6 @@ async def match_protocol_print(match_id: int, request: Request, db: AsyncSession
 
     if match.events:
         for e in match.events:
-            # --- СБОР ГОЛОВ И ПЕРЕДАЧ ---
             if e.player_id:
                 if e.player_id not in events_data:
                     events_data[e.player_id] = {'goals': [], 'assists': []}
@@ -3637,7 +3423,6 @@ async def match_protocol_print(match_id: int, request: Request, db: AsyncSession
                 elif e.event_type == MatchEventType.ASSIST:
                     events_data[e.player_id]['assists'].append(e.minute)
 
-            # --- СБОР АВТОГОЛОВ ---
             if e.event_type == MatchEventType.OWN_GOAL and e.player:
                 own_goals_data.append({
                     "minute": e.minute,
@@ -3645,7 +3430,6 @@ async def match_protocol_print(match_id: int, request: Request, db: AsyncSession
                     "team_name": e.team.name if e.team else "Неизвестно"
                 })
 
-            # --- СБОР КАРТОЧЕК ---
             if e.event_type in [MatchEventType.YELLOW_CARD, MatchEventType.RED_CARD]:
                 cards_data.append({
                     "minute": e.minute,
@@ -3675,7 +3459,8 @@ async def match_protocol_print(match_id: int, request: Request, db: AsyncSession
     )
 
 
-# --- СПИСОК АЛЬБОМОВ В АДМИНКЕ ---
+# Медиа
+
 @router.get("/admin/media")
 async def admin_media_list(
         request: Request,
@@ -3704,7 +3489,6 @@ async def admin_media_list(
     })
 
 
-# --- ФОРМА СОЗДАНИЯ АЛЬБОМА ---
 @router.get("/admin/media/create")
 async def admin_media_create_form(
         request: Request,
@@ -3724,7 +3508,6 @@ async def admin_media_create_form(
     })
 
 
-# --- СОХРАНЕНИЕ НОВОГО АЛЬБОМА ---
 @router.post("/admin/media/create")
 async def admin_media_create(
         request: Request,
@@ -3740,7 +3523,6 @@ async def admin_media_create(
     await db.commit()
     await db.refresh(album)
 
-    # Если альбом создан для турнира, редиректим обратно к фильтру по турниру
     if tournament_id:
         return RedirectResponse(url=f"/admin/media?tournament_id={tournament_id}", status_code=303)
 
@@ -3811,20 +3593,20 @@ from sqlalchemy.orm import selectinload
 from datetime import datetime
 
 
+# Публичные страницы
+
 @router.get("/teams/{team_id}")
 async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     team = await db.get(Team, team_id)
     if not team:
         raise HTTPException(status_code=404, detail="Команда не найдена")
 
-    # 1. Новости команды
     stmt_news = select(News).where(
         News.is_published == True,
         News.teams.any(id=team.id)
     ).order_by(News.published_at.desc()).limit(6)
     team_news = (await db.execute(stmt_news)).scalars().all()
 
-    # 2. Все матчи команды
     stmt = select(Match).where(
         or_(Match.home_team_id == team.id, Match.away_team_id == team.id)
     ).options(
@@ -3835,7 +3617,6 @@ async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(g
     all_matches = (await db.execute(stmt)).scalars().all()
     all_matches = sorted(all_matches, key=lambda x: x.match_date.timestamp() if x.match_date else 0, reverse=True)
 
-    # 3. Статистика
     finished_matches = [m for m in all_matches if m.status == MatchStatus.FINISHED]
     total_games = len(finished_matches)
     total_wins = 0
@@ -3862,7 +3643,6 @@ async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(g
             recent_form.append("В" if (m.away_score or 0) > (m.home_score or 0) else (
                 "П" if (m.away_score or 0) < (m.home_score or 0) else "Н"))
 
-    # 4. Группируем матчи по СЕЗОНАМ и ТУРНИРАМ
     grouped_matches = {}
     for m in all_matches:
         season = m.tournament.season if m.tournament else "Без сезона"
@@ -3874,7 +3654,6 @@ async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(g
             grouped_matches[season][t_name] = []
         grouped_matches[season][t_name].append(m)
 
-    # 5. Текущий турнир и таблица
     active_tournament = next((m.tournament for m in all_matches if m.tournament), None)
     standings = []
     if active_tournament:
@@ -3885,14 +3664,12 @@ async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(g
         ).limit(5)
         standings = (await db.execute(stmt_standings)).scalars().all()
 
-    # 6. ПОЛУЧАЕМ СОСТАВ (РОСТЕР)
     stmt_roster = select(TeamPlayer).where(
         TeamPlayer.team_id == team.id
     ).options(selectinload(TeamPlayer.player)).order_by(TeamPlayer.jersey_number)
 
     roster_raw = (await db.execute(stmt_roster)).scalars().all()
 
-    # Убираем дубликаты, если игрок заявлен за команду в разных турнирах
     roster = []
     seen_players = set()
     for tp in roster_raw:
@@ -3900,7 +3677,6 @@ async def team_page(team_id: int, request: Request, db: AsyncSession = Depends(g
             seen_players.add(tp.player_id)
             roster.append(tp)
 
-    # Считаем возраст для каждого игрока
     today = date.today()
     for tp in roster:
         if tp.player.date_of_birth:
@@ -3934,13 +3710,11 @@ async def team_application_page(
         request: Request,
         db: AsyncSession = Depends(get_db)
 ):
-    # 1. Получаем турнир и команду
     tournament = await db.get(Tournament, tournament_id)
     team = await db.get(Team, team_id)
     if not tournament or not team:
         raise HTTPException(status_code=404, detail="Турнир или команда не найдены")
 
-    # 2. Получаем заявку команды (всех игроков)
     stmt = select(TeamPlayer).where(
         TeamPlayer.tournament_id == tournament_id,
         TeamPlayer.team_id == team_id
@@ -3948,12 +3722,9 @@ async def team_application_page(
 
     roster = (await db.execute(stmt)).scalars().all()
 
-    # 3. Разделяем на заявленных и отзаявленных
     active_players = [p for p in roster if p.is_active]
     released_players = [p for p in roster if not p.is_active]
 
-    # --- НОВОЕ: КРАСИВАЯ СОРТИРОВКА ---
-    # Задаем вес для каждой позиции (кто первый в списке)
     position_order = {
         PlayerPosition.GOALKEEPER: 1,  # Вратари
         PlayerPosition.DEFENDER: 2,    # Защитники
@@ -3963,18 +3734,14 @@ async def team_application_page(
     }
 
     def sort_roster(tp):
-        # Сначала по позиции, потом по номеру (если номера нет - ставим 999), потом по фамилии
         pos = position_order.get(tp.player.position, 5)
         num = tp.jersey_number if tp.jersey_number is not None else 999
         name = tp.player.last_name or ""
         return (pos, num, name)
 
-    # Применяем сортировку
     active_players.sort(key=sort_roster)
     released_players.sort(key=sort_roster)
-    # ----------------------------------
 
-    # 4. Считаем средний возраст (только для активных)
     today = date.today()
     ages = []
     for tp in active_players:
@@ -3985,7 +3752,6 @@ async def team_application_page(
 
     avg_age = round(sum(ages) / len(ages), 2) if ages else 0
 
-    # 5. Формируем словарь статистики (для передачи в шаблон, если понадобится)
     stats_dict = {}
     for tp in roster:
         stats_dict[tp.player_id] = {
@@ -4006,6 +3772,8 @@ async def team_application_page(
     })
 
 
+# Турниры
+
 @router.post("/admin/tournaments/{tournament_id}/generate-playoff")
 async def admin_generate_playoff(
     tournament_id: int,
@@ -4019,7 +3787,6 @@ async def admin_generate_playoff(
     tournament = await db.get(Tournament, tournament_id)
     if not tournament: return RedirectResponse(url="/admin/tournaments", status_code=303)
 
-    # Берем топ-N команд по очкам и разнице мячей
     stmt = select(TournamentStanding).where(
         TournamentStanding.tournament_id == tournament_id
     ).order_by(
@@ -4032,18 +3799,15 @@ async def admin_generate_playoff(
     if len(top_teams) < num_teams:
         return RedirectResponse(url=f"/admin/tournaments/{tournament_id}/edit", status_code=303)
 
-    # Определяем раунд
     if num_teams == 16: round_num = 1; stage_n = "1/8 Финала"; stage_t = MatchStage.PLAYOFF
     elif num_teams == 8: round_num = 2; stage_n = "1/4 Финала"; stage_t = MatchStage.PLAYOFF
     elif num_teams == 4: round_num = 3; stage_n = "1/2 Финала"; stage_t = MatchStage.PLAYOFF
     else: round_num = 4; stage_n = "Финал"; stage_t = MatchStage.FINAL
 
-    # Создаем пары: 1-й с последним (8-м), 2-й с 7-м и т.д.
     for i in range(num_teams // 2):
         home_team = top_teams[i].team_id
         away_team = top_teams[num_teams - 1 - i].team_id
 
-        # Проверяем, нет ли уже такого матча
         existing = await db.scalar(select(Match).where(
             Match.tournament_id == tournament_id,
             Match.round == round_num,
@@ -4074,17 +3838,14 @@ async def admin_tournament_teams(tournament_id: int, request: Request, db: Async
     tournament = await db.get(Tournament, tournament_id)
     if not tournament: return RedirectResponse(url="/admin/tournaments", status_code=303)
 
-    # Все команды
     all_teams = (await db.execute(select(Team).order_by(Team.name))).scalars().all()
 
-    # Команды в турнире
     stmt = select(TournamentTeam).where(TournamentTeam.tournament_id == tournament_id).options(
         selectinload(TournamentTeam.team))
     tournament_teams = (await db.execute(stmt)).scalars().all()
 
     added_team_ids = [tt.team_id for tt in tournament_teams]
 
-    # Группируем команды для шаблона
     grouped_teams = {}
     for tt in tournament_teams:
         group_name = tt.group_name if tt.group_name else "Общая таблица"
@@ -4092,7 +3853,6 @@ async def admin_tournament_teams(tournament_id: int, request: Request, db: Async
             grouped_teams[group_name] = []
         grouped_teams[group_name].append(tt)
 
-    # Сортируем группы по алфавиту, но "Общая таблица" пусть будет в конце (если есть)
     grouped_teams = dict(sorted(grouped_teams.items(), key=lambda x: (x[0] == "Общая таблица", x[0])))
 
     return await render_page(request, db, "admin_tournament_teams.html", context={
@@ -4110,14 +3870,12 @@ async def admin_tournament_remove_team(tournament_id: int, team_id: int, request
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Удаляем связь с турниром
     stmt = select(TournamentTeam).where(TournamentTeam.tournament_id == tournament_id,
                                         TournamentTeam.team_id == team_id)
     tt = (await db.execute(stmt)).scalar_one_or_none()
     if tt:
         await db.delete(tt)
 
-    # Удаляем из таблицы
     stmt_s = select(TournamentStanding).where(TournamentStanding.tournament_id == tournament_id,
                                               TournamentStanding.team_id == team_id)
     ts = (await db.execute(stmt_s)).scalar_one_or_none()
@@ -4128,18 +3886,18 @@ async def admin_tournament_remove_team(tournament_id: int, team_id: int, request
     return RedirectResponse(url=f"/admin/tournaments/{tournament_id}/teams", status_code=303)
 
 
-# Ручной пересчет таблицы (кнопка "Пересчитать")
 @router.post("/admin/tournaments/{tournament_id}/recalculate")
 async def admin_tournament_recalculate(tournament_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Импортируем наш сервис, который мы написали ранее
     from app.services.standings import StandingsService
     await StandingsService.recalculate_standings(db, tournament_id)
 
     return RedirectResponse(url=f"/admin/tournaments/{tournament_id}/edit", status_code=303)
 
+
+# Матчи
 
 @router.post("/admin/matches/{match_id}/events/{event_id}/edit")
 async def admin_match_event_edit(
@@ -4155,7 +3913,6 @@ async def admin_match_event_edit(
     if not event:
         raise HTTPException(status_code=404, detail="Событие не найдено")
 
-    # Обновляем данные события
     event.team_id = team_id
     event.player_id = player_id
     event.event_type = event_type
@@ -4164,16 +3921,16 @@ async def admin_match_event_edit(
     db.add(event)
     await db.commit()
 
-    # Пересчитываем счет матча (голы могли измениться)
     match = await db.get(Match, match_id)
     await recalculate_match_score(match, db)
 
-    # Полный пересчет всей статистики турнира
     from app.services.stats_recalc import StatsRecalculator
     await StatsRecalculator.recalculate_all(db, match.tournament_id)
 
     return RedirectResponse(url=f"/admin/matches/{match_id}/events", status_code=303)
 
+
+# Административная панель
 
 @router.post("/admin/roster/{roster_id}/edit")
 async def admin_roster_edit(
@@ -4199,6 +3956,8 @@ async def admin_roster_edit(
     return RedirectResponse(url=f"/admin/teams/{roster_item.team_id}/roster?tournament_id={roster_item.tournament_id}", status_code=303)
 
 
+# Турниры
+
 @router.post("/admin/tournaments/{tournament_id}/teams/add")
 async def admin_tournament_add_team(
         tournament_id: int,
@@ -4210,15 +3969,12 @@ async def admin_tournament_add_team(
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Проверяем, есть ли уже
     existing = await db.scalar(select(TournamentTeam).where(
         TournamentTeam.tournament_id == tournament_id, TournamentTeam.team_id == team_id
     ))
     if not existing:
-        # Добавляем в турнир с указанной группой
         db.add(TournamentTeam(tournament_id=tournament_id, team_id=team_id, group_name=group_name))
 
-        # Создаем пустую строку в таблице для этой группы
         db.add(TournamentStanding(
             tournament_id=tournament_id, team_id=team_id, group_name=group_name,
             games_played=0, wins=0, draws=0, losses=0, goals_for=0, goals_against=0, points=0
@@ -4237,7 +3993,6 @@ async def admin_tournament_change_team_group(
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Меняем группу в заявке
     tt = await db.scalar(select(TournamentTeam).where(
         TournamentTeam.tournament_id == tournament_id, TournamentTeam.team_id == team_id
     ))
@@ -4245,7 +4000,6 @@ async def admin_tournament_change_team_group(
         tt.group_name = new_group_name
         db.add(tt)
 
-    # Меняем группу в таблице
     ts = await db.scalar(select(TournamentStanding).where(
         TournamentStanding.tournament_id == tournament_id, TournamentStanding.team_id == team_id
     ))
@@ -4257,6 +4011,8 @@ async def admin_tournament_change_team_group(
     return RedirectResponse(url=f"/admin/tournaments/{tournament_id}/teams", status_code=303)
 
 
+# Дисквалификации
+
 @router.get("/admin/disqualifications")
 async def admin_disqualifications_list(
         request: Request,
@@ -4267,18 +4023,15 @@ async def admin_disqualifications_list(
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Базовый запрос
     stmt = select(Disqualification).options(
         selectinload(Disqualification.player),
         selectinload(Disqualification.team),
         selectinload(Disqualification.tournament)
     ).order_by(Disqualification.created_at.desc())
 
-    # Фильтр по турниру
     if tournament_id:
         stmt = stmt.where(Disqualification.tournament_id == tournament_id)
 
-    # Фильтр по фамилии или имени игрока
     if search:
         stmt = stmt.join(Player).where(
             or_(
@@ -4290,7 +4043,6 @@ async def admin_disqualifications_list(
     disqualifications = (await db.execute(stmt)).scalars().all()
     tournaments = (await db.execute(select(Tournament).order_by(Tournament.name))).scalars().all()
 
-    # Разделяем на активные и завершенные
     active_disq = [d for d in disqualifications if d.matches_remaining and d.matches_remaining > 0]
     completed_disq = [d for d in disqualifications if not d.matches_remaining or d.matches_remaining == 0]
 
@@ -4304,18 +4056,14 @@ async def admin_disqualifications_list(
     })
 
 
-# 2. Форма создания дисквалификации
 @router.get("/admin/disqualifications/create")
 async def admin_disqualification_create_form(request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Получаем данные для селектов
     tournaments = (await db.execute(select(Tournament).order_by(Tournament.name))).scalars().all()
     teams = (await db.execute(select(Team).order_by(Team.name))).scalars().all()
 
-    # Игроков может быть очень много, лучше подгружать их через AJAX по выбранной команде,
-    # но для простоты выведем всех (если база большая, лучше оптимизировать)
     players = (await db.execute(select(Player).order_by(Player.last_name))).scalars().all()
 
     return await render_page(request, db, "admin_disqualification_form.html", context={
@@ -4326,7 +4074,6 @@ async def admin_disqualification_create_form(request: Request, db: AsyncSession 
     })
 
 
-# 3. Обработка создания
 @router.post("/admin/disqualifications/create")
 async def admin_disqualification_create(
         request: Request,
@@ -4356,7 +4103,6 @@ async def admin_disqualification_create(
     return RedirectResponse(url="/admin/disqualifications", status_code=303)
 
 
-# 4. Удаление (если ошиблись)
 @router.post("/admin/disqualifications/{disq_id}/delete")
 async def admin_disqualification_delete(disq_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     user = await get_admin_from_cookie(request, db)
@@ -4368,6 +4114,9 @@ async def admin_disqualification_delete(disq_id: int, request: Request, db: Asyn
         await db.commit()
 
     return RedirectResponse(url="/admin/disqualifications", status_code=303)
+
+
+# Матчи
 
 @router.post("/admin/matches/{match_id}/finish")
 async def admin_match_finish(
@@ -4397,11 +4146,12 @@ async def admin_match_finish(
 
     await db.commit()
 
-    # Полный пересчет
     await StatsRecalculator.recalculate_all(db, match.tournament_id)
 
     return RedirectResponse(url="/admin/matches", status_code=303)
 
+
+# Публичные страницы
 
 @router.get("/participants/hall-of-fame")
 async def participants_hall_page(
@@ -4415,13 +4165,11 @@ async def participants_hall_page(
     from app.models.match import Match
     from app.models.enums import MatchStatus
 
-    # ==================== 1. СТАТИСТИКА КОМАНД ====================
     stmt_matches = select(Match).where(Match.status == MatchStatus.FINISHED)
     all_matches = (await db.execute(stmt_matches)).scalars().all()
 
     team_stats = {}
     for m in all_matches:
-        # Инициализация
         if m.home_team_id not in team_stats: team_stats[m.home_team_id] = {'games': 0, 'wins': 0, 'goals': 0, 'clean_sheets': 0}
         if m.away_team_id not in team_stats: team_stats[m.away_team_id] = {'games': 0, 'wins': 0, 'goals': 0, 'clean_sheets': 0}
 
@@ -4454,14 +4202,11 @@ async def participants_hall_page(
                 "clean_sheets": stats['clean_sheets']
             })
 
-    # Сортируем и берем топ-5 для каждой категории
     top_teams_games = sorted(teams_list, key=lambda x: x['games'], reverse=True)[:5]
     top_teams_wins = sorted(teams_list, key=lambda x: x['wins'], reverse=True)[:5]
     top_teams_cs = sorted(teams_list, key=lambda x: x['clean_sheets'], reverse=True)[:5]
     top_teams_goals = sorted(teams_list, key=lambda x: x['goals'], reverse=True)[:5]
 
-    # ==================== 2. СТАТИСТИКА ИГРОКОВ ====================
-    # Загружаем всех игроков с их статистикой из заявок (суммируем по всем турнирам)
     stmt_tp = select(TeamPlayer).options(
         selectinload(TeamPlayer.player),
         selectinload(TeamPlayer.team)
@@ -4491,8 +4236,6 @@ async def participants_hall_page(
     top_players_goals = sorted(players_list, key=lambda x: x['goals'], reverse=True)[:5]
     top_players_assists = sorted(players_list, key=lambda x: x['assists'], reverse=True)[:5]
 
-    # Получаем стиль из первого турнира (или задаем дефолтный)
-    # В идеале нужно глобальное поле, но пока берем стиль первого турнира или default
     from app.models.tournament import Tournament
     first_tournament = await db.scalar(select(Tournament).limit(1))
     hof_style = getattr(first_tournament, 'stats_style', 'default') or 'default'
@@ -4509,6 +4252,8 @@ async def participants_hall_page(
         "hof_style": hof_style
     })
 
+
+# Турниры
 
 @router.post("/admin/tournaments/{tournament_id}/generate-card")
 async def admin_generate_champion_card(
@@ -4532,7 +4277,6 @@ async def admin_generate_champion_card(
     )
 
 
-# 1. Страница с перетаскиванием
 @router.get("/admin/tournaments/reorder")
 async def admin_tournaments_reorder(
         request: Request,
@@ -4542,15 +4286,12 @@ async def admin_tournaments_reorder(
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Получаем все сезоны
     seasons_result = await db.execute(select(Tournament.season).distinct().order_by(Tournament.season.desc()))
     available_seasons = [s[0] for s in seasons_result.all() if s[0]]
 
-    # Если сезон не выбран, берем последний
     if not season and available_seasons:
         season = available_seasons[0]
 
-    # Запрашиваем турниры за выбранный сезон, сортируя по sort_order
     stmt = select(Tournament).where(Tournament.season == season).order_by(Tournament.sort_order.asc(),
                                                                           Tournament.name.asc())
     tournaments = (await db.execute(stmt)).scalars().all()
@@ -4563,7 +4304,6 @@ async def admin_tournaments_reorder(
     })
 
 
-# 2. Сохранение нового порядка
 @router.post("/admin/tournaments/reorder/save")
 async def admin_tournaments_reorder_save(
         request: Request,
@@ -4575,7 +4315,6 @@ async def admin_tournaments_reorder_save(
     try:
         data = await request.json()
 
-        # Обновляем sort_order для каждого турнира
         for item in data:
             t_id = item.get("id")
             new_order = item.get("sort_order")
@@ -4632,7 +4371,6 @@ async def admin_tournament_regulations_save(
     except:
         tb_list = []
 
-    # Обновляем поля
     tournament.allow_draws = allow_draws
     tournament.points_win = points_win
     tournament.points_draw = points_draw
@@ -4654,15 +4392,7 @@ async def admin_tournament_regulations_save(
 
     return RedirectResponse(url=f"/admin/tournaments/{tournament_id}/edit?msg=regulations_saved", status_code=303)
 
-# =========================================================================
-# КОНСТРУКТОР СТРУКТУРЫ ТУРНИРА (ТАБЛИЦЫ И СЕТКИ)
-# =========================================================================
 
-# =========================================================================
-# КОНСТРУКТОР СТРУКТУРЫ ТУРНИРА (ТАБЛИЦЫ И СЕТКИ)
-# =========================================================================
-
-# 1. Отображение страницы
 @router.get("/admin/tournaments/{tournament_id}/structure")
 async def admin_tournament_structure(
         tournament_id: int, request: Request, db: AsyncSession = Depends(get_db)
@@ -4674,20 +4404,16 @@ async def admin_tournament_structure(
     if not tournament:
         return RedirectResponse(url="/admin/tournaments", status_code=303)
 
-    # Получаем все заявки команд на этот турнир
     stmt_tt = select(TournamentTeam).where(TournamentTeam.tournament_id == tournament_id).options(
         selectinload(TournamentTeam.team)
     )
     tournament_teams = (await db.execute(stmt_tt)).scalars().all()
 
-    # Берем сохраненные пустые группы из настроек турнира (или пустой список)
     saved_groups = tournament.custom_groups or []
 
-    # Создаем словарь со всеми группами (даже пустыми)
     groups = {g: [] for g in saved_groups}
     unassigned_teams = []
 
-    # Распределяем команды
     for tt in tournament_teams:
         if not tt.group_name:
             unassigned_teams.append(tt)
@@ -4696,7 +4422,6 @@ async def admin_tournament_structure(
                 groups[tt.group_name] = []  # Если группы нет в сохраненных, создаем
             groups[tt.group_name].append(tt)
 
-    # Получаем названия сеток (чтобы вывести их внизу)
     stmt_brackets = select(Match.stage_name).where(
         Match.tournament_id == tournament_id,
         Match.stage_name.isnot(None),
@@ -4713,7 +4438,6 @@ async def admin_tournament_structure(
     })
 
 
-# 2. Создание новой (пустой) группы
 @router.post("/admin/tournaments/{tournament_id}/structure/add-group")
 async def admin_structure_add_group(
         tournament_id: int, request: Request, group_name: str = Form(...), db: AsyncSession = Depends(get_db)
@@ -4733,7 +4457,6 @@ async def admin_structure_add_group(
     return RedirectResponse(url=f"/admin/tournaments/{tournament_id}/structure", status_code=303)
 
 
-# 3. СОХРАНЕНИЕ ВСЕЙ СТРУКТУРЫ (Вызывается по кнопке)
 @router.post("/admin/tournaments/{tournament_id}/structure/save")
 async def admin_structure_save(
         tournament_id: int, request: Request, db: AsyncSession = Depends(get_db)
@@ -4741,18 +4464,14 @@ async def admin_structure_save(
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Получаем данные из формы
     form_data = await request.form()
 
     for key, value in form_data.items():
         if key.startswith("team_group_"):
-            # Извлекаем ID команды из названия поля (team_group_123 -> 123)
             team_id = int(key.replace("team_group_", ""))
 
-            # Если перетащили в "Не распределены", ставим None
             group_name = value if value and value != "unassigned" else None
 
-            # 1. Обновляем в заявке турнира
             stmt_tt = select(TournamentTeam).where(
                 TournamentTeam.tournament_id == tournament_id,
                 TournamentTeam.team_id == team_id
@@ -4762,7 +4481,6 @@ async def admin_structure_save(
                 tt.group_name = group_name
                 db.add(tt)
 
-            # 2. Обновляем в турнирной таблице
             stmt_ts = select(TournamentStanding).where(
                 TournamentStanding.tournament_id == tournament_id,
                 TournamentStanding.team_id == team_id
@@ -4776,7 +4494,6 @@ async def admin_structure_save(
     return RedirectResponse(url=f"/admin/tournaments/{tournament_id}/structure", status_code=303)
 
 
-# 4. Создание сетки плей-офф
 @router.post("/admin/tournaments/{tournament_id}/structure/create-bracket")
 async def admin_create_bracket(
         tournament_id: int, request: Request, bracket_name: str = Form(...), db: AsyncSession = Depends(get_db)
@@ -4784,8 +4501,6 @@ async def admin_create_bracket(
     user = await get_admin_from_cookie(request, db)
     if isinstance(user, RedirectResponse): return user
 
-    # Создаем один матч-заглушку, чтобы сетка появилась в списке
-    # Админ потом отредактирует команды в разделе "Матчи"
     new_match = Match(
         tournament_id=tournament_id,
         home_team_id=1,
@@ -4800,6 +4515,8 @@ async def admin_create_bracket(
 
     return RedirectResponse(url=f"/admin/tournaments/{tournament_id}/structure", status_code=303)
 
+
+# Публичные страницы
 
 @router.get("/tournaments/{tournament_id}/photos")
 async def tournament_photos_page(tournament_id: int, request: Request, db: AsyncSession = Depends(get_db)):
@@ -4884,12 +4601,10 @@ async def tournament_full_stats_page(
     from app.models.player import Player
     from app.models.tournament_standing import TournamentStanding
 
-    # 1. Получаем турнир
     tournament = await db.get(Tournament, tournament_id)
     if not tournament:
         raise HTTPException(status_code=404, detail="Турнир не найден")
 
-    # 2. Все бомбардиры (без лимита)
     stmt_goals = select(TeamPlayer).join(Player).where(
         TeamPlayer.tournament_id == tournament_id,
         func.coalesce(TeamPlayer.stats_goals, 0) > 0
@@ -4902,7 +4617,6 @@ async def tournament_full_stats_page(
     )
     stats_goals = (await db.execute(stmt_goals)).scalars().all()
 
-    # 3. Все карточки (без лимита)
     stmt_cards = select(TeamPlayer).join(Player).where(
         TeamPlayer.tournament_id == tournament_id,
         or_(
@@ -4918,7 +4632,6 @@ async def tournament_full_stats_page(
     )
     stats_cards = (await db.execute(stmt_cards)).scalars().all()
 
-    # 4. Команды (таблица)
     stmt_standings = select(TournamentStanding).where(
         TournamentStanding.tournament_id == tournament_id
     ).options(selectinload(TournamentStanding.team)).order_by(
@@ -4934,6 +4647,8 @@ async def tournament_full_stats_page(
         "standings": standings
     })
 
+
+# Матчи
 
 @router.post("/admin/matches/{match_id}/quick-update")
 async def admin_matches_quick_update(
@@ -4954,11 +4669,9 @@ async def admin_matches_quick_update(
     if not match:
         raise HTTPException(status_code=404, detail="Матч не найден")
 
-    # Запоминаем старый счет, чтобы понять, нужно ли пересчитывать таблицу
     old_home_score = match.home_score
     old_away_score = match.away_score
 
-    # 1. Обработка даты (перевод из Алматы в UTC)
     if match_date:
         try:
             from zoneinfo import ZoneInfo
@@ -4974,14 +4687,12 @@ async def admin_matches_quick_update(
     else:
         match.match_date = None
 
-    # 2. Обработка чисел
     match.home_score = int(home_score) if home_score and home_score.strip() else None
     match.away_score = int(away_score) if away_score and away_score.strip() else None
     match.home_penalty = int(home_penalty) if home_penalty and home_penalty.strip() else None
     match.away_penalty = int(away_penalty) if away_penalty and away_penalty.strip() else None
     match.round = int(round) if round and round.strip() else None
 
-    # 3. Автоматическая смена статуса
     if match.home_score is not None and match.away_score is not None:
         if match.status != MatchStatus.FINISHED:
             match.status = MatchStatus.FINISHED
@@ -4992,15 +4703,15 @@ async def admin_matches_quick_update(
     db.add(match)
     await db.commit()
 
-    # 4. Если счет изменился, пересчитываем турнирную таблицу и статистику
     if old_home_score != match.home_score or old_away_score != match.away_score:
         from app.services.stats_recalc import StatsRecalculator
         await StatsRecalculator.recalculate_all(db, match.tournament_id)
 
-    # Возвращаем пользователя обратно на ту же страницу со всеми фильтрами
     referer = request.headers.get("referer", "/admin/matches")
     return RedirectResponse(url=referer, status_code=303)
 
+
+# Турниры
 
 @router.post("/admin/tournaments/{tid}/generate-schedule")
 async def admin_generate_schedule(
@@ -5017,7 +4728,6 @@ async def admin_generate_schedule(
     if not tournament:
         raise HTTPException(404, "Турнир не найден")
 
-    # Удаляем только несыгранные (FINISHED / LIVE сохраняем)
     await db.execute(
         delete(Match).where(
             Match.tournament_id == tid,
@@ -5025,7 +4735,6 @@ async def admin_generate_schedule(
         )
     )
 
-    # Команды турнира (с учётом групп)
     tteams = (await db.execute(
         select(TournamentTeam).where(TournamentTeam.tournament_id == tid)
     )).scalars().all()
@@ -5065,10 +4774,6 @@ async def admin_generate_schedule(
     )
 
 
-# ============================================================
-# ГЕНЕРАТОР КАЛЕНДАРЯ
-# ============================================================
-
 async def _all_tournaments_for_select(db: AsyncSession):
     return (await db.execute(
         select(Tournament).order_by(Tournament.season.desc(), Tournament.name)
@@ -5102,6 +4807,8 @@ async def _load_schedule_teams(db: AsyncSession, tid: int):
     return teams_list, groups_info
 
 
+# Административная панель
+
 @router.get("/admin/schedule")
 async def admin_schedule_global(
     request: Request,
@@ -5120,6 +4827,8 @@ async def admin_schedule_global(
         "circles": 1,
     })
 
+
+# Турниры
 
 @router.get("/admin/tournaments/{tid}/schedule")
 async def admin_schedule_get(
@@ -5207,10 +4916,6 @@ async def admin_schedule_approve(
     await db.commit()
     return {"ok": True, "count": count}
 
-
-# ==========================================
-# ГЕНЕРАЦИЯ КАЛЕНДАРЯ
-# ==========================================
 
 @router.get("/admin/tournaments/{tournament_id}/schedule")
 async def admin_schedule_page(
@@ -5374,3 +5079,854 @@ async def admin_schedule_confirm(
         url=f"/admin/tournaments/{tournament_id}/schedule?created={created}",
         status_code=303,
     )
+
+
+# Кабинет тренера
+
+@router.get("/coach", include_in_schema=False)
+async def coach_panel(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="coach_panel.html",
+    )
+
+
+
+# ============================================================
+# ADMIN: МОДЕРАЦИЯ ЗАЯВОК ТРЕНЕРОВ
+# ============================================================
+
+from urllib.parse import urlencode
+
+from fastapi import Form
+from sqlalchemy import func, select
+from sqlalchemy.orm import selectinload
+
+from app.models.registration import (
+    Registration,
+    RegistrationPlayer,
+    RegistrationStatus,
+)
+
+
+def admin_registration_redirect(
+    application_id: int,
+    message: str,
+) -> RedirectResponse:
+    query = urlencode({"message": message})
+
+    return RedirectResponse(
+        url=f"/admin/coach-applications/{application_id}?{query}",
+        status_code=303,
+    )
+
+
+def verify_admin_form_origin(request: Request) -> None:
+    """
+    Базовая защита POST-запросов с cookie-авторизацией.
+    Для production рекомендуется полноценный CSRF-токен.
+    """
+    from urllib.parse import urlparse
+
+    origin = request.headers.get("origin")
+    referer = request.headers.get("referer")
+    expected = str(request.base_url).rstrip("/")
+
+    if origin:
+        actual = origin.rstrip("/")
+    elif referer:
+        parsed = urlparse(referer)
+        actual = f"{parsed.scheme}://{parsed.netloc}"
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail="Не удалось проверить источник запроса",
+        )
+
+    if actual != expected:
+        raise HTTPException(
+            status_code=403,
+            detail="Недопустимый источник запроса",
+        )
+
+
+@router.get("/admin/coach-applications")
+async def admin_coach_applications(
+    request: Request,
+    status_filter: str = "submitted",
+    db: AsyncSession = Depends(get_db),
+):
+    admin = await get_admin_from_cookie(request, db)
+
+    if isinstance(admin, RedirectResponse):
+        return admin
+
+    allowed = {
+        "all",
+        "draft",
+        "submitted",
+        "revision",
+        "approved",
+        "rejected",
+    }
+
+    if status_filter not in allowed:
+        status_filter = "submitted"
+
+    stmt = (
+        select(Registration)
+        .options(selectinload(Registration.players))
+        .order_by(Registration.id.desc())
+    )
+
+    if status_filter != "all":
+        stmt = stmt.where(
+            Registration.status == status_filter
+        )
+
+    applications = (await db.scalars(stmt)).all()
+
+    team_ids = {item.team_id for item in applications}
+    tournament_ids = {
+        item.tournament_id for item in applications
+    }
+    author_ids = {item.author_id for item in applications}
+
+    teams = {}
+    tournaments = {}
+    authors = {}
+
+    if team_ids:
+        rows = (
+            await db.scalars(
+                select(Team).where(Team.id.in_(team_ids))
+            )
+        ).all()
+        teams = {item.id: item for item in rows}
+
+    if tournament_ids:
+        rows = (
+            await db.scalars(
+                select(Tournament).where(
+                    Tournament.id.in_(tournament_ids)
+                )
+            )
+        ).all()
+        tournaments = {item.id: item for item in rows}
+
+    if author_ids:
+        rows = (
+            await db.scalars(
+                select(User).where(User.id.in_(author_ids))
+            )
+        ).all()
+        authors = {item.id: item for item in rows}
+
+    counts_rows = (
+        await db.execute(
+            select(
+                Registration.status,
+                func.count(Registration.id),
+            ).group_by(Registration.status)
+        )
+    ).all()
+
+    counts = dict(counts_rows)
+    counts["all"] = sum(counts.values())
+
+    return await render_page(
+        request,
+        db,
+        "admin_coach_applications.html",
+        context={
+            "user": admin,
+            "applications": applications,
+            "teams_map": teams,
+            "tournaments_map": tournaments,
+            "authors_map": authors,
+            "status_filter": status_filter,
+            "counts": counts,
+        },
+    )
+
+
+@router.get("/admin/coach-applications/{application_id}")
+async def admin_coach_application_detail(
+    application_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    admin = await get_admin_from_cookie(request, db)
+
+    if isinstance(admin, RedirectResponse):
+        return admin
+
+    application = await db.scalar(
+        select(Registration)
+        .options(selectinload(Registration.players))
+        .where(Registration.id == application_id)
+    )
+
+    if application is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Заявка не найдена",
+        )
+
+    team = await db.get(Team, application.team_id)
+    tournament = await db.get(
+        Tournament,
+        application.tournament_id,
+    )
+    author = await db.get(User, application.author_id)
+
+    existing_ids = {
+        player.existing_player_id
+        for player in application.players
+        if player.existing_player_id is not None
+    }
+
+    existing_players = {}
+
+    if existing_ids:
+        rows = (
+            await db.scalars(
+                select(Player).where(
+                    Player.id.in_(existing_ids)
+                )
+            )
+        ).all()
+
+        existing_players = {
+            player.id: player for player in rows
+        }
+
+    return await render_page(
+        request,
+        db,
+        "admin_coach_application_detail.html",
+        context={
+            "user": admin,
+            "application": application,
+            "team": team,
+            "tournament": tournament,
+            "author": author,
+            "existing_players": existing_players,
+            "message": request.query_params.get("message"),
+        },
+    )
+
+
+@router.get("/admin/api/coach-applications/count")
+async def admin_coach_applications_count(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    admin = await get_admin_from_cookie(request, db)
+
+    if isinstance(admin, RedirectResponse):
+        raise HTTPException(
+            status_code=401,
+            detail="Необходима авторизация администратора",
+        )
+
+    pending = await db.scalar(
+        select(func.count(Registration.id)).where(
+            Registration.status
+            == RegistrationStatus.SUBMITTED.value
+        )
+    )
+
+    return {"pending": pending or 0}
+
+
+
+@router.post(
+    "/admin/coach-applications/{application_id}/review"
+)
+async def admin_review_coach_application(
+    application_id: int,
+    request: Request,
+    action: str = Form(...),
+    comment: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+):
+    admin = await get_admin_from_cookie(request, db)
+
+    if isinstance(admin, RedirectResponse):
+        return admin
+
+    verify_admin_form_origin(request)
+
+    if action not in {"approve", "revision", "reject"}:
+        raise HTTPException(
+            status_code=422,
+            detail="Неизвестное действие",
+        )
+
+    comment = comment.strip()
+
+    if len(comment) > 3000:
+        raise HTTPException(
+            status_code=422,
+            detail="Комментарий слишком длинный",
+        )
+
+    if action in {"revision", "reject"} and not comment:
+        return admin_registration_redirect(
+            application_id,
+            "Необходимо указать причину решения",
+        )
+
+    try:
+        if action == "approve":
+            result = await approve_registration(
+                db=db,
+                registration_id=application_id,
+                admin_id=admin.id,
+                comment=comment,
+            )
+
+            await db.commit()
+
+            message = (
+                "Заявка одобрена. "
+                f"Новых игроков: {result['created_players']}. "
+                f"Добавлено в состав: {result['added_to_roster']}. "
+                f"Обновлено связей: {result['updated_roster']}."
+            )
+
+        else:
+            application = await db.scalar(
+                select(Registration)
+                .where(Registration.id == application_id)
+                .with_for_update()
+            )
+
+            if application is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Заявка не найдена",
+                )
+
+            if (
+                application.status
+                != RegistrationStatus.SUBMITTED.value
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Заявка уже обработана",
+                )
+
+            if action == "revision":
+                application.status = (
+                    RegistrationStatus.REVISION.value
+                )
+                message = "Заявка возвращена на доработку"
+
+            else:
+                application.status = (
+                    RegistrationStatus.REJECTED.value
+                )
+                message = "Заявка отклонена"
+
+            application.admin_comment = comment
+            application.reviewed_by_id = admin.id
+            application.reviewed_at = datetime.now(
+                timezone.utc
+            )
+
+            await db.commit()
+
+    except HTTPException:
+        await db.rollback()
+        raise
+
+    except IntegrityError:
+        await db.rollback()
+
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Конфликт данных при обработке заявки. "
+                "Проверьте состав и повторите попытку."
+            ),
+        )
+
+    return admin_registration_redirect(
+        application_id,
+        message,
+    )
+
+
+
+# ============================================================
+# ADMIN: РЕДАКТОР ЗАЯВОК ТРЕНЕРОВ
+# ============================================================
+
+from datetime import date
+from urllib.parse import urlencode
+
+from sqlalchemy.exc import IntegrityError
+
+from app.models.registration import (
+    Registration,
+    RegistrationPlayer,
+)
+from app.services.registration_editor import (
+    get_editable_registration,
+    get_registration_player,
+    validate_birth_date,
+    validate_coach_birth_year,
+    validate_name,
+    validate_player_link,
+    validate_position,
+    validate_roster_capacity,
+    validate_roster_entry,
+)
+
+
+def editor_redirect(
+    registration_id: int,
+    message: str,
+) -> RedirectResponse:
+    query = urlencode({"message": message})
+
+    return RedirectResponse(
+        url=(
+            f"/admin/coach-applications/"
+            f"{registration_id}?{query}"
+        ),
+        status_code=303,
+    )
+
+
+async def editor_admin(
+    request: Request,
+    db: AsyncSession,
+):
+    user = await get_admin_from_cookie(request, db)
+
+    if isinstance(user, RedirectResponse):
+        return user
+
+    # Используем проверку источника POST-запросов,
+    # которую добавляли в pages.py ранее.
+    verify_admin_form_origin(request)
+
+    return user
+
+
+async def editor_commit(
+    db: AsyncSession,
+) -> None:
+    try:
+        await db.commit()
+
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            409,
+            "Конфликт данных. Проверьте номер "
+            "и привязку существующего игрока.",
+        )
+
+
+# ------------------------------------------------------------
+# ИЗМЕНИТЬ ДАННЫЕ ТРЕНЕРА
+# ------------------------------------------------------------
+
+@router.post(
+    "/admin/coach-applications/{application_id}/coach"
+)
+async def admin_edit_application_coach(
+    application_id: int,
+    request: Request,
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    birth_year: int = Form(...),
+    photo: UploadFile = File(None),
+    db: AsyncSession = Depends(get_db),
+):
+    admin = await editor_admin(request, db)
+
+    if isinstance(admin, RedirectResponse):
+        return admin
+
+    registration = await get_editable_registration(
+        db,
+        application_id,
+    )
+
+    validate_coach_birth_year(birth_year)
+
+    registration.coach_first_name = validate_name(
+        first_name,
+        "Имя тренера",
+    )
+    registration.coach_last_name = validate_name(
+        last_name,
+        "Фамилия тренера",
+    )
+    registration.coach_birth_year = birth_year
+
+    if photo and photo.filename:
+        registration.coach_photo_url = (
+            await save_upload_file(photo, "coaches")
+        )
+
+    await editor_commit(db)
+
+    return editor_redirect(
+        application_id,
+        "Данные тренера обновлены",
+    )
+
+
+# ------------------------------------------------------------
+# ПОИСК СУЩЕСТВУЮЩИХ ИГРОКОВ
+# ------------------------------------------------------------
+
+@router.get("/admin/api/registration-players/search")
+async def admin_search_registration_players(
+    request: Request,
+    q: str = "",
+    db: AsyncSession = Depends(get_db),
+):
+    admin = await get_admin_from_cookie(request, db)
+
+    if isinstance(admin, RedirectResponse):
+        raise HTTPException(401, "Необходима авторизация")
+
+    q = q.strip()
+
+    if len(q) < 2:
+        return []
+
+    if len(q) > 100:
+        raise HTTPException(422, "Слишком длинный запрос")
+
+    escaped = (
+        q.replace("\\", "\\\\")
+        .replace("%", "\\%")
+        .replace("_", "\\_")
+    )
+    pattern = f"%{escaped}%"
+
+    stmt = (
+        select(Player)
+        .where(
+            or_(
+                Player.first_name.ilike(
+                    pattern, escape="\\"
+                ),
+                Player.last_name.ilike(
+                    pattern, escape="\\"
+                ),
+                (
+                    Player.last_name
+                    + " "
+                    + Player.first_name
+                ).ilike(pattern, escape="\\"),
+                (
+                    Player.first_name
+                    + " "
+                    + Player.last_name
+                ).ilike(pattern, escape="\\"),
+            )
+        )
+        .order_by(
+            Player.last_name,
+            Player.first_name,
+        )
+        .limit(20)
+    )
+
+    players = (await db.scalars(stmt)).all()
+
+    return [
+        {
+            "id": player.id,
+            "first_name": player.first_name,
+            "last_name": player.last_name,
+            "birth_date": (
+                player.date_of_birth.isoformat()
+                if player.date_of_birth else ""
+            ),
+            "position": (
+                player.position.value
+                if player.position else ""
+            ),
+            "photo_url": player.photo_url or "",
+        }
+        for player in players
+    ]
+
+
+# ------------------------------------------------------------
+# ДОБАВИТЬ ИГРОКА В ЗАЯВКУ
+# ------------------------------------------------------------
+
+@router.post(
+    "/admin/coach-applications/{application_id}/players/add"
+)
+async def admin_add_registration_player(
+    application_id: int,
+    request: Request,
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    birth_date: date = Form(...),
+    position: str = Form(...),
+    jersey_number: int = Form(...),
+    existing_player_id: Optional[int] = Form(None),
+    photo: UploadFile = File(None),
+    db: AsyncSession = Depends(get_db),
+):
+    admin = await editor_admin(request, db)
+
+    if isinstance(admin, RedirectResponse):
+        return admin
+
+    registration = await get_editable_registration(
+        db,
+        application_id,
+    )
+
+    await validate_roster_capacity(
+        db,
+        registration.id,
+    )
+
+    validate_birth_date(birth_date)
+
+    await validate_roster_entry(
+        db,
+        registration.id,
+        jersey_number,
+        existing_player_id,
+    )
+
+    existing = await validate_player_link(
+        db,
+        existing_player_id,
+    )
+
+    first_name = validate_name(
+        first_name, "Имя игрока"
+    )
+    last_name = validate_name(
+        last_name, "Фамилия игрока"
+    )
+    position = validate_position(position)
+
+    photo_url = None
+
+    if existing is not None:
+        # Для существующего игрока берём
+        # официальные данные из основной БД.
+        if (
+            existing.date_of_birth is None
+            or existing.position is None
+            or not existing.photo_url
+        ):
+            raise HTTPException(
+                422,
+                "У существующего игрока не заполнены "
+                "дата рождения, позиция или фото. "
+                "Сначала исправьте его карточку.",
+            )
+
+        first_name = existing.first_name
+        last_name = existing.last_name
+        birth_date = existing.date_of_birth
+        position = existing.position.value
+        photo_url = existing.photo_url
+
+    elif photo and photo.filename:
+        photo_url = await save_upload_file(
+            photo,
+            "players",
+        )
+
+    if not photo_url:
+        raise HTTPException(
+            422,
+            "Для нового игрока необходимо фото",
+        )
+
+    player = RegistrationPlayer(
+        registration_id=registration.id,
+        existing_player_id=existing_player_id,
+        first_name=first_name,
+        last_name=last_name,
+        birth_date=birth_date,
+        position=position,
+        jersey_number=jersey_number,
+        photo_url=photo_url,
+    )
+
+    db.add(player)
+
+    await editor_commit(db)
+
+    return editor_redirect(
+        application_id,
+        "Игрок добавлен в заявку",
+    )
+
+
+# ------------------------------------------------------------
+# РЕДАКТИРОВАТЬ ИГРОКА В ЗАЯВКЕ
+# ------------------------------------------------------------
+
+@router.post(
+    "/admin/coach-applications/"
+    "{application_id}/players/{player_id}/edit"
+)
+async def admin_edit_registration_player(
+    application_id: int,
+    player_id: int,
+    request: Request,
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    birth_date: date = Form(...),
+    position: str = Form(...),
+    jersey_number: int = Form(...),
+    existing_player_id: Optional[int] = Form(None),
+    photo: UploadFile = File(None),
+    db: AsyncSession = Depends(get_db),
+):
+    admin = await editor_admin(request, db)
+
+    if isinstance(admin, RedirectResponse):
+        return admin
+
+    registration = await get_editable_registration(
+        db,
+        application_id,
+    )
+
+    player = await get_registration_player(
+        db,
+        registration.id,
+        player_id,
+    )
+
+    validate_birth_date(birth_date)
+
+    await validate_roster_entry(
+        db,
+        registration.id,
+        jersey_number,
+        existing_player_id,
+        exclude_player_id=player.id,
+    )
+
+    existing = await validate_player_link(
+        db,
+        existing_player_id,
+    )
+
+    first_name = validate_name(
+        first_name, "Имя игрока"
+    )
+    last_name = validate_name(
+        last_name, "Фамилия игрока"
+    )
+    position = validate_position(position)
+
+    if existing is not None:
+        if (
+            existing.date_of_birth is None
+            or existing.position is None
+            or not existing.photo_url
+        ):
+            raise HTTPException(
+                422,
+                "У выбранного игрока неполные данные "
+                "в основной базе",
+            )
+
+        # Привязка к существующему игроку.
+        # Его официальные данные не изменяем.
+
+        player.existing_player_id = existing.id
+        player.first_name = existing.first_name
+        player.last_name = existing.last_name
+        player.birth_date = existing.date_of_birth
+        player.position = existing.position.value
+        player.photo_url = existing.photo_url
+
+    else:
+        # Отвязка от основного Player означает,
+        # что при одобрении будет создан новый Player.
+
+        player.existing_player_id = None
+        player.first_name = first_name
+        player.last_name = last_name
+        player.birth_date = birth_date
+        player.position = position
+
+        if photo and photo.filename:
+            player.photo_url = await save_upload_file(
+                photo,
+                "players",
+            )
+
+        if not player.photo_url:
+            raise HTTPException(
+                422,
+                "У нового игрока должно быть фото",
+            )
+
+    player.jersey_number = jersey_number
+
+    await editor_commit(db)
+
+    return editor_redirect(
+        application_id,
+        "Данные игрока обновлены",
+    )
+
+
+# ------------------------------------------------------------
+# УДАЛИТЬ ИГРОКА ИЗ ЗАЯВКИ
+# ------------------------------------------------------------
+
+@router.post(
+    "/admin/coach-applications/"
+    "{application_id}/players/{player_id}/delete"
+)
+async def admin_delete_registration_player(
+    application_id: int,
+    player_id: int,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    admin = await editor_admin(request, db)
+
+    if isinstance(admin, RedirectResponse):
+        return admin
+
+    registration = await get_editable_registration(
+        db,
+        application_id,
+    )
+
+    player = await get_registration_player(
+        db,
+        registration.id,
+        player_id,
+    )
+
+    # Удаляем только запись из заявки.
+    # Официальный Player остаётся в БД.
+
+    await db.delete(player)
+    await editor_commit(db)
+
+    return editor_redirect(
+        application_id,
+        "Игрок удалён из заявки",
+    )
+

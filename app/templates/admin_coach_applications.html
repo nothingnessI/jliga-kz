@@ -1,0 +1,148 @@
+
+{% extends "admin_base.html" %}
+
+{% block title %}Заявки тренеров | J-LIGA{% endblock %}
+
+{% block page_heading %}Заявки тренеров{% endblock %}
+
+{% block admin_content %}
+
+{% set statuses = {
+    "draft": "Черновик",
+    "submitted": "На проверке",
+    "revision": "На доработке",
+    "approved": "Одобрена",
+    "rejected": "Отклонена"
+} %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+    <div>
+        <h3 class="fw-bold mb-1">Заявки тренеров</h3>
+        <p class="text-muted mb-0">
+            Проверка составов команд перед допуском к турнирам
+        </p>
+    </div>
+    <span class="badge text-bg-primary fs-6">
+        На проверке: {{ counts.get("submitted", 0) }}
+    </span>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="admin-card p-3">
+            <div class="text-muted small">Всего заявок</div>
+            <div class="fs-2 fw-bold">{{ counts.get("all", 0) }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="admin-card p-3">
+            <div class="text-muted small">Ожидают проверки</div>
+            <div class="fs-2 fw-bold text-primary">
+                {{ counts.get("submitted", 0) }}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="admin-card p-3">
+            <div class="text-muted small">Одобрены</div>
+            <div class="fs-2 fw-bold text-success">
+                {{ counts.get("approved", 0) }}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <span>Список заявок</span>
+            <form method="get" action="/admin/coach-applications">
+                <select
+                    name="status_filter"
+                    class="form-select form-select-sm"
+                    onchange="this.form.submit()"
+                    aria-label="Фильтр по статусу"
+                >
+                    <option value="all" {% if status_filter == "all" %}selected{% endif %}>
+                        Все заявки
+                    </option>
+                    {% for code, label in statuses.items() %}
+                    <option value="{{ code }}" {% if status_filter == code %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="ps-3">№</th>
+                    <th>Команда</th>
+                    <th>Турнир</th>
+                    <th>Тренер</th>
+                    <th>Игроки</th>
+                    <th>Статус</th>
+                    <th>Отправлена</th>
+                    <th class="text-end pe-3">Действие</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for application in applications %}
+                {% set team = teams_map.get(application.team_id) %}
+                {% set tournament = tournaments_map.get(application.tournament_id) %}
+                {% set author = authors_map.get(application.author_id) %}
+                <tr>
+                    <td class="ps-3 fw-semibold">{{ application.id }}</td>
+                    <td>{{ team.name if team else "Команда не найдена" }}</td>
+                    <td>{{ tournament.name if tournament else "Турнир не найден" }}</td>
+                    <td>
+                        {% if author %}
+                            {{ author.last_name or "" }} {{ author.first_name or "" }}
+                            <div class="text-muted small">
+                                {{ author.phone or "" }}
+                            </div>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>{{ application.players | length }}</td>
+                    <td>
+                        <span class="application-status application-status-{{ application.status }}">
+                            {{ statuses.get(application.status, application.status) }}
+                        </span>
+                    </td>
+                    <td class="small">
+                        {% if application.submitted_at %}
+                            {{ application.submitted_at.strftime("%d.%m.%Y %H:%M") }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-3">
+                        <a
+                            href="/admin/coach-applications/{{ application.id }}"
+                            class="btn btn-sm btn-outline-primary"
+                        >
+                            <i class="bi bi-eye me-1"></i>
+                            Проверить
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-5">
+                        <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+                        Заявок с выбранным статусом нет
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

@@ -51,6 +51,8 @@ class UserRole(str, enum.Enum):
     EDITOR = "editor"
     CAPTAIN = "captain"
     USER = "user"
+    COACH = "coach"
+
 
 
 class ScheduleStatus(str, enum.Enum):
