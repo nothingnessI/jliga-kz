@@ -418,7 +418,10 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
             sorted_events = sorted(m.events, key=lambda x: x.minute)
             for e in sorted_events:
                 event_str = str(e.event_type).upper()
-                if "YELLOW" in event_str:
+                # ← NEW: SECOND_YELLOW проверяем ПЕРВЫМ, т.к. содержит "YELLOW"
+                if "SECOND_YELLOW" in event_str:
+                    etype = "SECOND_YELLOW"
+                elif "YELLOW" in event_str:
                     etype = "YELLOW"
                 elif "RED" in event_str:
                     etype = "RED"
@@ -572,7 +575,10 @@ async def matches_page(
             sorted_events = sorted(m.events, key=lambda x: x.minute)
             for e in sorted_events:
                 event_str = str(e.event_type).upper()
-                if "YELLOW" in event_str:
+                # ← NEW: SECOND_YELLOW проверяем ПЕРВЫМ, т.к. содержит "YELLOW"
+                if "SECOND_YELLOW" in event_str:
+                    etype = "SECOND_YELLOW"
+                elif "YELLOW" in event_str:
                     etype = "YELLOW"
                 elif "RED" in event_str:
                     etype = "RED"
@@ -944,11 +950,19 @@ async def tournament_page(
             sorted_events = sorted(m.events, key=lambda x: x.minute)
             for e in sorted_events:
                 event_str = str(e.event_type).upper()
-                if "YELLOW" in event_str: etype = "YELLOW"
-                elif "RED" in event_str: etype = "RED"
-                elif "OWN" in event_str: etype = "OWN_GOAL"
-                elif "PENALTY" in event_str: etype = "PENALTY"
-                else: etype = "GOAL"
+                # ← NEW: SECOND_YELLOW проверяем ПЕРВЫМ, т.к. содержит "YELLOW"
+                if "SECOND_YELLOW" in event_str:
+                    etype = "SECOND_YELLOW"
+                elif "YELLOW" in event_str:
+                    etype = "YELLOW"
+                elif "RED" in event_str:
+                    etype = "RED"
+                elif "OWN" in event_str:
+                    etype = "OWN_GOAL"
+                elif "PENALTY" in event_str:
+                    etype = "PENALTY"
+                else:
+                    etype = "GOAL"
 
                 events_list.append({
                     "minute": e.minute, "team_id": e.team_id,

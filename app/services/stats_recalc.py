@@ -1,5 +1,6 @@
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.models.match import Match
 from app.models.match_event import MatchEvent
 from app.models.tournament_standing import TournamentStanding
@@ -58,6 +59,10 @@ class StatsRecalculator:
                     tp.stats_assists += 1
                 elif e.event_type == MatchEventType.YELLOW_CARD:
                     tp.stats_yellow_cards += 1
+                elif e.event_type == MatchEventType.SECOND_YELLOW_CARD:
+                    # Вторая ЖК = +1 ЖК и +1 КК (для накопления и отображения)
+                    tp.stats_yellow_cards += 1
+                    tp.stats_red_cards += 1
                 elif e.event_type == MatchEventType.RED_CARD:
                     tp.stats_red_cards += 1
 
