@@ -1,14 +1,15 @@
-"""Генератор календаря для круговых турниров (с группами и до 4 кругов)."""
+
+"""Генерация календаря кругового турнира J-LIGA (1–4 круга)."""
 
 from dataclasses import dataclass
-
 
 MAX_CIRCLES = 4
 
 
 @dataclass
 class RoundPair:
-    """Одна пара в календаре."""
+    """Одна встреча: номер тура, хозяева, гости и группа."""
+
     round: int
     home_team_id: int
     away_team_id: int
@@ -16,37 +17,41 @@ class RoundPair:
 
 
 def _one_circle(team_ids: list[int]) -> list[list[tuple[int, int]]]:
-    """
-    Один круг круговой системы (метод круга).
-    Возвращает туры как список пар (home, away).
-    При нечётном числе команд один игрок в каждом туре отдыхает.
-    """
-    teams = list(team_ids)
-    if len(teams) < 2:
+    """Метод вращения: каждая пара встречается ровно один раз."""
+    if len(team_ids) != len(set(team_ids)):
+        raise ValueError("ID команд не должны повторяться")
+    if any(team_id is None for team_id in team_ids):
+        raise ValueError("ID команды не может быть None")
+    if len(team_ids) < 2:
         return []
 
-    bye = None
+    teams = list(team_ids)
     if len(teams) % 2:
-        teams.append(bye)
+        teams.append(None)  # Команда без соперника отдыхает.
 
     n = len(teams)
-    fixed, rotating = teams[0], teams[1:]
     rounds: list[list[tuple[int, int]]] = []
 
-    for r in range(n - 1):
+    for round_index in range(n - 1):
         pairs: list[tuple[int, int]] = []
 
-        a, b = fixed, rotating[0]
-        if a is not None and b is not None:
-            pairs.append((a, b) if r % 2 == 0 else (b, a))
+        for index in range(n // 2):
+            a = teams[index]
+            b = teams[n - 1 - index]
 
-        for i in range(1, n // 2):
-            a, b = rotating[i], rotating[-i]
-            if a is not None and b is not None:
-                pairs.append((a, b) if i % 2 == 0 else (b, a))
+            if a is None or b is None:
+                continue
+
+            # Чередуем стороны, не изменяя состав пар.
+            if (round_index + index) % 2:
+                a, b = b, a
+
+            pairs.append((a, b))
 
         rounds.append(pairs)
-        rotating = rotating[1:] + [rotating[0]]
+
+        # Первый участник закреплён; остальные вращаются.
+        teams = [teams[0], teams[-1], *teams[1:-1]]
 
     return rounds
 
@@ -56,43 +61,33 @@ def generate_round_robin(
     circles: int = 1,
     group_name: str | None = None,
 ) -> list[RoundPair]:
-    """
-    Круговая система, до MAX_CIRCLES кругов.
-
-    circles=1 → N-1 туров (N — чётное) или N туров (нечётное).
-    circles=2 → те же туры + home/away перевёрнуты (двойной круг).
-    circles=3,4 → повторение циклов 1 и 2.
-
-    group_name: если задано — проставляется в каждой паре
-    (для турниров с группами).
-    """
-    if circles < 1 or circles > MAX_CIRCLES:
+    """Генерирует до четырёх кругов с зеркальными ответными матчами."""
+    if not 1 <= circles <= MAX_CIRCLES:
         raise ValueError(f"circles должен быть от 1 до {MAX_CIRCLES}")
-    if len(team_ids) < 2:
-        return []
 
-    base = _one_circle(team_ids)
-    if not base:
-        return []
-
+    base_rounds = _one_circle(team_ids)
     result: list[RoundPair] = []
-    offset = 0
+    rounds_per_circle = len(base_rounds)
 
-    for c in range(circles):
-        swap = c % 2 == 1  # нечётный цикл — меняем home/away
-        for idx, pairs in enumerate(base, start=1):
-            for home, away in pairs:
-                if swap:
-                    home, away = away, home
+    for circle_index in range(circles):
+        reverse = circle_index % 2 == 1
+
+        for round_index, pairs in enumerate(base_rounds, start=1):
+            for home_id, away_id in pairs:
+                if reverse:
+                    home_id, away_id = away_id, home_id
+
                 result.append(
                     RoundPair(
-                        round=offset + idx,
-                        home_team_id=home,
-                        away_team_id=away,
+                        round=(
+                            circle_index * rounds_per_circle
+                            + round_index
+                        ),
+                        home_team_id=home_id,
+                        away_team_id=away_id,
                         group_name=group_name,
                     )
                 )
-        offset += len(base)
 
     return result
 
@@ -103,16 +98,35 @@ def generate_for_tournament(
     groups_info: dict[str, list[int]] | None = None,
 ) -> list[RoundPair]:
     """
-    Универсальная точка входа для роутера.
+    Генерирует календарь целого турнира
+    или отдельно каждой группы.
 
-    Если заданы группы — генерация идёт по каждой группе отдельно,
-    туры нумеруются с 1 внутри каждой группы.
-
-    Если групп нет — общий круг по всем командам турнира.
+    При наличии групп номера туров начинаются
+    с 1 в каждой группе.
     """
     if groups_info:
         result: list[RoundPair] = []
-        for gname, tids in groups_info.items():
-            result.extend(generate_round_robin(tids, circles=circles, group_name=gname))
+        seen_team_ids: set[int] = set()
+
+        for group_name, team_ids in groups_info.items():
+            if seen_team_ids.intersection(team_ids):
+                raise ValueError(
+                    "Одна команда не может быть в нескольких группах"
+                )
+
+            seen_team_ids.update(team_ids)
+
+            result.extend(
+                generate_round_robin(
+                    team_ids,
+                    circles=circles,
+                    group_name=group_name,
+                )
+            )
+
         return result
-    return generate_round_robin(all_team_ids, circles=circles)
+
+    return generate_round_robin(
+        all_team_ids,
+        circles=circles,
+    )

@@ -1,4 +1,5 @@
 
+import logging
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -18,18 +19,103 @@ from app.models.tournament import Tournament
 from app.models.tournament_team import TournamentTeam
 
 
-def normalize_name(value: str) -> str:
+logger = logging.getLogger(__name__)
+
+
+def normalize_name(value: str | None) -> str:
+    """Нормализует ФИО для сравнения."""
     return " ".join((value or "").casefold().split())
 
 
-def parse_position(value: str) -> PlayerPosition:
+def parse_position(value: str | PlayerPosition) -> PlayerPosition:
+    """Преобразует позицию заявки в PlayerPosition."""
+    if isinstance(value, PlayerPosition):
+        return value
+
     try:
         return PlayerPosition(value)
-    except ValueError:
+    except (ValueError, TypeError):
         raise HTTPException(
             status_code=422,
             detail=f"Неизвестная позиция игрока: {value}",
         )
+
+
+def validate_registration_players(
+    players: list[RegistrationPlayer],
+) -> None:
+    """Проверяет состав заявки до изменения базы данных."""
+
+    if not 1 <= len(players) <= 25:
+        raise HTTPException(
+            status_code=422,
+            detail="В заявке должно быть от 1 до 25 игроков",
+        )
+
+    numbers = set()
+    existing_ids = set()
+    identities = set()
+
+    for item in players:
+        if not all(
+            (
+                item.first_name and item.first_name.strip(),
+                item.last_name and item.last_name.strip(),
+                item.birth_date,
+                item.photo_url,
+            )
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "У одного из игроков не заполнены "
+                    "обязательные данные"
+                ),
+            )
+
+        parse_position(item.position)
+
+        number = item.jersey_number
+
+        if number is None or not 1 <= number <= 99:
+            raise HTTPException(
+                status_code=422,
+                detail="Игровые номера должны быть от 1 до 99",
+            )
+
+        if number in numbers:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Игровой номер {number} повторяется",
+            )
+
+        numbers.add(number)
+
+        if item.existing_player_id is not None:
+            if item.existing_player_id in existing_ids:
+                raise HTTPException(
+                    status_code=422,
+                    detail="В заявке повторяется существующий игрок",
+                )
+
+            existing_ids.add(item.existing_player_id)
+
+        identity = (
+            normalize_name(item.first_name),
+            normalize_name(item.last_name),
+            item.birth_date,
+        )
+
+        if identity in identities:
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "В заявке повторяется футболист: "
+                    f"{item.last_name} {item.first_name}"
+                ),
+            )
+
+        identities.add(identity)
 
 
 async def approve_registration(
@@ -39,15 +125,22 @@ async def approve_registration(
     comment: str | None = None,
 ) -> dict:
     """
-    Одобрение заявки.
+    Одобряет заявку и публикует официальный состав.
+
+    Порядок:
+    1. Блокировка заявки.
+    2. Проверка статуса и данных.
+    3. Поиск существующих игроков.
+    4. Проверка дубликатов и номеров.
+    5. Регистрация команды в турнире.
+    6. Создание новых игроков.
+    7. Обновление официального состава.
+    8. Сохранение решения администратора.
 
     ВАЖНО:
-    Функция не вызывает commit().
-    Вызывающий маршрут должен выполнить commit()
-    или rollback() для всей транзакции.
+    Метод не вызывает commit().
+    Транзакцией управляет вызывающий маршрут.
     """
-
-    # Блокируем заявку от одновременной обработки.
 
     registration = await db.scalar(
         select(Registration)
@@ -67,7 +160,14 @@ async def approve_registration(
             detail="Одобрить можно только отправленную заявку",
         )
 
-    team = await db.get(Team, registration.team_id)
+    # Блокируем команду, чтобы параллельные одобрения
+    # заявок одной команды выполнялись последовательно.
+    team = await db.scalar(
+        select(Team)
+        .where(Team.id == registration.team_id)
+        .with_for_update()
+    )
+
     tournament = await db.get(
         Tournament,
         registration.tournament_id,
@@ -76,17 +176,21 @@ async def approve_registration(
     if team is None or tournament is None:
         raise HTTPException(
             status_code=422,
-            detail="Команда или турнир больше не существуют",
+            detail="Команда или турнир не найдены",
         )
 
-    # Блокируем команду, чтобы два администратора
-    # не публиковали составы одной команды одновременно.
-
-    await db.scalar(
-        select(Team)
-        .where(Team.id == registration.team_id)
-        .with_for_update()
-    )
+    if not all(
+        (
+            registration.coach_first_name,
+            registration.coach_last_name,
+            registration.coach_birth_year,
+            registration.coach_photo_url,
+        )
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="Не заполнены обязательные данные тренера",
+        )
 
     application_players = (
         await db.scalars(
@@ -96,83 +200,24 @@ async def approve_registration(
                 == registration.id
             )
             .order_by(RegistrationPlayer.id)
-        )
-    ).all()
-
-    if not 1 <= len(application_players) <= 25:
-        raise HTTPException(
-            status_code=422,
-            detail="В заявке должно быть от 1 до 25 игроков",
-        )
-
-    if not all([
-        registration.coach_first_name,
-        registration.coach_last_name,
-        registration.coach_birth_year,
-        registration.coach_photo_url,
-    ]):
-        raise HTTPException(
-            status_code=422,
-            detail="Не заполнены данные тренера",
-        )
-
-    # Получаем уже опубликованный состав команды.
-
-    roster = (
-        await db.scalars(
-            select(TeamPlayer)
-            .where(
-                TeamPlayer.team_id == registration.team_id,
-                TeamPlayer.tournament_id
-                == registration.tournament_id,
-            )
             .with_for_update()
         )
     ).all()
 
-    roster_by_player = {
-        item.player_id: item for item in roster
-    }
+    validate_registration_players(application_players)
 
-    # Номера в существующем составе.
-    # Учитываем только активных игроков.
+    # Проверяем существующих игроков.
 
-    numbers_in_roster = {
-        item.jersey_number: item.player_id
-        for item in roster
-        if item.is_active
-        and item.jersey_number is not None
-    }
-
-    # Проверяем все данные ДО создания новых игроков.
-
-    existing_ids = [
+    existing_ids = {
         item.existing_player_id
         for item in application_players
         if item.existing_player_id is not None
-    ]
-
-    if len(existing_ids) != len(set(existing_ids)):
-        raise HTTPException(
-            status_code=422,
-            detail="В заявке повторяется существующий игрок",
-        )
-
-    numbers = [
-        item.jersey_number
-        for item in application_players
-    ]
-
-    if len(numbers) != len(set(numbers)):
-        raise HTTPException(
-            status_code=422,
-            detail="В заявке повторяются игровые номера",
-        )
+    }
 
     existing_players = {}
 
     if existing_ids:
-        found = (
+        found_players = (
             await db.scalars(
                 select(Player)
                 .where(Player.id.in_(existing_ids))
@@ -181,80 +226,23 @@ async def approve_registration(
         ).all()
 
         existing_players = {
-            player.id: player for player in found
+            player.id: player
+            for player in found_players
         }
 
-        if len(existing_players) != len(existing_ids):
+        missing_ids = existing_ids - set(existing_players)
+
+        if missing_ids:
             raise HTTPException(
                 status_code=422,
-                detail="Один из существующих игроков не найден",
-            )
-
-    # Проверяем потенциальные дубликаты среди
-    # новых игроков по ФИО и дате рождения.
-
-    new_application_players = [
-        item for item in application_players
-        if item.existing_player_id is None
-    ]
-
-    new_birth_dates = {
-        item.birth_date
-        for item in new_application_players
-    }
-
-    possible_duplicates = []
-
-    if new_birth_dates:
-        possible_duplicates = (
-            await db.scalars(
-                select(Player).where(
-                    Player.date_of_birth.in_(new_birth_dates)
-                )
-            )
-        ).all()
-
-    new_identity_keys = set()
-
-    for item in new_application_players:
-        identity = (
-            normalize_name(item.first_name),
-            normalize_name(item.last_name),
-            item.birth_date,
-        )
-
-        if identity in new_identity_keys:
-            raise HTTPException(
-                status_code=409,
                 detail=(
-                    f"В заявке повторяется новый игрок: "
-                    f"{item.last_name} {item.first_name}"
+                    "Не найдены существующие игроки: "
+                    + ", ".join(map(str, sorted(missing_ids)))
                 ),
             )
 
-        new_identity_keys.add(identity)
-
-        for candidate in possible_duplicates:
-            if (
-                normalize_name(candidate.first_name)
-                == identity[0]
-                and normalize_name(candidate.last_name)
-                == identity[1]
-                and candidate.date_of_birth
-                == identity[2]
-            ):
-                raise HTTPException(
-                    status_code=409,
-                    detail=(
-                        f"Возможный дубликат: "
-                        f"{item.last_name} {item.first_name}. "
-                        f"В базе уже есть игрок ID {candidate.id}. "
-                        f"Свяжите заявку с существующим игроком "
-                        f"перед одобрением."
-                    ),
-                )
-
-    # Проверяем совпадение данных существующих игроков.
+    # Существующие игроки должны соответствовать
+    # данным, уже сохранённым в общей базе.
 
     for item in application_players:
         if item.existing_player_id is None:
@@ -272,40 +260,116 @@ async def approve_registration(
             raise HTTPException(
                 status_code=409,
                 detail=(
-                    f"Данные игрока ID {player.id} "
-                    f"отличаются от основной базы. "
-                    f"Проверьте ФИО и дату рождения."
+                    f"Данные игрока ID {player.id} отличаются "
+                    "от основной базы. Проверьте ФИО "
+                    "и дату рождения."
                 ),
             )
 
-    # Проверяем конфликты номеров с уже опубликованными
-    # игроками, которые не входят в текущую заявку.
+    # Ищем возможные дубликаты новых игроков.
+    # Не создаём повторную запись Player, если
+    # такой футболист уже существует.
 
-    submitted_existing_ids = set(existing_ids)
+    new_players = [
+        item
+        for item in application_players
+        if item.existing_player_id is None
+    ]
 
-    for item in application_players:
-        occupied_by = numbers_in_roster.get(
-            item.jersey_number
+    birth_dates = {
+        item.birth_date
+        for item in new_players
+    }
+
+    candidates = []
+
+    if birth_dates:
+        candidates = (
+            await db.scalars(
+                select(Player).where(
+                    Player.date_of_birth.in_(birth_dates)
+                )
+            )
+        ).all()
+
+    candidate_keys = {}
+
+    for candidate in candidates:
+        key = (
+            normalize_name(candidate.first_name),
+            normalize_name(candidate.last_name),
+            candidate.date_of_birth,
+        )
+        candidate_keys[key] = candidate
+
+    for item in new_players:
+        key = (
+            normalize_name(item.first_name),
+            normalize_name(item.last_name),
+            item.birth_date,
         )
 
-        if occupied_by is None:
-            continue
+        duplicate = candidate_keys.get(key)
 
-        if occupied_by == item.existing_player_id:
-            continue
-
-        if occupied_by not in submitted_existing_ids:
+        if duplicate is not None:
             raise HTTPException(
                 status_code=409,
                 detail=(
-                    f"Номер {item.jersey_number} уже занят "
-                    f"другим игроком официального состава."
+                    f"Футболист {item.last_name} "
+                    f"{item.first_name} уже существует "
+                    f"в базе (ID {duplicate.id}). "
+                    "Свяжите заявку с существующим игроком."
                 ),
             )
 
-    # Для уже существующих игроков, которые входят
-    # в заявку, сначала освобождаем старые номера.
-    # Это позволяет безопасно поменять номера местами.
+    # Получаем официальный состав команды.
+    # Не удаляем старых игроков автоматически.
+
+    roster = (
+        await db.scalars(
+            select(TeamPlayer)
+            .where(
+                TeamPlayer.team_id == registration.team_id,
+                TeamPlayer.tournament_id
+                == registration.tournament_id,
+            )
+            .with_for_update()
+        )
+    ).all()
+
+    roster_by_player = {
+        item.player_id: item
+        for item in roster
+    }
+
+    submitted_existing_ids = set(existing_ids)
+
+    # Проверяем конфликты игровых номеров
+    # с футболистами, отсутствующими в заявке.
+
+    for roster_item in roster:
+        if not roster_item.is_active:
+            continue
+
+        if roster_item.player_id in submitted_existing_ids:
+            continue
+
+        if roster_item.jersey_number is None:
+            continue
+
+        for item in application_players:
+            if item.jersey_number == roster_item.jersey_number:
+                raise HTTPException(
+                    status_code=409,
+                    detail=(
+                        f"Номер {item.jersey_number} уже занят "
+                        "игроком официального состава."
+                    ),
+                )
+
+    # Освобождаем старые номера существующих игроков
+    # перед назначением новых. Это позволяет
+    # безопасно обменивать номера между игроками.
 
     for player_id in submitted_existing_ids:
         roster_item = roster_by_player.get(player_id)
@@ -315,7 +379,7 @@ async def approve_registration(
 
     await db.flush()
 
-    # Регистрируем команду в турнире, если её ещё нет.
+    # Регистрируем команду в турнире.
 
     tournament_team = await db.scalar(
         select(TournamentTeam)
@@ -341,16 +405,15 @@ async def approve_registration(
     added_to_roster = 0
     updated_roster = 0
 
-    for item in application_players:
+    # Формируем официальный состав.
 
+    for item in application_players:
         position = parse_position(item.position)
 
         if item.existing_player_id is not None:
-            # Игрок уже есть в общей базе.
             player = existing_players[item.existing_player_id]
 
         else:
-            # Создаём нового игрока.
             player = Player(
                 first_name=item.first_name.strip(),
                 last_name=item.last_name.strip(),
@@ -362,16 +425,14 @@ async def approve_registration(
             db.add(player)
             await db.flush()
 
-            created_players += 1
-
-            # Запоминаем ID созданного игрока
-            # в исходной заявке для повторных проверок.
+            # Сохраняем связь с созданным футболистом.
             item.existing_player_id = player.id
+
+            created_players += 1
 
         roster_item = roster_by_player.get(player.id)
 
         if roster_item is None:
-            # Новая связь игрока с командой и турниром.
             roster_item = TeamPlayer(
                 player_id=player.id,
                 team_id=registration.team_id,
@@ -387,9 +448,7 @@ async def approve_registration(
             added_to_roster += 1
 
         else:
-            # Игрок уже числится в команде.
-            # Обновляем номер и активность,
-            # не сбрасывая статистику.
+            # Не сбрасываем накопленную статистику.
             roster_item.jersey_number = item.jersey_number
             roster_item.is_active = True
 
@@ -398,11 +457,26 @@ async def approve_registration(
     # Фиксируем решение администратора.
 
     registration.status = RegistrationStatus.APPROVED.value
-    registration.admin_comment = comment or None
+    registration.admin_comment = (
+        comment.strip()
+        if comment and comment.strip()
+        else None
+    )
     registration.reviewed_by_id = admin_id
     registration.reviewed_at = datetime.now(timezone.utc)
 
     await db.flush()
+
+    logger.info(
+        "Заявка %s одобрена администратором %s. "
+        "Создано игроков: %s, добавлено в состав: %s, "
+        "обновлено: %s",
+        registration.id,
+        admin_id,
+        created_players,
+        added_to_roster,
+        updated_roster,
+    )
 
     return {
         "registration_id": registration.id,

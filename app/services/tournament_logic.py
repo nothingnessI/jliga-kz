@@ -1,146 +1,171 @@
-from sqlalchemy import select, delete
+
+import logging
+
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+
+from app.models.enums import MatchEventType
 from app.models.match import Match
-from app.models.tournament import Tournament
-from app.models.tournament_standing import TournamentStanding
-from app.models.team_player import TeamPlayer
 from app.models.match_event import MatchEvent
-from app.models.enums import MatchStatus, MatchEventType
+from app.services.standings import StandingsService
+
+
+logger = logging.getLogger(__name__)
 
 
 class TournamentLogicService:
+    """
+    Турнирная логика J-LIGA.
+
+    Использует единый StandingsService для расчёта
+    таблицы, чтобы разные части проекта не
+    применяли разные правила начисления очков.
+
+    Методы не вызывают commit().
+    """
 
     @staticmethod
-    async def recalculate_standings(db: AsyncSession, tournament_id: int):
+    async def recalculate_standings(
+        db: AsyncSession,
+        tournament_id: int,
+    ):
         """
-        Полный пересчет турнирной таблицы.
-        Вызывается после любого изменения матча (добавление события, изменение счета).
-        """
-        # 1. Получаем турнир, чтобы знать формат
-        tournament = await db.get(Tournament, tournament_id)
-        if not tournament:
-            return
+        Полностью пересчитывает турнирную таблицу.
 
-        # 2. Получаем все завершенные матчи этого турнира
-        stmt = select(Match).where(
-            Match.tournament_id == tournament_id,
-            Match.status == MatchStatus.FINISHED
+        Сохраняет прежнее имя метода для
+        совместимости с существующими маршрутами.
+        """
+        logger.debug(
+            "Пересчёт таблицы турнира %s",
+            tournament_id,
         )
-        matches = (await db.execute(stmt)).scalars().all()
 
-        # 3. Получаем все команды в турнире (из таблицы standings или tournament_teams)
-        # Если таблицы еще нет, создаем пустые записи
-        stmt_standings = select(TournamentStanding).where(TournamentStanding.tournament_id == tournament_id)
-        standings = (await db.execute(stmt_standings)).scalars().all()
-
-        # Словарь для быстрого доступа {team_id: standing_obj}
-        standings_dict = {s.team_id: s for s in standings}
-
-        # Сбрасываем все счетчики в 0 перед пересчетом
-        for s in standings_dict.values():
-            s.games_played = 0
-            s.wins = 0
-            s.draws = 0
-            s.losses = 0
-            s.goals_for = 0
-            s.goals_against = 0
-            s.points = 0
-            s.yellow_cards = 0
-            s.red_cards = 0
-            s.clean_sheets = 0
-            # progress (форма) мы обновим отдельно в pages.py
-
-        # 4. Проходимся по каждому матчу и начисляем очки
-        for m in matches:
-            # Пропускаем матчи плей-офф, если таблица только для группового этапа
-            # (если у вас общая таблица для всего кубка, то убирать этот if не нужно)
-            if m.stage == 'PLAYOFF' and tournament.division != 'CUP_TABLE':
-                continue
-
-            home = standings_dict.get(m.home_team_id)
-            away = standings_dict.get(m.away_team_id)
-
-            if not home or not away:
-                continue
-
-            # Игры
-            home.games_played += 1
-            away.games_played += 1
-
-            # Мячи
-            home.goals_for += m.home_score
-            home.goals_against += m.away_score
-            away.goals_for += m.away_score
-            away.goals_against += m.home_score
-
-            # "Сухие" матчи (Clean Sheets)
-            if m.away_score == 0: home.clean_sheets += 1
-            if m.home_score == 0: away.clean_sheets += 1
-
-            # Очки и исходы
-            if m.home_score > m.away_score:
-                home.wins += 1
-                home.points += 3
-                away.losses += 1
-            elif m.home_score < m.away_score:
-                away.wins += 1
-                away.points += 3
-                home.losses += 1
-            else:
-                # Ничья в основное время
-                home.draws += 1
-                away.draws += 1
-                home.points += 1
-                away.points += 1
-
-                # Если есть серия пенальти, победитель по пенальти может получать +1 очко (по регламенту)
-                # Если по регламенту пенальти не дают очков в таблицу, эту часть можно убрать
-                if m.home_penalty is not None and m.away_penalty is not None:
-                    if m.home_penalty > m.away_penalty:
-                        home.points += 1  # Бонус за победу по пенальти
-                    elif m.away_penalty > m.home_penalty:
-                        away.points += 1
-
-        # 5. Считаем карточки (из таблицы событий)
-        for team_id, standing in standings_dict.items():
-            stmt_yellow = select(MatchEvent).where(
-                MatchEvent.match_id.in_([m.id for m in matches]),
-                MatchEvent.team_id == team_id,
-                MatchEvent.event_type == MatchEventType.YELLOW_CARD
-            )
-            stmt_red = select(MatchEvent).where(
-                MatchEvent.match_id.in_([m.id for m in matches]),
-                MatchEvent.team_id == team_id,
-                MatchEvent.event_type == MatchEventType.RED_CARD
-            )
-            standing.yellow_cards = len((await db.execute(stmt_yellow)).scalars().all())
-            standing.red_cards = len((await db.execute(stmt_red)).scalars().all())
-
-        await db.commit()
+        return await StandingsService.recalculate_standings(
+            db,
+            tournament_id,
+        )
 
     @staticmethod
-    async def update_match_score_from_events(db: AsyncSession, match_id: int):
+    async def update_match_score_from_events(
+        db: AsyncSession,
+        match_id: int,
+    ):
         """
-        Пересчитывает счет матча на основе добавленных событий (голов).
+        Восстанавливает счёт матча из событий.
+
+        Учитывает:
+        - обычные голы;
+        - голы с пенальти;
+        - автоголы в пользу соперника.
+
+        После изменения счёта пересчитывает
+        турнирную таблицу.
+
+        ВАЖНО:
+        Метод следует вызывать только для матчей,
+        счёт которых полностью ведётся по событиям.
+        Если результат внесён вручную без событий,
+        он будет заменён рассчитанным значением.
         """
-        match = await db.get(Match, match_id)
-        if not match:
+
+        match = await db.scalar(
+            select(Match)
+            .where(Match.id == match_id)
+            .with_for_update()
+        )
+
+        if match is None:
+            logger.warning(
+                "Матч %s не найден при пересчёте счёта",
+                match_id,
+            )
             return
 
-        events = (await db.execute(
-            select(MatchEvent).where(MatchEvent.match_id == match_id)
-        )).scalars().all()
+        if (
+            match.home_team_id is None
+            or match.away_team_id is None
+        ):
+            raise ValueError(
+                "У матча не определены обе команды"
+            )
 
-        home_goals = sum(1 for e in events if e.team_id == match.home_team_id and e.event_type in [MatchEventType.GOAL,
-                                                                                                   MatchEventType.PENALTY_GOAL])
-        away_goals = sum(1 for e in events if e.team_id == match.away_team_id and e.event_type in [MatchEventType.GOAL,
-                                                                                                   MatchEventType.PENALTY_GOAL])
+        if match.home_team_id == match.away_team_id:
+            raise ValueError(
+                "Команда не может играть сама с собой"
+            )
+
+        goal_types = [
+            MatchEventType.GOAL,
+            MatchEventType.PENALTY_GOAL,
+            MatchEventType.OWN_GOAL,
+        ]
+
+        events = (
+            await db.scalars(
+                select(MatchEvent).where(
+                    MatchEvent.match_id == match_id,
+                    MatchEvent.event_type.in_(goal_types),
+                )
+            )
+        ).all()
+
+        home_goals = 0
+        away_goals = 0
+
+        for event in events:
+            team_id = event.team_id
+
+            if team_id not in (
+                match.home_team_id,
+                match.away_team_id,
+            ):
+                raise ValueError(
+                    f"Событие {event.id} принадлежит "
+                    "команде, которая не участвует "
+                    "в этом матче"
+                )
+
+            is_home = (
+                team_id == match.home_team_id
+            )
+
+            # Автогол засчитывается сопернику.
+            if event.event_type == MatchEventType.OWN_GOAL:
+                is_home = not is_home
+
+            if is_home:
+                home_goals += 1
+            else:
+                away_goals += 1
+
+        score_changed = (
+            match.home_score != home_goals
+            or match.away_score != away_goals
+        )
+
+        if not score_changed:
+            return
+
+        previous_score = (
+            match.home_score,
+            match.away_score,
+        )
 
         match.home_score = home_goals
         match.away_score = away_goals
 
-        await db.commit()
+        await db.flush()
 
-        # Автоматически пересчитываем таблицу после обновления счета
-        await TournamentLogicService.recalculate_standings(db, match.tournament_id)
+        logger.info(
+            "Пересчитан счёт матча %s: %s:%s -> %s:%s",
+            match.id,
+            previous_score[0],
+            previous_score[1],
+            home_goals,
+            away_goals,
+        )
+
+        await TournamentLogicService.recalculate_standings(
+            db,
+            match.tournament_id,
+        )
