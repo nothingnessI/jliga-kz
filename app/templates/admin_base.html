@@ -10,13 +10,13 @@
     </title>
 
     <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
         rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
     >
 
     <link
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
         rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
     >
 
     <style>
@@ -36,7 +36,7 @@
         body {
             margin: 0;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--page-bg);
+            background: var(--page-bg);
             overflow-x: hidden;
         }
 
@@ -45,52 +45,51 @@
         ========================================= */
 
         .sidebar {
-            width: var(--sidebar-width);
-            height: 100vh;
             position: fixed;
             top: 0;
             left: 0;
-            background-color: var(--sidebar-bg);
-            color: #fff;
-            overflow-y: auto;
             z-index: 1050;
+            width: var(--sidebar-width);
+            height: 100vh;
+            overflow-y: auto;
+            background: var(--sidebar-bg);
+            color: #fff;
             transition:
-                transform 0.3s ease-in-out,
-                visibility 0.3s;
+                transform .25s ease,
+                visibility .25s ease;
         }
 
         .sidebar-header {
             display: block;
             padding: 20px;
-            background-color: var(--sidebar-header-bg);
-            border-bottom: 1px solid #3c4146;
-            text-decoration: none;
             color: #fff;
-            transition: background-color 0.2s;
+            text-decoration: none;
+            background: var(--sidebar-header-bg);
+            border-bottom: 1px solid #3c4146;
         }
 
         .sidebar-header:hover {
-            background-color: #1a1e21;
             color: #fff;
+            background: #1a1e21;
         }
 
         .sidebar-user {
-            padding: 16px;
-            border-bottom: 1px solid #495057;
             display: flex;
             align-items: center;
             gap: 10px;
+            padding: 16px;
+            border-bottom: 1px solid #495057;
         }
 
         .sidebar-avatar {
             width: 42px;
             height: 42px;
-            min-width: 42px;
-            background: #495057;
+            flex: 0 0 42px;
             border-radius: 50%;
+            background: #495057;
             display: flex;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
             font-size: 20px;
         }
 
@@ -105,18 +104,22 @@
         }
 
         .sidebar-user-email {
-            color: #adb5bd;
             font-size: 12px;
+            color: #adb5bd;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
 
+        /* =========================================
+           NAVIGATION
+        ========================================= */
+
         .sidebar .nav-category {
-            padding: 20px 20px 10px;
+            padding: 19px 20px 9px;
+            color: #9299a0;
             font-size: 12px;
             text-transform: uppercase;
-            color: #868e96;
             font-weight: 700;
             letter-spacing: 1px;
         }
@@ -127,33 +130,29 @@
             gap: 10px;
             padding: 12px 20px;
             color: #adb5bd;
-            font-size: 15px;
             text-decoration: none;
             border-radius: 0;
+            font-size: 15px;
             transition:
-                background-color 0.2s,
-                color 0.2s;
+                background-color .2s,
+                color .2s;
         }
 
         .sidebar .nav-link > i {
-            font-size: 17px;
-            width: 20px;
-            text-align: center;
+            width: 21px;
             flex-shrink: 0;
+            font-size: 17px;
+            text-align: center;
         }
 
         .sidebar .nav-link:hover {
-            background-color: var(--sidebar-hover);
+            background: var(--sidebar-hover);
             color: #fff;
         }
 
         .sidebar .nav-link.active {
-            background-color: var(--primary-color);
+            background: var(--primary-color);
             color: #fff;
-        }
-
-        .sidebar .nav-link.active:hover {
-            background-color: #0b5ed7;
         }
 
         .sidebar .nav-link .nav-text {
@@ -161,31 +160,37 @@
         }
 
         /* =========================================
-           BADGE ЗАЯВОК
+           BADGES
         ========================================= */
 
-        .applications-badge {
+        .applications-badge,
+        .broadcast-badge {
             display: none;
+            align-items: center;
+            justify-content: center;
             min-width: 23px;
             height: 23px;
             padding: 0 6px;
-            border-radius: 20px;
-            background-color: #dc3545;
-            color: #fff;
+            border-radius: 16px;
             font-size: 11px;
             font-weight: 700;
-            align-items: center;
-            justify-content: center;
-            line-height: 1;
+            color: #fff;
+            background: #dc3545;
         }
 
-        .applications-badge.visible {
+        .applications-badge.visible,
+        .broadcast-badge.visible {
             display: inline-flex;
         }
 
-        .sidebar .nav-link.active .applications-badge {
-            background-color: #fff;
-            color: #dc3545;
+        .broadcast-badge {
+            background: #198754;
+        }
+
+        .sidebar .nav-link.active .applications-badge,
+        .sidebar .nav-link.active .broadcast-badge {
+            background: #fff;
+            color: #0d6efd;
         }
 
         /* =========================================
@@ -197,26 +202,23 @@
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            transition: margin-left 0.3s;
         }
 
         .topbar {
-            background-color: #fff;
             min-height: 60px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 10px 20px;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0,0,0,.1);
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 12px;
-            padding: 10px 20px;
-            position: relative;
-            z-index: 10;
         }
 
         .topbar-title {
+            color: #343a40;
             font-size: 15px;
             font-weight: 600;
-            color: #343a40;
         }
 
         .topbar-actions {
@@ -226,8 +228,8 @@
         }
 
         .page-container {
-            padding: 24px;
             flex: 1;
+            padding: 24px;
         }
 
         /* =========================================
@@ -235,41 +237,41 @@
         ========================================= */
 
         .stat-card {
-            border: none;
-            border-radius: 8px;
-            color: white;
             display: flex;
             align-items: center;
             padding: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,.1);
         }
 
         .stat-card .icon {
             font-size: 2.5rem;
             margin-right: 15px;
-            opacity: 0.8;
+            opacity: .8;
         }
 
         .stat-card .number {
             font-size: 1.8rem;
-            font-weight: bold;
+            font-weight: 700;
             line-height: 1;
         }
 
         .stat-card .label {
-            font-size: 0.9rem;
-            opacity: 0.9;
+            font-size: .9rem;
+            opacity: .9;
         }
 
         /* =========================================
-           ОБЩИЕ КОМПОНЕНТЫ
+           ADMIN COMPONENTS
         ========================================= */
 
         .admin-card {
             background: #fff;
             border: 1px solid #e9ecef;
             border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            box-shadow: 0 2px 8px rgba(0,0,0,.04);
         }
 
         .admin-card-header {
@@ -308,42 +310,43 @@
         }
 
         /* =========================================
-           ФОТОГРАФИИ ИГРОКОВ И ТРЕНЕРОВ
+           PLAYER PHOTOS
         ========================================= */
+
+        .admin-photo,
+        .admin-photo-small {
+            object-fit: cover;
+            border: 1px solid #dee2e6;
+            background: #f8f9fa;
+        }
 
         .admin-photo {
             width: 80px;
             height: 100px;
-            object-fit: cover;
             border-radius: 8px;
-            border: 1px solid #dee2e6;
-            background: #f8f9fa;
         }
 
         .admin-photo-small {
             width: 48px;
             height: 56px;
-            object-fit: cover;
             border-radius: 6px;
-            border: 1px solid #dee2e6;
-            background: #f8f9fa;
         }
 
         .admin-photo-placeholder {
             width: 80px;
             height: 100px;
-            background: #f1f3f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             border: 1px dashed #ced4da;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             color: #adb5bd;
+            background: #f1f3f5;
             font-size: 28px;
         }
 
         /* =========================================
-           СТАТУСЫ ЗАЯВОК
+           APPLICATION STATUS
         ========================================= */
 
         .application-status {
@@ -382,17 +385,15 @@
         }
 
         /* =========================================
-           МОБИЛЬНОЕ МЕНЮ
+           MOBILE SIDEBAR
         ========================================= */
 
         .sidebar-backdrop {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.5);
+            background: rgba(0,0,0,.55);
             z-index: 1040;
-            opacity: 0;
-            transition: opacity 0.3s ease;
         }
 
         @media (max-width: 991.98px) {
@@ -410,7 +411,6 @@
 
             .sidebar-backdrop.show {
                 display: block;
-                opacity: 1;
             }
 
             .main-content {
@@ -423,14 +423,6 @@
 
             .topbar {
                 padding: 10px 15px;
-            }
-
-            .admin-page-title {
-                font-size: 21px;
-            }
-
-            .admin-card-body {
-                padding: 15px;
             }
         }
 
@@ -446,30 +438,41 @@
             .stat-card .number {
                 font-size: 1.5rem;
             }
-        }
 
-        {% block extra_css %}{% endblock %}
+            .admin-page-title {
+                font-size: 21px;
+            }
+
+            .admin-card-body {
+                padding: 15px;
+            }
+        }
     </style>
+
+    {# Дочерние шаблоны могут добавлять свой CSS. #}
+    {% block extra_css %}{% endblock %}
 </head>
 
 <body>
 
-    <!-- =====================================
-         MOBILE BACKDROP
-    ====================================== -->
+    <!-- MOBILE BACKDROP -->
 
     <div
         class="sidebar-backdrop"
         id="sidebar-backdrop"
     ></div>
 
-    <!-- =====================================
+    <!-- =========================================
          SIDEBAR
-    ====================================== -->
+    ========================================= -->
 
-    <aside class="sidebar" id="sidebar">
+    <aside
+        class="sidebar"
+        id="sidebar"
+        aria-label="Навигация администратора"
+    >
 
-        <!-- Логотип -->
+        <!-- LOGO -->
 
         <a
             href="/"
@@ -479,11 +482,13 @@
         >
             <div class="d-flex align-items-center">
                 <i class="bi bi-shield-shaded fs-3 me-2 text-primary"></i>
-                <h5 class="m-0 fw-bold">САЙТ ЛИГИ</h5>
+                <h5 class="m-0 fw-bold">
+                    САЙТ ЛИГИ
+                </h5>
             </div>
         </a>
 
-        <!-- Администратор -->
+        <!-- USER -->
 
         <div class="sidebar-user">
 
@@ -498,16 +503,16 @@
                 </div>
 
                 <div class="sidebar-user-email">
-                    {{ user.email }}
+                    {{ user.email if user is defined and user else 'Администратор' }}
                 </div>
 
             </div>
 
         </div>
 
-        <!-- =================================
-             ОСНОВНОЕ
-        ================================== -->
+        <!-- =========================================
+             MAIN MENU
+        ========================================= -->
 
         <div class="nav-category">
             Основное
@@ -530,7 +535,7 @@
 
         <a href="/admin/partners" class="nav-link">
             <i class="bi bi-briefcase"></i>
-            <span class="nav-text">Партнеры</span>
+            <span class="nav-text">Партнёры</span>
         </a>
 
         <a href="/admin/staff" class="nav-link">
@@ -543,12 +548,12 @@
             <span class="nav-text">Пользователи</span>
         </a>
 
-        <!-- =================================
-             ТУРНИРЫ
-        ================================== -->
+        <!-- =========================================
+             TOURNAMENTS
+        ========================================= -->
 
         <div class="nav-category">
-            Турниры
+            Турниры и матчи
         </div>
 
         <a href="/admin/tournaments" class="nav-link">
@@ -561,13 +566,24 @@
             <span class="nav-text">Матчи</span>
         </a>
 
-        <!-- =================================
-             ТАБЛО ТРАНСЛЯЦИИ
-        ================================== -->
+        <!-- BROADCAST CONTROL -->
 
-        <a href="/broadcast/studio/1" class="nav-link">
-            <i class="bi bi-broadcast"></i>
-            <span class="nav-text">Табло трансляции</span>
+        <a
+            href="/admin/broadcast"
+            class="nav-link"
+            id="broadcast-navigation-link"
+        >
+            <i class="bi bi-broadcast-pin"></i>
+
+            <span class="nav-text">
+                Трансляции
+            </span>
+
+            <span
+                id="active-broadcasts-badge"
+                class="broadcast-badge"
+                aria-label="Активные эфиры"
+            ></span>
         </a>
 
         <a href="/admin/stadiums" class="nav-link">
@@ -575,9 +591,9 @@
             <span class="nav-text">Стадионы</span>
         </a>
 
-        <!-- =================================
-             УЧАСТНИКИ
-        ================================== -->
+        <!-- =========================================
+             PARTICIPANTS
+        ========================================= -->
 
         <div class="nav-category">
             Участники
@@ -593,9 +609,7 @@
             <span class="nav-text">Игроки</span>
         </a>
 
-        <!-- =================================
-             ЗАЯВКИ ТРЕНЕРОВ
-        ================================== -->
+        <!-- COACH APPLICATIONS -->
 
         <a
             href="/admin/coach-applications"
@@ -609,8 +623,8 @@
             </span>
 
             <span
-                class="applications-badge"
                 id="pending-applications-badge"
+                class="applications-badge"
                 aria-label="Заявки на проверке"
             ></span>
         </a>
@@ -620,14 +634,13 @@
             class="nav-link"
         >
             <i class="bi bi-card-list"></i>
+
             <span class="nav-text">
                 Дисквалификации
             </span>
         </a>
 
-        <!-- =================================
-             ВЫХОД
-        ================================== -->
+        <!-- LOGOUT -->
 
         <div class="mt-5 mb-3 px-3">
 
@@ -643,11 +656,14 @@
 
     </aside>
 
-    <!-- =====================================
-         ОСНОВНОЙ КОНТЕНТ
-    ====================================== -->
+    <!-- =========================================
+         MAIN CONTENT
+    ========================================= -->
 
-    <div class="main-content" id="main-content">
+    <div
+        class="main-content"
+        id="main-content"
+    >
 
         <!-- TOPBAR -->
 
@@ -662,7 +678,6 @@
                     aria-label="Открыть меню"
                     aria-controls="sidebar"
                     aria-expanded="false"
-                    style="text-decoration: none;"
                 >
                     <i class="bi bi-list fs-2"></i>
                 </button>
@@ -695,236 +710,298 @@
 
         </header>
 
-        <!-- СОДЕРЖИМОЕ СТРАНИЦЫ -->
+        <!-- PAGE CONTENT -->
 
         <main class="container-fluid page-container">
-
-            {% block admin_content %}
-            {% endblock %}
-
+            {% block admin_content %}{% endblock %}
         </main>
 
     </div>
 
-    <!-- =====================================
-         BOOTSTRAP
-    ====================================== -->
+    <!-- BOOTSTRAP -->
 
-    <script
-        src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
-    ></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    <!-- =====================================
-         SIDEBAR SCRIPT
-    ====================================== -->
+    <!-- =========================================
+         SIDEBAR CONTROLLER
+    ========================================= -->
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", () => {
 
-            const toggleBtn = document.getElementById(
-                "menu-toggle"
+        const toggleBtn = document.getElementById(
+            "menu-toggle"
+        );
+
+        const sidebar = document.getElementById(
+            "sidebar"
+        );
+
+        const backdrop = document.getElementById(
+            "sidebar-backdrop"
+        );
+
+        const navLinks = [
+            ...document.querySelectorAll(".sidebar .nav-link")
+        ];
+
+        /* =========================================
+           MOBILE NAVIGATION
+        ========================================= */
+
+        function closeSidebar() {
+            sidebar.classList.remove("show");
+            backdrop.classList.remove("show");
+
+            toggleBtn?.setAttribute(
+                "aria-expanded",
+                "false"
             );
+        }
 
-            const sidebar = document.getElementById(
-                "sidebar"
+        function openSidebar() {
+            sidebar.classList.add("show");
+            backdrop.classList.add("show");
+
+            toggleBtn?.setAttribute(
+                "aria-expanded",
+                "true"
             );
+        }
 
-            const backdrop = document.getElementById(
-                "sidebar-backdrop"
+        toggleBtn?.addEventListener("click", () => {
+            if (sidebar.classList.contains("show")) {
+                closeSidebar();
+            } else {
+                openSidebar();
+            }
+        });
+
+        backdrop.addEventListener(
+            "click",
+            closeSidebar
+        );
+
+        navLinks.forEach(link => {
+            link.addEventListener(
+                "click",
+                closeSidebar
             );
+        });
 
-            const navLinks = document.querySelectorAll(
-                ".sidebar .nav-link"
-            );
-
-            function openSidebar() {
-                sidebar.classList.add("show");
-                backdrop.classList.add("show");
-
-                toggleBtn?.setAttribute(
-                    "aria-expanded",
-                    "true"
-                );
-            }
-
-            function closeSidebar() {
-                sidebar.classList.remove("show");
-                backdrop.classList.remove("show");
-
-                toggleBtn?.setAttribute(
-                    "aria-expanded",
-                    "false"
-                );
-            }
-
-            // Открытие меню
-
-            if (toggleBtn) {
-                toggleBtn.addEventListener(
-                    "click",
-                    function () {
-                        if (sidebar.classList.contains("show")) {
-                            closeSidebar();
-                        } else {
-                            openSidebar();
-                        }
-                    }
-                );
-            }
-
-            // Закрытие по затемнению
-
-            if (backdrop) {
-                backdrop.addEventListener(
-                    "click",
-                    closeSidebar
-                );
-            }
-
-            // Закрытие после перехода
-
-            navLinks.forEach(link => {
-                link.addEventListener(
-                    "click",
-                    closeSidebar
-                );
-            });
-
-            // Закрытие клавишей Escape
-
-            document.addEventListener(
-                "keydown",
-                function (event) {
-                    if (event.key === "Escape") {
-                        closeSidebar();
-                    }
+        document.addEventListener(
+            "keydown",
+            event => {
+                if (event.key === "Escape") {
+                    closeSidebar();
                 }
-            );
+            }
+        );
 
-            // =====================================
-            // АКТИВНЫЙ ПУНКТ МЕНЮ
-            // =====================================
+        /* =========================================
+           ACTIVE NAVIGATION LINK
+        ========================================= */
 
-            const currentPath =
-                window.location.pathname.replace(/\/+$/, "") ||
-                "/";
+        const pathname =
+            location.pathname.replace(/\/+$/, "") || "/";
 
-            const navigationLinks = [
-                ...document.querySelectorAll(
-                    ".sidebar .nav-link[href]"
-                )
-            ].filter(link => {
-                const href = link.getAttribute("href");
-                return href && href.startsWith("/");
-            });
+        const normalized = href =>
+            href.replace(/\/+$/, "") || "/";
 
-            let bestMatch = null;
-            let bestLength = -1;
+        let selected = null;
+        let maxLength = -1;
 
-            navigationLinks.forEach(link => {
-                const href = link.getAttribute("href")
-                    .replace(/\/+$/, "") || "/";
+        for (const link of navLinks) {
+            const href = link.getAttribute("href") || "";
 
-                const isMatch =
-                    currentPath === href ||
-                    (
-                        href !== "/" &&
-                        href !== "/admin" &&
-                        currentPath.startsWith(href + "/")
-                    );
-
-                if (isMatch && href.length > bestLength) {
-                    bestMatch = link;
-                    bestLength = href.length;
-                }
-            });
-
-            navigationLinks.forEach(link => {
-                link.classList.remove("active");
-                link.removeAttribute("aria-current");
-            });
-
-            if (bestMatch) {
-                bestMatch.classList.add("active");
-                bestMatch.setAttribute("aria-current", "page");
+            if (!href.startsWith("/")) {
+                continue;
             }
 
-            // =====================================
-            // СЧЁТЧИК ЗАЯВОК ТРЕНЕРОВ
-            // =====================================
+            const path = normalized(href);
 
+            const matches =
+                pathname === path ||
+                (
+                    path !== "/admin" &&
+                    pathname.startsWith(path + "/")
+                );
+
+            if (
+                matches &&
+                path.length > maxLength
+            ) {
+                selected = link;
+                maxLength = path.length;
+            }
+        }
+
+        // Если администратор открыл отдельную
+        // студию, относим её к разделу эфиров.
+
+        if (
+            pathname === "/broadcast/control" ||
+            pathname.startsWith("/broadcast/studio/")
+        ) {
+            selected = document.getElementById(
+                "broadcast-navigation-link"
+            );
+        }
+
+        navLinks.forEach(link => {
+            link.classList.toggle(
+                "active",
+                link === selected
+            );
+
+            if (link === selected) {
+                link.setAttribute(
+                    "aria-current",
+                    "page"
+                );
+            } else {
+                link.removeAttribute(
+                    "aria-current"
+                );
+            }
+        });
+
+        /* =========================================
+           COACH APPLICATIONS BADGE
+        ========================================= */
+
+        async function updateApplicationsBadge() {
             const badge = document.getElementById(
                 "pending-applications-badge"
             );
 
-            /*
-             * GET /admin/api/coach-applications/count
-             *
-             * Ожидаемый ответ:
-             * {
-             *     "pending": 5
-             * }
-             */
+            if (!badge) return;
 
-            async function updateApplicationsBadge() {
-                if (!badge) return;
-
-                try {
-                    const response = await fetch(
-                        "/admin/api/coach-applications/count",
-                        {
-                            method: "GET",
-                            credentials: "same-origin",
-                            headers: {
-                                "Accept": "application/json"
-                            }
+            try {
+                const response = await fetch(
+                    "/admin/api/coach-applications/count",
+                    {
+                        credentials: "same-origin",
+                        cache: "no-store",
+                        headers: {
+                            "Accept": "application/json"
                         }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Applications API unavailable"
                     );
-
-                    if (!response.ok) {
-                        badge.classList.remove("visible");
-                        return;
-                    }
-
-                    const data = await response.json();
-                    const count = Number(data.pending);
-
-                    if (
-                        !Number.isInteger(count) ||
-                        count < 0
-                    ) {
-                        badge.classList.remove("visible");
-                        return;
-                    }
-
-                    if (count > 0) {
-                        badge.textContent = count > 99
-                            ? "99+"
-                            : String(count);
-
-                        badge.classList.add("visible");
-
-                        badge.setAttribute(
-                            "aria-label",
-                            "Заявок на проверке: " + count
-                        );
-                    } else {
-                        badge.textContent = "";
-                        badge.classList.remove("visible");
-                    }
-
-                } catch (error) {
-                    badge.classList.remove("visible");
                 }
+
+                const data = await response.json();
+                const count = Number(data.pending);
+
+                if (
+                    !Number.isInteger(count) ||
+                    count <= 0
+                ) {
+                    badge.textContent = "";
+                    badge.classList.remove("visible");
+                    return;
+                }
+
+                badge.textContent =
+                    count > 99
+                        ? "99+"
+                        : String(count);
+
+                badge.classList.add("visible");
+
+                badge.setAttribute(
+                    "aria-label",
+                    `Заявок на проверке: ${count}`
+                );
+
+            } catch (_) {
+                badge.classList.remove("visible");
             }
+        }
 
-            updateApplicationsBadge();
+        /* =========================================
+           ACTIVE BROADCASTS BADGE
+        ========================================= */
 
-            window.updateApplicationsBadge =
-                updateApplicationsBadge;
+        async function updateBroadcastBadge() {
+            const badge = document.getElementById(
+                "active-broadcasts-badge"
+            );
 
-        });
+            if (!badge) return;
+
+            try {
+                const response = await fetch(
+                    "/api/v1/broadcast/control/sessions?limit=500",
+                    {
+                        credentials: "same-origin",
+                        cache: "no-store",
+                        headers: {
+                            "Accept": "application/json"
+                        }
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Broadcast API unavailable"
+                    );
+                }
+
+                const sessions = await response.json();
+
+                if (!Array.isArray(sessions)) {
+                    throw new Error(
+                        "Unexpected response"
+                    );
+                }
+
+                const count = sessions.filter(
+                    session => session.is_active
+                ).length;
+
+                badge.textContent =
+                    count > 99
+                        ? "99+"
+                        : String(count);
+
+                badge.classList.toggle(
+                    "visible",
+                    count > 0
+                );
+
+                badge.setAttribute(
+                    "aria-label",
+                    `Активных эфиров: ${count}`
+                );
+
+            } catch (_) {
+                badge.classList.remove("visible");
+            }
+        }
+
+        /* =========================================
+           INIT
+        ========================================= */
+
+        window.updateApplicationsBadge =
+            updateApplicationsBadge;
+
+        window.updateBroadcastBadge =
+            updateBroadcastBadge;
+
+        updateApplicationsBadge();
+        updateBroadcastBadge();
+
+    });
     </script>
+
+    <!-- SCRIPTS OF CHILD TEMPLATES -->
 
     {% block extra_js %}{% endblock %}
 

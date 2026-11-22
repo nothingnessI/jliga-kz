@@ -3,195 +3,1534 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>J-LIGA Broadcast Overlay</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>J-LIGA · Broadcast Overlay</title>
 
 <style>
 :root {
     --navy: #151b38;
+    --dark: #11172d;
     --accent: #c9f12d;
+    --white: #fff;
 }
+
 * { box-sizing: border-box; }
+
 html, body {
-    margin: 0;
     width: 100%;
     height: 100%;
+    margin: 0;
     overflow: hidden;
     background: transparent !important;
-    font-family: Arial, sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
 }
-#canvas {
+
+#scene {
+    position: relative;
     width: 1920px;
     height: 1080px;
-    position: relative;
-    transform-origin: top left;
+    transform-origin: 0 0;
+    color: white;
 }
+
+.hidden {
+    display: none !important;
+}
+
+/* ============================================
+   SCOREBOARD
+   ============================================ */
+
 .scoreboard {
     position: absolute;
-    top: 55px;
-    left: 55px;
+    left: 54px;
+    top: 54px;
     display: flex;
-    height: 76px;
-    filter: drop-shadow(0 5px 9px #0004);
-}
-.scoreboard.hidden { display: none; }
-.league, .team, .score, .clock {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    height: 78px;
+    align-items: stretch;
+    filter: drop-shadow(0 5px 9px #0007);
     font-weight: 900;
 }
-.league {
-    width: 105px;
+
+.brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 112px;
     background: var(--accent);
     color: var(--navy);
-    border-radius: 7px 0 0 7px;
     font-size: 19px;
+    border-radius: 7px 0 0 7px;
 }
+
 .team {
-    min-width: 112px;
-    max-width: 170px;
-    padding: 0 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 0 13px;
+    min-width: 122px;
+    max-width: 246px;
     background: var(--navy);
-    color: white;
-    font-size: 25px;
-    overflow: hidden;
+    font-size: 21px;
     white-space: nowrap;
+    overflow: hidden;
 }
+
+.team img {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
 .score {
-    min-width: 120px;
-    padding: 0 12px;
-    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
     color: var(--navy);
-    font-size: 34px;
+    min-width: 142px;
+    padding: 0 15px;
+    font-size: 36px;
     font-variant-numeric: tabular-nums;
 }
+
 .clock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 17px;
     min-width: 115px;
-    padding: 0 12px;
     background: #26365a;
-    color: white;
     font-size: 23px;
     border-radius: 0 7px 7px 0;
     font-variant-numeric: tabular-nums;
 }
+
 .phase {
     position: absolute;
-    top: 76px;
-    left: 105px;
-    min-width: 170px;
+    top: 78px;
+    left: 112px;
     background: var(--accent);
     color: var(--navy);
-    padding: 8px 13px;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 900;
+    padding: 8px 15px;
     border-radius: 0 0 6px 6px;
+    letter-spacing: .7px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+/* ============================================
+   GRAPHIC CONTAINER
+   ============================================ */
+
+.graphic {
+    position: absolute;
+    left: 64px;
+    bottom: 76px;
+    width: 800px;
+    max-height: 830px;
+    filter: drop-shadow(0 10px 22px #0008);
+    animation: slide .26s ease-out;
+}
+
+@keyframes slide {
+    from {
+        opacity: .25;
+        transform: translateY(22px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.g-head {
+    background: var(--accent);
+    color: var(--navy);
+    font-size: 21px;
+    font-weight: 900;
+    padding: 13px 24px;
+    letter-spacing: 1px;
+    border-radius: 8px 8px 0 0;
+}
+
+.g-body {
+    background: linear-gradient(
+        135deg,
+        #182447,
+        #11172d
+    );
+    color: #fff;
+    padding: 25px;
+    border-radius: 0 0 8px 8px;
+    font-size: 25px;
+    font-weight: 700;
+}
+
+.g-sub {
+    color: #c5d2e3;
+    font-size: 18px;
+    font-weight: 500;
+    margin-top: 10px;
+}
+
+.g-foot {
+    font-size: 15px;
+    font-weight: 600;
+    color: #b7c4dc;
+    margin-top: 17px;
+}
+
+/* ============================================
+   GOAL / CARDS / SUBSTITUTION
+   ============================================ */
+
+.g-event {
+    width: 690px;
+}
+
+.g-event .g-body {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    min-height: 153px;
+}
+
+.event-symbol {
+    flex: 0 0 95px;
+    text-align: center;
+    font-size: 68px;
+}
+
+.event-player {
+    font-size: 36px;
+    line-height: 1.16;
+    overflow-wrap: anywhere;
+}
+
+.event-team {
+    font-size: 23px;
+    color: var(--accent);
+    margin-top: 12px;
+}
+
+.event-minute {
+    margin-left: auto;
+    align-self: flex-start;
+    font-size: 36px;
+    font-variant-numeric: tabular-nums;
+    color: var(--accent);
+}
+
+.g-event.yellow .g-head {
+    background: #ffd54c;
+}
+
+.g-event.red .g-head {
+    background: #ff4c5b;
+    color: #fff;
+}
+
+/* ============================================
+   LOWER THIRD
+   ============================================ */
+
+.g-lower {
+    width: 860px;
+}
+
+.g-lower .g-head {
+    font-size: 29px;
+}
+
+.g-lower .g-body {
+    font-size: 23px;
+    min-height: 75px;
+}
+
+/* ============================================
+   STANDINGS
+   ============================================ */
+
+.g-table {
+    width: 920px;
+}
+
+.g-table .g-body {
+    padding: 16px 20px;
+}
+
+.g-table table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 19px;
+    font-weight: 600;
+}
+
+.g-table th {
+    color: var(--accent);
+    font-size: 15px;
+    text-align: right;
+    padding: 9px 8px;
+    border-bottom: 1px solid #ffffff40;
+}
+
+.g-table td {
+    text-align: right;
+    padding: 9px 8px;
+    border-bottom: 1px solid #ffffff22;
+}
+
+.g-table th:nth-child(2),
+.g-table td:nth-child(2) {
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.g-table th:first-child,
+.g-table td:first-child {
+    width: 42px;
+    text-align: center;
+}
+
+.g-table tbody tr.focus {
+    background: #c9f12d25;
+}
+
+/* ============================================
+   TEAM ROSTER
+   ============================================ */
+
+.g-list {
+    width: 850px;
+}
+
+.g-list .g-body {
+    padding: 17px 25px;
+}
+
+.list-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 25px;
+}
+
+.list-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid #ffffff24;
+    font-size: 18px;
+    line-height: 1.15;
+    min-width: 0;
+}
+
+.list-num {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    min-width: 32px;
+}
+
+.list-row span:last-child {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+/* ============================================
+   MATCH INFORMATION
+   ============================================ */
+
+.g-info .g-body {
+    font-size: 28px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 30px;
+    padding: 11px 0;
+    border-bottom: 1px solid #ffffff25;
+    font-size: 22px;
+}
+
+.info-label {
+    color: #b6c4d9;
+    font-size: 18px;
+}
+
+/* ============================================
+   COMPARISON
+   ============================================ */
+
+.g-compare .g-body {
+    font-size: 23px;
+}
+
+.compare-row {
+    display: grid;
+    grid-template-columns: 1fr 180px 1fr;
+    align-items: center;
+    padding: 13px 0;
+    border-bottom: 1px solid #ffffff25;
+    text-align: center;
+}
+
+.compare-row strong {
+    font-size: 30px;
+    color: var(--accent);
+}
+
+.compare-row span {
+    font-size: 17px;
+    color: #cbd3df;
+}
+
+/* ============================================
+   VAR / PENALTIES
+   ============================================ */
+
+.g-var {
+    width: 650px;
+}
+
+.g-var .g-body {
+    text-align: center;
+    font-size: 48px;
+    padding: 35px;
+}
+
+.g-pen {
+    width: 760px;
+}
+
+.pen-score {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 35px;
+    font-size: 56px;
+}
+
+.pen-score span {
+    font-size: 25px;
+    max-width: 210px;
+    text-align: center;
+    overflow-wrap: anywhere;
+}
+
+.g-empty {
+    font-size: 21px;
+    color: #d7dcea;
+    font-weight: 500;
+}
+
+#connection {
+    position: absolute;
+    right: 20px;
+    bottom: 14px;
+    color: #fff9;
+    font-size: 13px;
+    display: none;
+}
+
+body.debug #connection {
+    display: block;
 }
 </style>
 </head>
 
 <body>
-<div id="canvas">
-    <div class="scoreboard hidden" id="scoreboard">
-        <div class="league">J-LIGA</div>
-        <div class="team" id="home">HOME</div>
+
+<div id="scene">
+
+    <!-- SCOREBOARD -->
+
+    <div id="scoreboard" class="scoreboard hidden">
+
+        <div class="brand">
+            J-LIGA
+        </div>
+
+        <div class="team">
+            <img id="homeLogo" alt="">
+            <span id="home">HOME</span>
+        </div>
+
         <div class="score">
             <span id="homeScore">0</span>
             &nbsp;:&nbsp;
             <span id="awayScore">0</span>
         </div>
-        <div class="team" id="away">AWAY</div>
-        <div class="clock" id="clock">00:00</div>
-        <div class="phase" id="phase">ДО МАТЧА</div>
+
+        <div class="team">
+            <img id="awayLogo" alt="">
+            <span id="away">AWAY</span>
+        </div>
+
+        <div id="clock" class="clock">
+            00:00
+        </div>
+
+        <div id="phase" class="phase">
+            ДО МАТЧА
+        </div>
+
     </div>
+
+    <!-- ACTIVE GRAPHIC -->
+
+    <div
+        id="graphic"
+        class="graphic hidden"
+        aria-live="polite"
+    ></div>
+
+    <div id="connection">
+        Подключение...
+    </div>
+
 </div>
 
 <script>
 "use strict";
 
 const SESSION_ID = Number({{ session_id | tojson }});
-const BASE = `/api/v1/broadcast/sessions/${SESSION_ID}`;
 
-const params = new URLSearchParams(location.search);
+const BASE =
+    `/api/v1/broadcast/sessions/${SESSION_ID}`;
 
-// По умолчанию только HTTP.
-// ?realtime=1 включает WebSocket.
-const REALTIME = params.get("realtime") === "1";
+const PARAMS = new URLSearchParams(
+    location.search
+);
 
-const POLL_MS = REALTIME ? 15000 : 3000;
-const RECONNECT_MS = 5000;
-const MAX_RECONNECTS = 3;
+const LAYER = PARAMS.get("layer") || "all";
+
+const WITH_WS =
+    PARAMS.get("realtime") !== "0";
 
 const $ = id => document.getElementById(id);
 
-const phases = {
-    pre_match: "ДО МАТЧА",
-    not_started: "ДО МАТЧА",
-    first_half: "ПЕРВЫЙ ТАЙМ",
-    half_time: "ПЕРЕРЫВ",
-    second_half: "ВТОРОЙ ТАЙМ",
-    extra_first_half: "ДОП. ВРЕМЯ",
-    extra_second_half: "ДОП. ВРЕМЯ",
-    penalties: "ПЕНАЛЬТИ",
-    finished: "МАТЧ ЗАВЕРШЁН"
+
+const PHASES = {
+    PRE_MATCH: "ДО МАТЧА",
+    FIRST_HALF: "ПЕРВЫЙ ТАЙМ",
+    HALF_TIME: "ПЕРЕРЫВ",
+    SECOND_HALF: "ВТОРОЙ ТАЙМ",
+    EXTRA_TIME_FIRST: "ДОП. ВРЕМЯ",
+    EXTRA_TIME_BREAK: "ПЕРЕРЫВ",
+    EXTRA_TIME_SECOND: "ДОП. ВРЕМЯ",
+    PENALTIES: "ПЕНАЛЬТИ",
+    FINISHED: "МАТЧ ЗАВЕРШЁН"
 };
 
+
+const EVENT_LABELS = {
+    goal: "ГОЛ",
+    penalty_goal: "ГОЛ С ПЕНАЛЬТИ",
+    own_goal: "АВТОГОЛ",
+    yellow_card: "ЖЁЛТАЯ КАРТОЧКА",
+    red_card: "КРАСНАЯ КАРТОЧКА",
+    assist: "ГОЛЕВАЯ ПЕРЕДАЧА",
+    substitution_in: "ВЫХОД НА ПОЛЕ",
+    substitution_out: "УХОД С ПОЛЯ"
+};
+
+
 let state = null;
+let snapshot = null;
 let receivedAt = 0;
 let socket = null;
-let reconnects = 0;
-let reconnectTimer = null;
-let loading = false;
+let retries = 0;
 let stopped = false;
+let loading = false;
+let lastGraphicKey = "";
 
-function resize() {
+
+/* ============================================
+   RESIZE
+   ============================================ */
+
+function fit() {
     const scale = Math.min(
         innerWidth / 1920,
         innerHeight / 1080
     );
-    $("canvas").style.transform = `scale(${scale})`;
+
+    $("scene").style.transform =
+        `scale(${scale})`;
 }
 
-addEventListener("resize", resize);
-resize();
+addEventListener("resize", fit);
+fit();
 
-function formatTime(ms) {
-    const seconds = Math.floor(Math.max(0, ms) / 1000);
+if (PARAMS.has("debug")) {
+    document.body.classList.add("debug");
+}
+
+
+function status(message) {
+    $("connection").textContent = message;
+}
+
+
+/* ============================================
+   HELPERS
+   ============================================ */
+
+function safeImage(img, url) {
+    try {
+        if (!url) {
+            throw new Error();
+        }
+
+        const u = new URL(url, location.href);
+
+        if (
+            !["https:", "http:"].includes(
+                u.protocol
+            )
+        ) {
+            throw new Error();
+        }
+
+        img.src = u.href;
+        img.style.display = "";
+
+    } catch {
+        img.removeAttribute("src");
+        img.style.display = "none";
+    }
+}
+
+
+function formatClock(ms) {
+    const n = Math.floor(
+        Math.max(0, ms) / 1000
+    );
+
     return (
-        String(Math.floor(seconds / 60)).padStart(2, "0") +
+        String(Math.floor(n / 60)).padStart(2, "0") +
         ":" +
-        String(seconds % 60).padStart(2, "0")
+        String(n % 60).padStart(2, "0")
     );
 }
 
-function elapsed() {
+
+function currentMs() {
     if (!state) return 0;
 
-    const base = Number(
-        state.current_elapsed_ms ??
-        state.elapsed_ms ??
-        0
-    );
-
-    if (!state.clock_running) return base;
-
-    return base + Math.max(
-        0,
-        performance.now() - receivedAt
+    return Math.min(
+        180 * 60 * 1000,
+        Number(
+            state.current_elapsed_ms ??
+            state.elapsed_ms ??
+            0
+        ) +
+        (
+            state.clock_running
+                ? Math.max(
+                    0,
+                    performance.now() - receivedAt
+                )
+                : 0
+        )
     );
 }
+
 
 function tick() {
-    if (state) $("clock").textContent = formatTime(elapsed());
+    if (state) {
+        $("clock").textContent = formatClock(
+            currentMs()
+        );
+    }
 }
 
+
+function node(tag, cls, text) {
+    const element = document.createElement(tag);
+
+    if (cls) {
+        element.className = cls;
+    }
+
+    if (text !== undefined) {
+        element.textContent = String(text);
+    }
+
+    return element;
+}
+
+
+function add(parent, tag, cls, text) {
+    const element = node(
+        tag,
+        cls,
+        text
+    );
+
+    parent.append(element);
+
+    return element;
+}
+
+
+function panel(kind, heading) {
+    const outer = $("graphic");
+
+    outer.className = `graphic ${kind}`;
+
+    outer.replaceChildren();
+
+    add(
+        outer,
+        "div",
+        "g-head",
+        heading
+    );
+
+    return add(
+        outer,
+        "div",
+        "g-body"
+    );
+}
+
+
+function empty(body, text) {
+    add(body, "div", "g-empty", text);
+}
+
+
+function number(value) {
+    return Number.isFinite(Number(value))
+        ? String(value)
+        : "0";
+}
+
+
+function team(side) {
+    return snapshot?.teams?.[side] || {
+        name: side.toUpperCase(),
+        short_name: side.toUpperCase(),
+        players: []
+    };
+}
+
+
+function line(body, label, value) {
+    const row = add(
+        body,
+        "div",
+        "info-row"
+    );
+
+    add(
+        row,
+        "span",
+        "info-label",
+        label
+    );
+
+    add(
+        row,
+        "strong",
+        "",
+        value || "—"
+    );
+}
+
+
+function dateText(raw) {
+    if (!raw) return "Не указана";
+
+    const date = new Date(raw);
+
+    if (Number.isNaN(date.getTime())) {
+        return String(raw);
+    }
+
+    return new Intl.DateTimeFormat(
+        "ru-RU",
+        {
+            day: "numeric",
+            month: "long",
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Asia/Almaty"
+        }
+    ).format(date);
+}
+
+
+/* ============================================
+   SCOREBOARD
+   ============================================ */
+
+function displayScoreboard() {
+    if (!state) return;
+
+    $("scoreboard").classList.toggle(
+        "hidden",
+        state.scoreboard_visible === false ||
+        LAYER === "graphic" ||
+        (
+            PARAMS.get("onair") === "1" &&
+            !state.is_active
+        )
+    );
+
+    $("home").textContent =
+        state.home_team_short_name ||
+        team("home").short_name ||
+        "HOME";
+
+    $("away").textContent =
+        state.away_team_short_name ||
+        team("away").short_name ||
+        "AWAY";
+
+    $("homeScore").textContent =
+        number(state.home_score);
+
+    $("awayScore").textContent =
+        number(state.away_score);
+
+    safeImage(
+        $("homeLogo"),
+        state.home_team_logo_url ||
+        team("home").logo_url
+    );
+
+    safeImage(
+        $("awayLogo"),
+        state.away_team_logo_url ||
+        team("away").logo_url
+    );
+
+    const added = Number(
+        state.added_time_minutes
+    ) || 0;
+
+    $("phase").textContent =
+        (
+            PHASES[state.phase] ||
+            state.phase ||
+            "ДО МАТЧА"
+        ) +
+        (
+            added > 0
+                ? ` · +${added}′`
+                : ""
+        );
+
+    tick();
+}
+
+
+/* ============================================
+   GOAL / CARD / SUBSTITUTION
+   ============================================ */
+
+function eventGraphic(type, payload) {
+    const labels = {
+        GOAL: "ГОЛ",
+        YELLOW_CARD: "ЖЁЛТАЯ КАРТОЧКА",
+        RED_CARD: "КРАСНАЯ КАРТОЧКА",
+        SUBSTITUTION: "ЗАМЕНА"
+    };
+
+    const cls =
+        type === "YELLOW_CARD"
+            ? "yellow"
+            : type === "RED_CARD"
+                ? "red"
+                : "";
+
+    const body = panel(
+        `g-event ${cls}`,
+        payload.text || labels[type]
+    );
+
+    add(
+        body,
+        "span",
+        "event-symbol",
+        {
+            GOAL: "⚽",
+            YELLOW_CARD: "🟨",
+            RED_CARD: "🟥",
+            SUBSTITUTION: "⇄"
+        }[type]
+    );
+
+    const info = add(
+        body,
+        "div"
+    );
+
+    add(
+        info,
+        "div",
+        "event-player",
+        payload.player_name ||
+        payload.player_in ||
+        "СОБЫТИЕ МАТЧА"
+    );
+
+    if (payload.player_out) {
+        add(
+            info,
+            "div",
+            "g-sub",
+            `Вместо: ${payload.player_out}`
+        );
+    }
+
+    if (payload.team_name) {
+        add(
+            info,
+            "div",
+            "event-team",
+            payload.team_name
+        );
+    }
+
+    if (
+        payload.minute !== undefined &&
+        payload.minute !== null
+    ) {
+        add(
+            body,
+            "div",
+            "event-minute",
+            `${payload.minute}′`
+        );
+    }
+}
+
+
+/* ============================================
+   LOWER THIRD
+   ============================================ */
+
+function lowerThird(payload) {
+    const body = panel(
+        "g-lower",
+        payload.title || "ТИТР"
+    );
+
+    add(
+        body,
+        "div",
+        "",
+        payload.subtitle || ""
+    );
+}
+
+
+/* ============================================
+   ROSTER / BENCH
+   ============================================ */
+
+function showRoster(payload, kind) {
+    const side =
+        payload.side === "away"
+            ? "away"
+            : "home";
+
+    const currentTeam = team(side);
+
+    const rows =
+        Array.isArray(payload.lines) &&
+        payload.lines.length
+            ? payload.lines
+            : currentTeam.players.map(
+                player =>
+                    `№ ${player.number ?? "—"}  ${player.name}`
+            );
+
+    const title =
+        kind === "BENCH"
+            ? "ЗАЯВКА КОМАНДЫ"
+            : "ЗАЯВКА НА ТУРНИР";
+
+    const body = panel(
+        "g-list",
+        `${title} · ${payload.team_name || currentTeam.name}`
+    );
+
+    if (!rows.length) {
+        empty(
+            body,
+            "Нет игроков в активной заявке"
+        );
+        return;
+    }
+
+    const grid = add(
+        body,
+        "div",
+        "list-grid"
+    );
+
+    const page = Math.max(
+        0,
+        Math.floor(
+            Number(payload.page) || 0
+        )
+    );
+
+    rows
+        .slice(
+            page * 22,
+            (page + 1) * 22
+        )
+        .forEach(row => {
+            const item = add(
+                grid,
+                "div",
+                "list-row"
+            );
+
+            if (typeof row === "string") {
+                add(
+                    item,
+                    "span",
+                    "",
+                    row
+                );
+
+            } else {
+                add(
+                    item,
+                    "span",
+                    "list-num",
+                    row.number ?? "—"
+                );
+
+                add(
+                    item,
+                    "span",
+                    "",
+                    row.name || "Игрок"
+                );
+            }
+        });
+
+    add(
+        body,
+        "div",
+        "g-foot",
+        `Заявлено игроков: ${rows.length}` +
+        (
+            rows.length > 22
+                ? ` · страница ${page + 1}/${Math.ceil(rows.length / 22)}`
+                : ""
+        )
+    );
+}
+
+
+/* ============================================
+   STANDINGS
+   ============================================ */
+
+function standingsGraphic() {
+    const body = panel(
+        "g-table",
+        "ТУРНИРНАЯ ТАБЛИЦА · " +
+        (
+            snapshot?.match?.tournament_short_name ||
+            snapshot?.match?.tournament ||
+            "J-LIGA"
+        )
+    );
+
+    const rows = snapshot?.standings || [];
+
+    if (!rows.length) {
+        empty(
+            body,
+            "Турнирная таблица ещё не рассчитана"
+        );
+        return;
+    }
+
+    const table = add(body, "table");
+
+    const head = add(
+        table,
+        "thead"
+    );
+
+    const tr = add(
+        head,
+        "tr"
+    );
+
+    [
+        "#",
+        "Команда",
+        "И",
+        "В",
+        "Н",
+        "П",
+        "М",
+        "О"
+    ].forEach(value => {
+        add(tr, "th", "", value);
+    });
+
+    const tbody = add(
+        table,
+        "tbody"
+    );
+
+    rows.slice(0, 12).forEach((row, index) => {
+        const focused =
+            row.team_id === team("home").id ||
+            row.team_id === team("away").id;
+
+        const tr = add(
+            tbody,
+            "tr",
+            focused ? "focus" : ""
+        );
+
+        [
+            index + 1,
+            row.name,
+            row.played,
+            row.wins,
+            row.draws,
+            row.losses,
+            `${row.goals_for}:${row.goals_against}`,
+            row.points
+        ].forEach(value => {
+            add(tr, "td", "", value);
+        });
+    });
+}
+
+
+/* ============================================
+   COMPARISON
+   ============================================ */
+
+function comparisonGraphic() {
+    const body = panel(
+        "g-compare",
+        "СРАВНЕНИЕ · " +
+        `${team("home").short_name} / ${team("away").short_name}`
+    );
+
+    const events =
+        snapshot?.events || [];
+
+    const count = (side, types) =>
+        events.filter(event =>
+            event.team_id === team(side).id &&
+            types.includes(event.event_type)
+        ).length;
+
+    const rows = [
+        [
+            state?.home_score,
+            "СЧЁТ",
+            state?.away_score
+        ],
+        [
+            count("home", ["yellow_card"]),
+            "ЖЁЛТЫЕ",
+            count("away", ["yellow_card"])
+        ],
+        [
+            count("home", ["red_card"]),
+            "КРАСНЫЕ",
+            count("away", ["red_card"])
+        ],
+        [
+            count("home", ["penalty_goal"]),
+            "ПЕНАЛЬТИ (ГОЛ)",
+            count("away", ["penalty_goal"])
+        ]
+    ];
+
+    for (const [home, title, away] of rows) {
+        const row = add(
+            body,
+            "div",
+            "compare-row"
+        );
+
+        add(
+            row,
+            "strong",
+            "",
+            home ?? 0
+        );
+
+        add(
+            row,
+            "span",
+            "",
+            title
+        );
+
+        add(
+            row,
+            "strong",
+            "",
+            away ?? 0
+        );
+    }
+
+    add(
+        body,
+        "div",
+        "g-foot",
+        "Карточки и пенальти — по зарегистрированным событиям матча"
+    );
+}
+
+
+/* ============================================
+   MATCH INFORMATION / EVENTS
+   ============================================ */
+
+function matchInfo(payload) {
+    const body = panel(
+        "g-info",
+        payload.heading ||
+        "ИНФОРМАЦИЯ О МАТЧЕ"
+    );
+
+    if (
+        Array.isArray(payload.lines) &&
+        payload.lines.length
+    ) {
+        payload.lines
+            .slice(0, 14)
+            .forEach(value => {
+                add(
+                    body,
+                    "div",
+                    "list-row",
+                    value
+                );
+            });
+
+        return;
+    }
+
+    const match = snapshot?.match || {};
+
+    line(
+        body,
+        "Матч",
+        `${team("home").name} — ${team("away").name}`
+    );
+
+    line(
+        body,
+        "Турнир",
+        match.tournament || "J-LIGA"
+    );
+
+    line(
+        body,
+        "Дата",
+        dateText(match.date)
+    );
+
+    if (match.stadium) {
+        line(
+            body,
+            "Стадион",
+            match.stadium
+        );
+    }
+
+    if (
+        match.round !== null &&
+        match.round !== undefined
+    ) {
+        line(
+            body,
+            "Тур",
+            match.round
+        );
+    }
+
+    if (match.group) {
+        line(
+            body,
+            "Группа",
+            match.group
+        );
+    }
+}
+
+
+/* ============================================
+   PENALTY SHOOTOUT
+   ============================================ */
+
+function penaltiesGraphic() {
+    const body = panel(
+        "g-pen",
+        "СЕРИЯ ПЕНАЛЬТИ"
+    );
+
+    const match = snapshot?.match || {};
+
+    if (
+        match.home_penalty === null ||
+        match.home_penalty === undefined ||
+        match.away_penalty === null ||
+        match.away_penalty === undefined
+    ) {
+        empty(
+            body,
+            "Счёт серии пенальти пока не внесён в матч"
+        );
+
+        return;
+    }
+
+    const score = add(
+        body,
+        "div",
+        "pen-score"
+    );
+
+    add(
+        score,
+        "span",
+        "",
+        team("home").short_name
+    );
+
+    add(
+        score,
+        "strong",
+        "",
+        `${match.home_penalty} : ${match.away_penalty}`
+    );
+
+    add(
+        score,
+        "span",
+        "",
+        team("away").short_name
+    );
+}
+
+
+/* ============================================
+   COACH
+   ============================================ */
+
+function coachGraphic(payload) {
+    const currentTeam = team(
+        payload.side === "away"
+            ? "away"
+            : "home"
+    );
+
+    const body = panel(
+        "g-lower",
+        `ТРЕНЕР · ${currentTeam.name}`
+    );
+
+    add(
+        body,
+        "div",
+        "",
+        payload.coach_name ||
+        currentTeam.coach_name ||
+        "Тренер не указан"
+    );
+}
+
+
+/* ============================================
+   VAR / GENERIC GRAPHICS
+   ============================================ */
+
+function genericGraphic(type, payload) {
+    const labels = {
+        VAR: "VAR",
+        PENALTIES: "ПЕНАЛЬТИ",
+        SUBSTITUTION: "ЗАМЕНА",
+        COACH: "ТРЕНЕР",
+        MATCH_INFO: "МАТЧ"
+    };
+
+    const body = panel(
+        type === "VAR"
+            ? "g-var"
+            : "g-info",
+        labels[type] || type
+    );
+
+    const lines =
+        Array.isArray(payload.lines)
+            ? payload.lines
+            : [];
+
+    if (lines.length) {
+        lines.slice(0, 15).forEach(value => {
+            add(
+                body,
+                "div",
+                "list-row",
+                value
+            );
+        });
+
+    } else {
+        add(
+            body,
+            "div",
+            "",
+            payload.text ||
+            "Нет данных для этой графики"
+        );
+    }
+}
+
+
+/* ============================================
+   SELECT ACTIVE GRAPHIC
+   ============================================ */
+
+function renderGraphic() {
+    const outer = $("graphic");
+
+    if (
+        !state ||
+        LAYER === "scoreboard" ||
+        state.active_graphic === "NONE" ||
+        !state.active_graphic ||
+        (
+            PARAMS.get("onair") === "1" &&
+            !state.is_active
+        )
+    ) {
+        outer.className = "graphic hidden";
+        lastGraphicKey = "";
+
+        return;
+    }
+
+    const type = String(
+        state.active_graphic
+    );
+
+    const payload =
+        state.graphic_payload || {};
+
+    // Изменение данных БД тоже вызывает
+    // обновление активного шаблона.
+    const dataKey =
+        type === "STANDINGS"
+            ? snapshot?.standings
+            : ["LINEUP", "BENCH", "COACH"].includes(type)
+                ? snapshot?.teams
+                : type === "COMPARISON"
+                    ? snapshot?.events
+                    : type === "PENALTIES"
+                        ? snapshot?.match
+                        : null;
+
+    const key =
+        `${state.revision}:${type}:` +
+        `${JSON.stringify(payload)}:` +
+        JSON.stringify(dataKey);
+
+    if (key === lastGraphicKey) {
+        return;
+    }
+
+    lastGraphicKey = key;
+
+    if (
+        [
+            "GOAL",
+            "YELLOW_CARD",
+            "RED_CARD",
+            "SUBSTITUTION"
+        ].includes(type)
+    ) {
+        eventGraphic(
+            type,
+            payload
+        );
+
+    } else if (type === "LOWER_THIRD") {
+        lowerThird(payload);
+
+    } else if (
+        type === "LINEUP" ||
+        type === "BENCH"
+    ) {
+        showRoster(
+            payload,
+            type
+        );
+
+    } else if (type === "STANDINGS") {
+        standingsGraphic();
+
+    } else if (type === "COMPARISON") {
+        comparisonGraphic();
+
+    } else if (type === "MATCH_INFO") {
+        matchInfo(payload);
+
+    } else if (type === "PENALTIES") {
+        penaltiesGraphic();
+
+    } else if (type === "COACH") {
+        coachGraphic(payload);
+
+    } else {
+        genericGraphic(
+            type,
+            payload
+        );
+    }
+
+    outer.classList.remove("hidden");
+}
+
+
+/* ============================================
+   STATE SYNC
+   ============================================ */
+
 function applyState(next) {
-    if (!next || typeof next !== "object") return;
+    if (
+        !next ||
+        typeof next !== "object"
+    ) {
+        return;
+    }
 
     if (
         state &&
-        Number(next.revision) < Number(state.revision)
+        Number(next.revision) <
+        Number(state.revision)
     ) {
         return;
     }
@@ -199,137 +1538,179 @@ function applyState(next) {
     state = next;
     receivedAt = performance.now();
 
-    $("homeScore").textContent = next.home_score ?? 0;
-    $("awayScore").textContent = next.away_score ?? 0;
-    $("home").textContent = next.home_team_short_name || "HOME";
-    $("away").textContent = next.away_team_short_name || "AWAY";
-
-    $("phase").textContent =
-        phases[next.phase] ||
-        String(next.phase || "ДО МАТЧА").toUpperCase();
-
-    $("scoreboard").classList.toggle(
-        "hidden",
-        next.scoreboard_visible === false
-    );
-
-    tick();
+    displayScoreboard();
+    renderGraphic();
 }
 
-function unwrap(message) {
-    if (!message || typeof message !== "object") return null;
-    if (message.data && typeof message.data === "object") {
-        return message.data;
-    }
-    if (message.state && typeof message.state === "object") {
-        return message.state;
-    }
-    return message;
-}
 
-async function loadState() {
-    if (loading || stopped) return;
+/* ============================================
+   HTTP DATA SYNC
+   ============================================ */
+
+async function loadSnapshot() {
+    if (loading || stopped) {
+        return;
+    }
+
     loading = true;
 
     try {
-        const response = await fetch(`${BASE}/public`, {
-            cache: "no-store"
-        });
+        const response = await fetch(
+            `${BASE}/presentation`,
+            {
+                cache: "no-store"
+            }
+        );
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(
+                `HTTP ${response.status}`
+            );
         }
 
-        applyState(unwrap(await response.json()));
+        const next = await response.json();
+
+        snapshot = next;
+
+        applyState(next.state);
+
+        displayScoreboard();
+        renderGraphic();
+
+        status("Синхронизировано");
+
     } catch (error) {
-        console.warn("Broadcast HTTP:", error.message);
+        status(
+            `Ожидание данных: ${error.message}`
+        );
+
     } finally {
         loading = false;
     }
 }
 
-function connectWebSocket() {
-    if (!REALTIME || stopped) return;
 
+/* ============================================
+   WEBSOCKET
+   ============================================ */
+
+function connect() {
     if (
-        socket &&
-        (
-            socket.readyState === WebSocket.OPEN ||
-            socket.readyState === WebSocket.CONNECTING
-        )
-    ) return;
+        !WITH_WS ||
+        stopped ||
+        socket
+    ) {
+        return;
+    }
 
-    const protocol = location.protocol === "https:"
-        ? "wss:"
-        : "ws:";
+    const protocol =
+        location.protocol === "https:"
+            ? "wss:"
+            : "ws:";
 
-    socket = new WebSocket(
+    const websocket = new WebSocket(
         `${protocol}//${location.host}${BASE}/ws`
     );
 
-    let connected = false;
+    socket = websocket;
 
-    socket.onopen = () => {
-        connected = true;
-        reconnects = 0;
-        console.info("Broadcast WebSocket connected");
-    };
+    websocket.onopen = () => {
+        retries = 0;
 
-    socket.onmessage = event => {
-        try {
-            const message = JSON.parse(event.data);
-            applyState(unwrap(message));
-        } catch (error) {
-            console.warn("Invalid broadcast message", error);
-        }
-    };
-
-    socket.onclose = event => {
-        socket = null;
-        if (stopped) return;
-
-        // 1008 означает отказ по политике доступа.
-        // При отказе во время handshake браузер часто
-        // сообщает код 1006, поэтому ограничиваем повторы.
-        if (event.code === 1008) {
-            console.warn("Broadcast viewer access denied");
-            return;
-        }
-
-        reconnects++;
-
-        if (reconnects > MAX_RECONNECTS) {
-            console.warn(
-                "WebSocket unavailable; using HTTP polling"
-            );
-            return;
-        }
-
-        clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(
-            connectWebSocket,
-            RECONNECT_MS * reconnects
+        status(
+            "WebSocket подключён"
         );
     };
 
-    socket.onerror = () => {
-        console.warn("Broadcast WebSocket connection error");
+    websocket.onmessage = event => {
+        try {
+            const message = JSON.parse(
+                event.data
+            );
+
+            const next =
+                message.data ||
+                message.state ||
+                message;
+
+            applyState(next);
+
+            // Помимо состояния загружаем
+            // связанные данные из PostgreSQL.
+            loadSnapshot();
+
+        } catch {
+            // Неподдерживаемый WS-пакет.
+        }
+    };
+
+    websocket.onclose = event => {
+        if (socket === websocket) {
+            socket = null;
+        }
+
+        if (
+            stopped ||
+            event.code === 1008
+        ) {
+            return;
+        }
+
+        retries++;
+
+        if (retries > 4) {
+            return;
+        }
+
+        setTimeout(
+            connect,
+            Math.min(
+                15000,
+                2000 * retries
+            )
+        );
+    };
+
+    websocket.onerror = () => {
+        status(
+            "HTTP-резерв активен"
+        );
     };
 }
 
-if (Number.isInteger(SESSION_ID) && SESSION_ID > 0) {
-    loadState();
-    setInterval(loadState, POLL_MS);
-    setInterval(tick, 100);
 
-    if (REALTIME) {
-        connectWebSocket();
-    }
+/* ============================================
+   START
+   ============================================ */
+
+if (
+    Number.isInteger(SESSION_ID) &&
+    SESSION_ID > 0
+) {
+    loadSnapshot();
+    connect();
+
+    // Даже если WebSocket недоступен,
+    // OBS/vMix продолжит синхронизацию.
+    setInterval(
+        loadSnapshot,
+        3000
+    );
+
+    setInterval(
+        tick,
+        100
+    );
+
+} else {
+    status(
+        "Некорректный ID трансляции"
+    );
 }
+
 
 addEventListener("pagehide", () => {
     stopped = true;
-    clearTimeout(reconnectTimer);
 
     if (socket) {
         socket.close();
@@ -337,5 +1718,6 @@ addEventListener("pagehide", () => {
     }
 });
 </script>
+
 </body>
 </html>

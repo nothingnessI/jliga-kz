@@ -1,11 +1,4 @@
 
-"""
-Модели системы управления футбольными трансляциями.
-
-BroadcastSession — состояние эфира.
-BroadcastCommand — журнал действий оператора.
-"""
-
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
@@ -69,8 +62,8 @@ class BroadcastSession(Base):
     match_id: Mapped[int] = mapped_column(
         ForeignKey("matches.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
         unique=True,
+        index=True,
     )
 
     is_active: Mapped[bool] = mapped_column(
@@ -85,8 +78,6 @@ class BroadcastSession(Base):
         default=BroadcastPhase.PRE_MATCH.value,
     )
 
-    # Счёт, который показывается в эфире.
-    # Не заменяет официальный счёт Match.
     home_score: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -99,9 +90,6 @@ class BroadcastSession(Base):
         default=0,
     )
 
-    # Время матча хранится в миллисекундах.
-    # Пока часы остановлены, elapsed_ms
-    # содержит зафиксированное время.
     elapsed_ms: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -114,7 +102,6 @@ class BroadcastSession(Base):
         default=False,
     )
 
-    # UTC-момент запуска часов.
     clock_started_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
@@ -132,28 +119,18 @@ class BroadcastSession(Base):
         default=True,
     )
 
-    # Активная временная графика.
     active_graphic: Mapped[str] = mapped_column(
         String(32),
         nullable=False,
         default=BroadcastGraphicType.NONE.value,
     )
 
-    # Например:
-    # {
-    #     "team_id": 10,
-    #     "player_id": 25,
-    #     "minute": 72
-    # }
     graphic_payload: Mapped[dict[str, Any]] = mapped_column(
         JSON,
         nullable=False,
         default=dict,
     )
 
-    # Монотонная версия состояния.
-    # Используется для синхронизации
-    # нескольких подключённых клиентов.
     revision: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
@@ -237,4 +214,3 @@ class BroadcastCommand(Base):
         "BroadcastSession",
         back_populates="commands",
     )
-

@@ -1,32 +1,11 @@
 
-"""
-J-LIGA Broadcast Studio
-=======================
-
-Сервис управления футбольной трансляцией.
-
-Возможности:
-- создание трансляции для матча;
-- получение состояния эфира;
-- управление игровыми часами;
-- изменение счёта;
-- управление фазами матча;
-- показ и скрытие графики;
-- журналирование действий оператора;
-- защита от конфликтующих команд.
-
-Важно:
-Сервис НЕ изменяет официальную статистику матча.
-
-Транзакциями управляет вызывающий API.
-"""
-
 from datetime import datetime, timezone
 from typing import Any, TypeVar
 
 from fastapi import HTTPException
 from pydantic import BaseModel, ValidationError
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.broadcast import (
@@ -52,21 +31,11 @@ MAX_CLOCK_MS = 180 * 60 * 1000
 SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
 
-# ============================================================
-# TIME HELPERS
-# ============================================================
-
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
 def as_utc(value: datetime) -> datetime:
-    """
-    Приведение datetime к UTC.
-
-    Если драйвер вернул naive datetime,
-    предполагаем, что оно хранится в UTC.
-    """
     if value.tzinfo is None:
         return value.replace(tzinfo=timezone.utc)
 
@@ -77,12 +46,6 @@ def elapsed_now(
     session: BroadcastSession,
     now: datetime | None = None,
 ) -> int:
-    """
-    Текущее игровое время в миллисекундах.
-
-    Если таймер запущен, вычисляем время
-    относительно момента его запуска.
-    """
     elapsed = max(0, session.elapsed_ms or 0)
 
     if not session.clock_running:
@@ -93,7 +56,7 @@ def elapsed_now(
 
     now = now or utc_now()
 
-    delta_ms = int(
+    difference = int(
         (
             now - as_utc(session.clock_started_at)
         ).total_seconds() * 1000
@@ -101,21 +64,14 @@ def elapsed_now(
 
     return min(
         MAX_CLOCK_MS,
-        elapsed + max(0, delta_ms),
+        elapsed + max(0, difference),
     )
 
-
-# ============================================================
-# VALIDATION
-# ============================================================
 
 def parse_payload(
     schema: type[SchemaT],
     payload: dict[str, Any],
 ) -> SchemaT:
-    """
-    Валидация данных команды через Pydantic.
-    """
     try:
         return schema.model_validate(payload)
 
@@ -129,17 +85,9 @@ def parse_payload(
         ) from exc
 
 
-# ============================================================
-# RESPONSE
-# ============================================================
-
 def state_response(
     session: BroadcastSession,
 ) -> BroadcastStateResponse:
-    """
-    Формирование состояния трансляции
-    для REST API и WebSocket.
-    """
     now = utc_now()
 
     return BroadcastStateResponse(
@@ -162,18 +110,7 @@ def state_response(
     )
 
 
-# ============================================================
-# BROADCAST SERVICE
-# ============================================================
-
 class BroadcastService:
-    """
-    Основной сервис управления трансляцией.
-    """
-
-    # --------------------------------------------------------
-    # CREATE SESSION
-    # --------------------------------------------------------
 
     @staticmethod
     async def create_session(
@@ -181,10 +118,10 @@ class BroadcastService:
         match_id: int,
     ) -> BroadcastSession:
         """
-        Создать трансляцию для матча.
+        Одна сессия на матч.
 
-        Если трансляция уже существует,
-        возвращаем существующую запись.
+        PostgreSQL ON CONFLICT защищает от двух
+        одновременных запросов создания трансляции.
         """
         match = await db.get(Match, match_id)
 
@@ -194,39 +131,43 @@ class BroadcastService:
                 detail="Матч не найден",
             )
 
-        existing = await db.scalar(
+        stmt = (
+            pg_insert(BroadcastSession)
+            .values(
+                match_id=match_id,
+                is_active=False,
+                phase=BroadcastPhase.PRE_MATCH.value,
+                home_score=match.home_score or 0,
+                away_score=match.away_score or 0,
+                elapsed_ms=0,
+                clock_running=False,
+                clock_started_at=None,
+                added_time_minutes=0,
+                scoreboard_visible=True,
+                active_graphic=BroadcastGraphicType.NONE.value,
+                graphic_payload={},
+                revision=0,
+            )
+            .on_conflict_do_nothing(
+                index_elements=["match_id"],
+            )
+        )
+
+        await db.execute(stmt)
+
+        session = await db.scalar(
             select(BroadcastSession).where(
                 BroadcastSession.match_id == match_id
             )
         )
 
-        if existing is not None:
-            return existing
-
-        session = BroadcastSession(
-            match_id=match_id,
-            is_active=False,
-            phase=BroadcastPhase.PRE_MATCH.value,
-            home_score=match.home_score or 0,
-            away_score=match.away_score or 0,
-            elapsed_ms=0,
-            clock_running=False,
-            clock_started_at=None,
-            added_time_minutes=0,
-            scoreboard_visible=True,
-            active_graphic=BroadcastGraphicType.NONE.value,
-            graphic_payload={},
-            revision=0,
-        )
-
-        db.add(session)
-        await db.flush()
+        if session is None:
+            raise HTTPException(
+                status_code=500,
+                detail="Не удалось создать трансляцию",
+            )
 
         return session
-
-    # --------------------------------------------------------
-    # GET SESSION
-    # --------------------------------------------------------
 
     @staticmethod
     async def get_session(
@@ -234,12 +175,6 @@ class BroadcastService:
         session_id: int,
         for_update: bool = False,
     ) -> BroadcastSession:
-        """
-        Получить трансляцию по ID.
-
-        for_update=True блокирует строку
-        PostgreSQL на время транзакции.
-        """
         stmt = select(BroadcastSession).where(
             BroadcastSession.id == session_id
         )
@@ -257,10 +192,6 @@ class BroadcastService:
 
         return session
 
-    # --------------------------------------------------------
-    # EXECUTE COMMAND
-    # --------------------------------------------------------
-
     @staticmethod
     async def execute_command(
         db: AsyncSession,
@@ -269,21 +200,14 @@ class BroadcastService:
         operator_id: int | None = None,
     ) -> BroadcastStateResponse:
         """
-        Выполнить команду оператора.
+        Изменяет эфирное состояние.
 
-        Последовательность:
-        1. Блокировка трансляции.
-        2. Проверка revision.
-        3. Выполнение команды.
-        4. Увеличение revision.
-        5. Запись в журнал.
-        6. Возврат нового состояния.
-
-        COMMIT выполняет вызывающий API.
+        Внешний API отвечает за транзакцию,
+        официальный Match и отправку по WebSocket.
         """
         session = await BroadcastService.get_session(
-            db=db,
-            session_id=session_id,
+            db,
+            session_id,
             for_update=True,
         )
 
@@ -291,10 +215,7 @@ class BroadcastService:
             raise HTTPException(
                 status_code=409,
                 detail={
-                    "message": (
-                        "Состояние трансляции изменилось. "
-                        "Обновите данные и повторите действие."
-                    ),
+                    "message": "Состояние эфира изменилось",
                     "current_revision": session.revision,
                 },
             )
@@ -303,15 +224,11 @@ class BroadcastService:
         payload = command.payload
         now = utc_now()
 
-        # ====================================================
-        # CLOCK
-        # ====================================================
-
         if action == "START_CLOCK":
             if session.phase == BroadcastPhase.FINISHED.value:
                 raise HTTPException(
                     status_code=409,
-                    detail="Нельзя запустить часы завершённого матча",
+                    detail="Матч завершён",
                 )
 
             if not session.clock_running:
@@ -338,16 +255,10 @@ class BroadcastService:
                 payload,
             )
 
-            was_running = session.clock_running
-
             session.elapsed_ms = data.elapsed_ms
-            session.clock_started_at = (
-                now if was_running else None
-            )
 
-        # ====================================================
-        # SCORE
-        # ====================================================
+            if session.clock_running:
+                session.clock_started_at = now
 
         elif action == "SET_SCORE":
             data = parse_payload(
@@ -357,10 +268,6 @@ class BroadcastService:
 
             session.home_score = data.home_score
             session.away_score = data.away_score
-
-        # ====================================================
-        # MATCH PHASE
-        # ====================================================
 
         elif action == "SET_PHASE":
             data = parse_payload(
@@ -378,10 +285,6 @@ class BroadcastService:
                 session.clock_running = False
                 session.clock_started_at = None
 
-        # ====================================================
-        # ADDED TIME
-        # ====================================================
-
         elif action == "SET_ADDED_TIME":
             data = parse_payload(
                 BroadcastAddedTimeSet,
@@ -390,19 +293,11 @@ class BroadcastService:
 
             session.added_time_minutes = data.minutes
 
-        # ====================================================
-        # SCOREBOARD
-        # ====================================================
-
         elif action == "SHOW_SCOREBOARD":
             session.scoreboard_visible = True
 
         elif action == "HIDE_SCOREBOARD":
             session.scoreboard_visible = False
-
-        # ====================================================
-        # GRAPHICS
-        # ====================================================
 
         elif action == "SHOW_GRAPHIC":
             data = parse_payload(
@@ -413,21 +308,15 @@ class BroadcastService:
             if data.graphic_type == BroadcastGraphicType.NONE:
                 raise HTTPException(
                     status_code=422,
-                    detail="Необходимо выбрать тип графики",
+                    detail="Укажите графику",
                 )
 
             session.active_graphic = data.graphic_type.value
             session.graphic_payload = data.payload
 
         elif action == "HIDE_GRAPHIC":
-            session.active_graphic = (
-                BroadcastGraphicType.NONE.value
-            )
+            session.active_graphic = BroadcastGraphicType.NONE.value
             session.graphic_payload = {}
-
-        # ====================================================
-        # BROADCAST LIFECYCLE
-        # ====================================================
 
         elif action == "ACTIVATE":
             session.is_active = True
@@ -439,12 +328,8 @@ class BroadcastService:
             )
             session.clock_running = False
             session.clock_started_at = None
-
             session.is_active = False
-
-            session.active_graphic = (
-                BroadcastGraphicType.NONE.value
-            )
+            session.active_graphic = BroadcastGraphicType.NONE.value
             session.graphic_payload = {}
 
         else:
@@ -453,21 +338,18 @@ class BroadcastService:
                 detail="Неизвестная команда",
             )
 
-        # ====================================================
-        # REVISION + AUDIT LOG
-        # ====================================================
-
         session.revision += 1
 
-        log = BroadcastCommand(
-            session_id=session.id,
-            revision=session.revision,
-            command_type=action,
-            payload=payload,
-            operator_id=operator_id,
+        db.add(
+            BroadcastCommand(
+                session_id=session.id,
+                revision=session.revision,
+                command_type=action,
+                payload=payload,
+                operator_id=operator_id,
+            )
         )
 
-        db.add(log)
         await db.flush()
 
         return state_response(session)

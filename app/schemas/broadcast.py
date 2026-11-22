@@ -40,19 +40,10 @@ class BroadcastVisibilitySet(BaseModel):
 
 class BroadcastGraphicShow(BaseModel):
     graphic_type: BroadcastGraphicType
-    payload: dict[str, Any] = Field(
-        default_factory=dict,
-    )
+    payload: dict[str, Any] = Field(default_factory=dict)
 
 
 class BroadcastCommandRequest(BaseModel):
-    """
-    Универсальная команда оператора.
-
-    revision — версия состояния, которую
-    видел оператор перед отправкой команды.
-    """
-
     action: Literal[
         "START_CLOCK",
         "PAUSE_CLOCK",
@@ -70,9 +61,7 @@ class BroadcastCommandRequest(BaseModel):
     ]
 
     expected_revision: int = Field(ge=0)
-    payload: dict[str, Any] = Field(
-        default_factory=dict,
-    )
+    payload: dict[str, Any] = Field(default_factory=dict)
 
 
 class BroadcastStateResponse(BaseModel):
@@ -85,6 +74,13 @@ class BroadcastStateResponse(BaseModel):
 
     home_score: int
     away_score: int
+
+    home_team_name: str | None = None
+    away_team_name: str | None = None
+    home_team_short_name: str | None = None
+    away_team_short_name: str | None = None
+    home_team_logo_url: str | None = None
+    away_team_logo_url: str | None = None
 
     elapsed_ms: int
     clock_running: bool

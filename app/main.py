@@ -1,15 +1,17 @@
-from pathlib import Path
-from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
-from fastapi.middleware.cors import CORSMiddleware
 
-# Импортируем наши роутеры
+from pathlib import Path
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
 from app.api.v1.api import api_router
 from app.api.v1 import pages
-from app.web.broadcast import router as broadcast_overlay_router
+from app.web.broadcast import router as broadcast_web_router
 
-# Определяем базовую директорию (папка app)
+
 BASE_DIR = Path(__file__).resolve().parent
+
 
 app = FastAPI(
     title="J-Liga",
@@ -20,7 +22,7 @@ app = FastAPI(
     openapi_url=None,
 )
 
-# Настройка CORS (чтобы фронтенд мог делать запросы)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -28,22 +30,53 @@ app.add_middleware(
         "https://www.jliga.kz",
     ],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+    ],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+    ],
 )
 
-# Подключаем папку со статикой (картинки, css, js)
-app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 
-# 1. Подключаем API (эндпоинты для Swagger / JSON)
-app.include_router(api_router, prefix="/api/v1")
+app.mount(
+    "/static",
+    StaticFiles(
+        directory=BASE_DIR / "static"
+    ),
+    name="static",
+)
 
-# 2. Подключаем HTML-страницы (Jinja2)
-app.include_router(pages.router)
 
-app.include_router(broadcast_overlay_router)
+# Основной JSON API.
+app.include_router(
+    api_router,
+    prefix="/api/v1",
+)
 
-# Запуск сервера (для запуска через python app/main.py)
+
+# Существующие Jinja-страницы сайта.
+app.include_router(
+    pages.router,
+)
+
+
+# Центр трансляций, студии, OBS и LIVE.
+app.include_router(
+    broadcast_web_router,
+)
+
+
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+
+    uvicorn.run(
+        app,
+        host="127.0.0.1",
+        port=8000,
+    )

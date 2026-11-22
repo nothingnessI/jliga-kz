@@ -1,0 +1,807 @@
+
+{% extends "admin_base.html" %}
+
+{% block title %}Трансляции | J-LIGA{% endblock %}
+
+{% block page_heading %}Центр трансляций{% endblock %}
+
+{% block extra_css %}
+<style>
+    .broadcast-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+
+    .broadcast-description {
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .broadcast-panel {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 22px;
+    }
+
+    .broadcast-controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+    }
+
+    .broadcast-stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 14px;
+        margin-bottom: 24px;
+    }
+
+    .broadcast-stat {
+        padding: 18px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+    }
+
+    .broadcast-stat-number {
+        font-size: 30px;
+        font-weight: 800;
+        color: #172033;
+    }
+
+    .broadcast-stat-label {
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .broadcast-grid {
+        display: grid;
+        grid-template-columns: repeat(
+            auto-fill,
+            minmax(310px, 1fr)
+        );
+        gap: 15px;
+    }
+
+    .broadcast-card {
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .broadcast-card.active {
+        border-color: #198754;
+    }
+
+    .broadcast-card-main {
+        padding: 17px;
+    }
+
+    .broadcast-card-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 14px;
+    }
+
+    .broadcast-tournament {
+        color: #64748b;
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .broadcast-status {
+        font-size: 11px;
+        font-weight: 800;
+        color: #dc3545;
+        white-space: nowrap;
+    }
+
+    .broadcast-status.active {
+        color: #198754;
+    }
+
+    .broadcast-teams {
+        font-weight: 750;
+        font-size: 18px;
+        min-height: 48px;
+        color: #172033;
+        overflow-wrap: anywhere;
+    }
+
+    .broadcast-score {
+        font-size: 34px;
+        font-weight: 900;
+        color: #198754;
+        margin: 7px 0;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .broadcast-details {
+        font-size: 12px;
+        color: #64748b;
+    }
+
+    .broadcast-card-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        padding: 14px;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+    }
+
+    .broadcast-card-actions .btn {
+        font-size: 12px;
+    }
+
+    .broadcast-card-actions .full {
+        grid-column: span 2;
+    }
+
+    .broadcast-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 15px;
+    }
+
+    .broadcast-toolbar input {
+        max-width: 300px;
+    }
+
+    .broadcast-empty {
+        background: white;
+        padding: 35px;
+        text-align: center;
+        color: #64748b;
+        border-radius: 12px;
+        border: 1px dashed #cbd5e1;
+    }
+
+    #broadcast-message {
+        min-height: 24px;
+        margin-bottom: 12px;
+        font-size: 13px;
+    }
+
+    @media (max-width: 650px) {
+        .broadcast-controls {
+            grid-template-columns: 1fr;
+        }
+
+        .broadcast-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .broadcast-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block admin_content %}
+
+<div class="broadcast-header">
+
+    <div>
+        <h2 class="h4 fw-bold mb-1">
+            <i class="bi bi-broadcast-pin text-success"></i>
+            Центр трансляций
+        </h2>
+
+        <div class="broadcast-description">
+            Управление несколькими эфирами J-LIGA
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+
+        <a
+            href="/broadcast/control"
+            target="_blank"
+            rel="noopener"
+            class="btn btn-outline-secondary"
+        >
+            Отдельное окно
+        </a>
+
+        <button
+            id="broadcast-refresh"
+            type="button"
+            class="btn btn-outline-primary"
+        >
+            <i class="bi bi-arrow-clockwise"></i>
+            Обновить
+        </button>
+
+    </div>
+</div>
+
+<!-- СОЗДАНИЕ ЭФИРА -->
+
+<div class="broadcast-panel">
+
+    <h5 class="fw-bold mb-3">
+        Создать или открыть трансляцию
+    </h5>
+
+    <div class="broadcast-controls">
+
+        <select
+            id="broadcast-match-select"
+            class="form-select"
+        >
+            <option value="">
+                Загрузка матчей...
+            </option>
+        </select>
+
+        <button
+            id="broadcast-create"
+            type="button"
+            class="btn btn-success"
+        >
+            <i class="bi bi-plus-lg"></i>
+            Создать / открыть эфир
+        </button>
+
+    </div>
+
+</div>
+
+<!-- СТАТИСТИКА -->
+
+<div class="broadcast-stats">
+
+    <div class="broadcast-stat">
+        <div
+            id="broadcast-total"
+            class="broadcast-stat-number"
+        >0</div>
+
+        <div class="broadcast-stat-label">
+            Всего эфиров
+        </div>
+    </div>
+
+    <div class="broadcast-stat">
+        <div
+            id="broadcast-active"
+            class="broadcast-stat-number"
+        >0</div>
+
+        <div class="broadcast-stat-label">
+            Активные эфиры
+        </div>
+    </div>
+
+    <div class="broadcast-stat">
+        <div
+            id="broadcast-inactive"
+            class="broadcast-stat-number"
+        >0</div>
+
+        <div class="broadcast-stat-label">
+            Выключенные эфиры
+        </div>
+    </div>
+
+</div>
+
+<div
+    id="broadcast-message"
+    role="status"
+></div>
+
+<!-- СПИСОК -->
+
+<div class="broadcast-toolbar">
+
+    <h5 class="fw-bold mb-0">
+        Управляемые трансляции
+    </h5>
+
+    <input
+        id="broadcast-search"
+        type="search"
+        class="form-control"
+        placeholder="Поиск матча или турнира"
+    >
+
+</div>
+
+<div
+    id="broadcast-list"
+    class="broadcast-grid"
+>
+    <div class="broadcast-empty">
+        Загрузка трансляций...
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    "use strict";
+
+    const API = "/api/v1/broadcast";
+
+    const $ = id => document.getElementById(id);
+
+    let sessions = [];
+    let busy = false;
+    let loading = false;
+
+
+    function message(text, error = false) {
+        const target = $("broadcast-message");
+
+        target.textContent = text;
+
+        target.className = error
+            ? "text-danger"
+            : "text-success";
+    }
+
+
+    async function request(url, options = {}) {
+        const response = await fetch(url, {
+            ...options,
+            credentials: "same-origin",
+            cache: "no-store",
+            headers: {
+                Accept: "application/json",
+                ...(options.headers || {})
+            }
+        });
+
+        const data = await response.json()
+            .catch(() => ({}));
+
+        if (!response.ok) {
+            const detail = data.detail;
+
+            throw new Error(
+                typeof detail === "string"
+                    ? detail
+                    : detail?.message ||
+                      `HTTP ${response.status}`
+            );
+        }
+
+        return data;
+    }
+
+
+    function element(tag, className, text) {
+        const node = document.createElement(tag);
+
+        if (className) {
+            node.className = className;
+        }
+
+        if (text !== undefined) {
+            node.textContent = String(text);
+        }
+
+        return node;
+    }
+
+
+    function makeButton(text, className, handler) {
+        const node = element(
+            "button",
+            `btn ${className}`,
+            text
+        );
+
+        node.type = "button";
+        node.onclick = handler;
+
+        return node;
+    }
+
+
+    function makeLink(text, url, className) {
+        const node = element(
+            "a",
+            `btn ${className}`,
+            text
+        );
+
+        node.href = url;
+        node.target = "_blank";
+        node.rel = "noopener";
+
+        return node;
+    }
+
+
+    function formatDate(value) {
+        if (!value) {
+            return "Дата не указана";
+        }
+
+        const raw = String(value);
+
+        const match = raw.match(
+            /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/
+        );
+
+        // Наивную дату показываем как в базе.
+        if (
+            match &&
+            !/(Z|[+-]\d{2}:?\d{2})$/i.test(raw)
+        ) {
+            return (
+                `${match[3]}.${match[2]}.${match[1]} ` +
+                `${match[4]}:${match[5]}`
+            );
+        }
+
+        const date = new Date(raw);
+
+        if (Number.isNaN(date.getTime())) {
+            return raw;
+        }
+
+        return new Intl.DateTimeFormat(
+            "ru-RU",
+            {
+                day: "numeric",
+                month: "long",
+                hour: "2-digit",
+                minute: "2-digit",
+                timeZone: "Asia/Almaty"
+            }
+        ).format(date);
+    }
+
+
+    async function loadMatches() {
+        const select = $("broadcast-match-select");
+        const previous = select.value;
+
+        const matches = await request(
+            `${API}/control/matches?limit=500`
+        );
+
+        select.replaceChildren(
+            new Option("Выбери матч", "")
+        );
+
+        matches.forEach(match => {
+            select.add(
+                new Option(
+                    `${formatDate(match.date)} · ` +
+                    `${match.home} — ${match.away} · ` +
+                    `${match.tournament}`,
+                    String(match.id)
+                )
+            );
+        });
+
+        if (
+            [...select.options].some(
+                option => option.value === previous
+            )
+        ) {
+            select.value = previous;
+        }
+    }
+
+
+    function renderSessions() {
+        const root = $("broadcast-list");
+
+        root.replaceChildren();
+
+        const activeCount = sessions.filter(
+            session => session.is_active
+        ).length;
+
+        $("broadcast-total").textContent =
+            sessions.length;
+
+        $("broadcast-active").textContent =
+            activeCount;
+
+        $("broadcast-inactive").textContent =
+            sessions.length - activeCount;
+
+        const search = $("broadcast-search")
+            .value.trim().toLowerCase();
+
+        const visible = sessions.filter(session => {
+            const text = (
+                `${session.home} ${session.away} ` +
+                `${session.tournament} ${session.id}`
+            ).toLowerCase();
+
+            return text.includes(search);
+        });
+
+        if (!visible.length) {
+            root.append(
+                element(
+                    "div",
+                    "broadcast-empty",
+                    "Трансляций не найдено"
+                )
+            );
+
+            return;
+        }
+
+        visible.forEach(session => {
+            const card = element(
+                "article",
+                "broadcast-card" +
+                (session.is_active ? " active" : "")
+            );
+
+            const content = element(
+                "div",
+                "broadcast-card-main"
+            );
+
+            const top = element(
+                "div",
+                "broadcast-card-top"
+            );
+
+            top.append(
+                element(
+                    "div",
+                    "broadcast-tournament",
+                    `${session.tournament} · эфир #${session.id}`
+                ),
+
+                element(
+                    "span",
+                    "broadcast-status" +
+                    (session.is_active ? " active" : ""),
+                    session.is_active
+                        ? "● В ЭФИРЕ"
+                        : "● ВЫКЛЮЧЕН"
+                )
+            );
+
+            content.append(
+                top,
+
+                element(
+                    "div",
+                    "broadcast-teams",
+                    `${session.home} — ${session.away}`
+                ),
+
+                element(
+                    "div",
+                    "broadcast-score",
+                    `${session.home_score ?? "—"} : ` +
+                    `${session.away_score ?? "—"}`
+                ),
+
+                element(
+                    "div",
+                    "broadcast-details",
+                    `${formatDate(session.match_date)} · ` +
+                    `${session.status} · ${session.phase}`
+                )
+            );
+
+            const actions = element(
+                "div",
+                "broadcast-card-actions"
+            );
+
+            actions.append(
+                makeLink(
+                    "Панель оператора",
+                    `/broadcast/studio/${session.id}`,
+                    "btn-primary"
+                ),
+
+                makeLink(
+                    "Графика OBS",
+                    `/broadcast/overlay/${session.id}`,
+                    "btn-outline-secondary"
+                ),
+
+                makeButton(
+                    session.is_active
+                        ? "Отключить эфир"
+                        : "Активировать эфир",
+
+                    session.is_active
+                        ? "btn-outline-danger full"
+                        : "btn-success full",
+
+                    () => toggleSession(session)
+                ),
+
+                makeButton(
+                    "↻ Счёт из турнира",
+                    "btn-outline-secondary full",
+                    () => syncScore(session)
+                )
+            );
+
+            card.append(content, actions);
+            root.append(card);
+        });
+    }
+
+
+    async function loadSessions() {
+        if (loading || busy) return;
+
+        loading = true;
+
+        try {
+            sessions = await request(
+                `${API}/control/sessions?limit=500`
+            );
+
+            renderSessions();
+
+        } catch (error) {
+            message(error.message, true);
+
+        } finally {
+            loading = false;
+        }
+    }
+
+
+    async function runOperation(callback) {
+        if (busy) return;
+
+        busy = true;
+
+        try {
+            await callback();
+
+        } catch (error) {
+            message(error.message, true);
+
+        } finally {
+            busy = false;
+            await loadSessions();
+        }
+    }
+
+
+    async function toggleSession(session) {
+        await runOperation(async () => {
+            const state = await request(
+                `${API}/sessions/${session.id}`
+            );
+
+            const action = session.is_active
+                ? "DEACTIVATE"
+                : "ACTIVATE";
+
+            await request(
+                `${API}/sessions/${session.id}/commands`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        action,
+                        expected_revision: state.revision,
+                        payload: {}
+                    })
+                }
+            );
+
+            message(
+                session.is_active
+                    ? "Эфир отключён"
+                    : "Эфир активирован"
+            );
+        });
+    }
+
+
+    async function syncScore(session) {
+        await runOperation(async () => {
+            const state = await request(
+                `${API}/sessions/${session.id}`
+            );
+
+            await request(
+                `${API}/control/sessions/${session.id}/sync`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        expected_revision: state.revision
+                    })
+                }
+            );
+
+            message("Счёт синхронизирован");
+        });
+    }
+
+
+    $("broadcast-create").onclick = () => {
+        const matchId = Number(
+            $("broadcast-match-select").value
+        );
+
+        if (!matchId) {
+            return message("Выбери матч", true);
+        }
+
+        runOperation(async () => {
+            const session = await request(
+                `${API}/control/start`,
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        match_id: matchId
+                    })
+                }
+            );
+
+            message(
+                `Эфир #${session.id} создан или открыт`
+            );
+        });
+    };
+
+
+    $("broadcast-refresh").onclick = async () => {
+        try {
+            await Promise.all([
+                loadMatches(),
+                loadSessions()
+            ]);
+        } catch (error) {
+            message(error.message, true);
+        }
+    };
+
+
+    $("broadcast-search").oninput = renderSessions;
+
+
+    Promise.all([
+        loadMatches(),
+        loadSessions()
+    ]).catch(error => {
+        message(error.message, true);
+    });
+
+
+    setInterval(
+        loadSessions,
+        5000
+    );
+
+})();
+</script>
+{% endblock %}

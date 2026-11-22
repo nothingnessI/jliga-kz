@@ -1,125 +1,137 @@
 
-"""
-Web-маршруты J-LIGA Broadcast Studio.
-
-Страницы:
-    /broadcast/studio/{session_id}
-        Панель управления трансляцией.
-
-    /broadcast/overlay/{session_id}
-        Графический оверлей для vMix.
-
-Управление состоянием трансляции выполняется
-через защищённый Broadcast API.
-"""
-
 from pathlib import Path
 
-from fastapi import APIRouter, Request, Path as PathParam
+from fastapi import (
+    APIRouter,
+    Depends,
+    Path as PathParam,
+    Request,
+)
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
+from app.api.deps import get_current_admin
+from app.models.user import User
 
-# ==========================================
-# ROUTER
-# ==========================================
 
 router = APIRouter(
-    prefix="/broadcast",
-    tags=["Broadcast Studio"],
+    tags=["Broadcast Web"],
 )
-
-
-# ==========================================
-# PATHS
-# ==========================================
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 
-TEMPLATES_DIR = BASE_DIR / "templates"
-
-
-# ==========================================
-# JINJA2
-# ==========================================
-
 templates = Jinja2Templates(
-    directory=str(TEMPLATES_DIR),
+    directory=str(BASE_DIR / "templates"),
 )
 
 
-# ==========================================
-# BROADCAST STUDIO — OPERATOR PANEL
-# ==========================================
+# ============================================
+# ЦЕНТР ЭФИРОВ В АДМИН-ПАНЕЛИ
+# ============================================
 
 @router.get(
-    "/studio/{session_id}",
+    "/admin/broadcast",
+    response_class=HTMLResponse,
+    name="admin_broadcast",
+)
+async def admin_broadcast(
+    request: Request,
+    admin: User = Depends(get_current_admin),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="admin_broadcast.html",
+        context={
+            "user": admin,
+        },
+    )
+
+
+# ============================================
+# ОТДЕЛЬНЫЙ ЦЕНТР ТРАНСЛЯЦИЙ
+# ============================================
+
+@router.get(
+    "/broadcast/control",
+    response_class=HTMLResponse,
+    name="broadcast_control",
+)
+async def broadcast_control(
+    request: Request,
+    admin: User = Depends(get_current_admin),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="broadcast/control.html",
+        context={
+            "user": admin,
+        },
+    )
+
+
+# ============================================
+# ОПЕРАТОРСКАЯ ПАНЕЛЬ
+# ============================================
+
+@router.get(
+    "/broadcast/studio/{session_id}",
     response_class=HTMLResponse,
     name="broadcast_studio",
 )
 async def broadcast_studio(
     request: Request,
-    session_id: int = PathParam(
-        ...,
-        ge=1,
-        description="Идентификатор трансляции",
-    ),
+    session_id: int = PathParam(ge=1),
+    admin: User = Depends(get_current_admin),
 ):
-    """
-    Отображает панель оператора Broadcast Studio.
-
-    Панель позволяет:
-    - просматривать состояние матча;
-    - управлять счётом;
-    - управлять таймером;
-    - переключать периоды;
-    - управлять графикой.
-
-    Управляющие API-запросы требуют авторизации.
-    """
-
     return templates.TemplateResponse(
         request=request,
         name="broadcast/studio.html",
+        context={
+            "session_id": session_id,
+            "user": admin,
+        },
+    )
+
+
+# ============================================
+# ПУБЛИЧНЫЙ ОВЕРЛЕЙ OBS / vMix
+# ============================================
+
+@router.get(
+    "/broadcast/overlay/{session_id}",
+    response_class=HTMLResponse,
+    name="broadcast_overlay",
+)
+async def broadcast_overlay(
+    request: Request,
+    session_id: int = PathParam(ge=1),
+):
+    return templates.TemplateResponse(
+        request=request,
+        name="broadcast/overlay.html",
         context={
             "session_id": session_id,
         },
     )
 
 
-# ==========================================
-# BROADCAST OVERLAY — VMIX
-# ==========================================
+# ============================================
+# LIVE-ТАБЛО ТУРНИРА
+# ============================================
 
 @router.get(
-    "/overlay/{session_id}",
+    "/broadcast/tournament/{tournament_id}/live",
     response_class=HTMLResponse,
-    name="broadcast_overlay",
+    name="broadcast_tournament_live",
 )
-async def broadcast_overlay(
+async def broadcast_tournament_live(
     request: Request,
-    session_id: int = PathParam(
-        ...,
-        ge=1,
-        description="Идентификатор трансляции",
-    ),
+    tournament_id: int = PathParam(ge=1),
 ):
-    """
-    Отображает графический оверлей трансляции.
-
-    Предназначен для использования в:
-    - vMix Browser Input;
-    - OBS Browser Source;
-    - браузере для предпросмотра.
-
-    Оверлей получает состояние матча через
-    Broadcast API и WebSocket.
-    """
-
     return templates.TemplateResponse(
         request=request,
-        name="broadcast/overlay.html",
+        name="broadcast/tournament_live.html",
         context={
-            "session_id": session_id,
+            "tournament_id": tournament_id,
         },
     )
