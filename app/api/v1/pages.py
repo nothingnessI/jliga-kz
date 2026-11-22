@@ -49,6 +49,15 @@ from app.services.stats_recalc import StatsRecalculator
 from app.services.schedule_generator import generate_round_robin
 from app.services.registration_approval import approve_registration
 from sqlalchemy.exc import IntegrityError
+from urllib.parse import urlsplit
+from sqlalchemy.orm import selectinload
+from sqlalchemy import func, select, or_, desc, case, update, delete
+from app.models.match import Match
+from app.models.tournament import Tournament
+from app.models.match_event import MatchEvent
+from app.models.tournament_standing import TournamentStanding
+from app.models.enums import MatchStage
+from app.services.standings import StandingsService
 
 
 router = APIRouter()
@@ -67,7 +76,7 @@ def calculate_standings_from_matches(matches, teams, is_cup=False):
             "draws": 0, "losses": 0, "goals_for": 0, "goals_against": 0, "points": 0
         }
     for m in matches:
-        if m.home_score is None or m.away_score is None:
+        if m.status != MatchStatus.FINISHED or m.home_score is None or m.away_score is None:
             continue
         h = stats.get(m.home_team_id)
         a = stats.get(m.away_team_id)
@@ -217,20 +226,39 @@ async def get_admin_from_cookie(request: Request, db: AsyncSession):
 
 
 async def save_upload_file(upload_file: UploadFile, folder: str) -> str | None:
-    if not upload_file or not upload_file.filename:
+    """Store images safely, rejecting path traversal, oversized and unsupported uploads."""
+    if upload_file is None or not upload_file.filename:
         return None
-
-    ext = Path(upload_file.filename).suffix
-    filename = f"{uuid.uuid4().hex}{ext}"
-
+    allowed_folders = {"teams", "players", "coaches", "news", "media", "partners", "stadiums", "tournaments", "albums", "photos", "videos", "logos"}
+    if folder not in allowed_folders:
+        raise HTTPException(422, "Недопустимая папка загрузки")
+    suffix = Path(upload_file.filename).suffix.lower()
+    allowed_types = {".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp", ".gif": "image/gif"}
+    if suffix not in allowed_types:
+        raise HTTPException(422, "Разрешены только JPG, PNG, WebP и GIF")
+    if upload_file.content_type and upload_file.content_type not in (allowed_types[suffix], "application/octet-stream"):
+        raise HTTPException(422, "Тип файла не соответствует расширению")
     upload_dir = BASE_DIR / "static" / "uploads" / folder
     upload_dir.mkdir(parents=True, exist_ok=True)
-
+    filename = f"{uuid.uuid4().hex}{suffix}"
     file_path = upload_dir / filename
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(upload_file.file, buffer)
+    total = 0
+    try:
+        with file_path.open("wb") as output:
+            while chunk := await upload_file.read(1024 * 1024):
+                total += len(chunk)
+                if total > 10 * 1024 * 1024:
+                    raise HTTPException(413, "Размер файла превышает 10 МБ")
+                output.write(chunk)
+        if total == 0:
+            raise HTTPException(422, "Пустой файл")
+        return f"/static/uploads/{folder}/{filename}"
+    except Exception:
+        file_path.unlink(missing_ok=True)
+        raise
+    finally:
+        await upload_file.close()
 
-    return f"/static/uploads/{folder}/{filename}"
 
 
 from sqlalchemy import select, or_, desc, case, update, delete
@@ -302,7 +330,7 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
 
     for m in upcoming_matches:
         if m.match_date:
-            m.match_date = m.match_date.astimezone(local_tz)
+            m.local_match_date = to_local_time(m.match_date)
 
     standings = []
     top_scorers = []
@@ -327,7 +355,7 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
             }
 
         for m in matches_for_table:
-            if m.home_score is None or m.away_score is None: continue
+            if m.status != MatchStatus.FINISHED or m.home_score is None or m.away_score is None: continue
             h = standings_dict.get(m.home_team_id)
             a = standings_dict.get(m.away_team_id)
             if not h or not a: continue
@@ -434,7 +462,7 @@ async def home_page(request: Request, tournament_id: int = None, db: AsyncSessio
             "away_logo": m.away_team.logo_url or f"https://ui-avatars.com/api/?name={m.away_team.name}&background=0f2537&color=fff&size=64&rounded=true",
             "home_penalty": m.home_penalty, "away_penalty": m.away_penalty,
             "stage_name": m.stage_name, "tech_loss": m.tech_loss,
-            "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
+            "date": to_local_time(m.match_date).strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
             "stadium": m.stadium or 'Стадион TBA', "events": events_list,
         }
 
@@ -538,11 +566,11 @@ async def matches_page(
     matches = (await db.execute(stmt)).scalars().all()
 
     for m in matches:
-        m.match_date = to_local_time(m.match_date)
+        m.local_match_date = to_local_time(m.match_date)
 
     for m in matches:
         if m.match_date:
-            m.match_date = m.match_date.astimezone(local_tz)
+            m.local_match_date = to_local_time(m.match_date)
 
     total_pages = (total_matches + limit - 1) // limit if total_matches > 0 else 1
 
@@ -579,7 +607,7 @@ async def matches_page(
             "away_logo": m.away_team.logo_url or f"https://ui-avatars.com/api/?name={m.away_team.name}&background=0f2537&color=fff&size=64&rounded=true",
             "home_penalty": m.home_penalty, "away_penalty": m.away_penalty,
             "stage_name": m.stage_name, "tech_loss": m.tech_loss,
-            "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
+            "date": to_local_time(m.match_date).strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
             "stadium": m.stadium or 'Стадион TBA', "events": events_list,
         }
 
@@ -657,7 +685,7 @@ def calculate_standings(matches: list, teams: list, is_cup: bool = False) -> lis
         }
 
     for m in matches:
-        if m.home_score is None or m.away_score is None:
+        if m.status != MatchStatus.FINISHED or m.home_score is None or m.away_score is None:
             continue
 
         h = stats.get(m.home_team_id)
@@ -752,7 +780,7 @@ async def tournament_page(
         }
 
     for m in matches_raw:
-        if m.home_score is None or m.away_score is None:
+        if m.status != MatchStatus.FINISHED or m.home_score is None or m.away_score is None:
             continue
 
         h = standings_dict.get(m.home_team_id)
@@ -799,7 +827,7 @@ async def tournament_page(
     teams_list = [s.team for s in standings]
 
     for m in matches_raw:
-        m.match_date = to_local_time(m.match_date)
+        m.local_match_date = to_local_time(m.match_date)
 
     fallback_date = datetime.min.replace(tzinfo=timezone.utc)
     matches = sorted(
@@ -913,7 +941,7 @@ async def tournament_page(
             "away_penalty": m.away_penalty,
             "stage_name": m.stage_name,
             "tech_loss": m.tech_loss,
-            "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
+            "date": to_local_time(m.match_date).strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
             "stadium": m.stadium or 'Стадион TBA',
             "events": events_list,
             "status": m.status.value if hasattr(m.status, 'value') else str(m.status)
@@ -2654,7 +2682,7 @@ async def admin_matches_list(
     matches = (await db.execute(stmt)).unique().scalars().all()
 
     for m in matches:
-        m.match_date = to_local_time(m.match_date)
+        m.local_match_date = to_local_time(m.match_date)
 
     tournaments = (await db.execute(select(Tournament).order_by(Tournament.name))).scalars().all()
 
@@ -4120,35 +4148,39 @@ async def admin_disqualification_delete(disq_id: int, request: Request, db: Asyn
 
 @router.post("/admin/matches/{match_id}/finish")
 async def admin_match_finish(
-        match_id: int, request: Request,
-        home_penalty: int = Form(None), away_penalty: int = Form(None),
-        tech_loss_team_id: int = Form(None),  # 0 = нет ТП, иначе ID команды
-        db: AsyncSession = Depends(get_db)
+    match_id: int, request: Request,
+    home_penalty: int = Form(None), away_penalty: int = Form(None),
+    tech_loss_team_id: int = Form(None),
+    db: AsyncSession = Depends(get_db),
 ):
     user = await get_admin_from_cookie(request, db)
-    if isinstance(user, RedirectResponse): return user
-
-    match = await db.get(Match, match_id)
-    if not match: return RedirectResponse(url="/admin/matches", status_code=303)
-
-    match.status = MatchStatus.FINISHED
+    if isinstance(user, RedirectResponse):
+        return user
+    match = await db.scalar(select(Match).where(Match.id == match_id).with_for_update())
+    if match is None:
+        raise HTTPException(404, "Матч не найден")
+    if match.status == MatchStatus.FINISHED:
+        return RedirectResponse(url="/admin/matches", status_code=303)
+    if (home_penalty is None) != (away_penalty is None):
+        raise HTTPException(422, "Укажите оба результата серии пенальти")
+    if any(v is not None and v < 0 for v in (home_penalty, away_penalty)):
+        raise HTTPException(422, "Счёт серии пенальти не может быть отрицательным")
+    if tech_loss_team_id and tech_loss_team_id not in (match.home_team_id, match.away_team_id):
+        raise HTTPException(422, "Команда технического поражения не участвует в матче")
+    if tech_loss_team_id:
+        match.tech_loss = True
+        match.home_score = 0 if tech_loss_team_id == match.home_team_id else 3
+        match.away_score = 3 if tech_loss_team_id == match.home_team_id else 0
+    elif match.home_score is None or match.away_score is None:
+        raise HTTPException(422, "Перед завершением матча укажите счёт")
     match.home_penalty = home_penalty
     match.away_penalty = away_penalty
-
-    if tech_loss_team_id and tech_loss_team_id > 0:
-        match.tech_loss = True
-        if tech_loss_team_id == match.home_team_id:
-            match.home_score = 0;
-            match.away_score = 3
-        else:
-            match.home_score = 3;
-            match.away_score = 0
-
-    await db.commit()
-
+    match.status = MatchStatus.FINISHED
+    await db.flush()
     await StatsRecalculator.recalculate_all(db, match.tournament_id)
-
+    await db.commit()
     return RedirectResponse(url="/admin/matches", status_code=303)
+
 
 
 # Публичные страницы
@@ -4582,7 +4614,7 @@ def build_matches_dict(matches):
             "away_logo": m.away_team.logo_url or f"https://ui-avatars.com/api/?name={m.away_team.name}&background=0f2537&color=fff&size=64&rounded=true",
             "home_penalty": m.home_penalty, "away_penalty": m.away_penalty,
             "stage_name": m.stage_name, "tech_loss": m.tech_loss,
-            "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
+            "date": to_local_time(m.match_date).strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
             "stadium": m.stadium or 'Стадион TBA', "events": events_list,
         }
     return matches_dict
@@ -4652,63 +4684,67 @@ async def tournament_full_stats_page(
 
 @router.post("/admin/matches/{match_id}/quick-update")
 async def admin_matches_quick_update(
-        match_id: int,
-        request: Request,
-        match_date: str = Form(None),
-        home_score: str = Form(None),
-        away_score: str = Form(None),
-        home_penalty: str = Form(None),
-        away_penalty: str = Form(None),
-        round: str = Form(None),
-        db: AsyncSession = Depends(get_db)
+    match_id: int,
+    request: Request,
+    match_date: str = Form(None),
+    home_score: str = Form(None),
+    away_score: str = Form(None),
+    home_penalty: str = Form(None),
+    away_penalty: str = Form(None),
+    round: str = Form(None),
+    db: AsyncSession = Depends(get_db),
 ):
     user = await get_admin_from_cookie(request, db)
-    if isinstance(user, RedirectResponse): return user
-
-    match = await db.get(Match, match_id)
-    if not match:
-        raise HTTPException(status_code=404, detail="Матч не найден")
-
-    old_home_score = match.home_score
-    old_away_score = match.away_score
-
-    if match_date:
+    if isinstance(user, RedirectResponse):
+        return user
+    match = await db.scalar(select(Match).where(Match.id == match_id).with_for_update())
+    if match is None:
+        raise HTTPException(404, "Матч не найден")
+    previous = (match.home_score, match.away_score, match.status)
+    if match_date is not None:
+        if match_date.strip():
+            try:
+                from zoneinfo import ZoneInfo
+                local_tz = ZoneInfo("Asia/Almaty")
+                local_dt = datetime.strptime(match_date, "%Y-%m-%dT%H:%M")
+                match.match_date = local_dt.replace(tzinfo=local_tz).astimezone(timezone.utc)
+            except ValueError as exc:
+                raise HTTPException(422, "Неверная дата матча") from exc
+        else:
+            match.match_date = None
+    def parse_nonnegative(raw, label):
+        if raw is None or not raw.strip():
+            return None
         try:
-            from zoneinfo import ZoneInfo
-            local_tz = ZoneInfo("Asia/Almaty")
-        except Exception:
-            local_tz = timezone(timedelta(hours=5))
-
-        try:
-            local_dt = datetime.strptime(match_date, "%Y-%m-%dT%H:%M")
-            match.match_date = local_dt.replace(tzinfo=local_tz).astimezone(timezone.utc)
-        except ValueError:
-            pass
-    else:
-        match.match_date = None
-
-    match.home_score = int(home_score) if home_score and home_score.strip() else None
-    match.away_score = int(away_score) if away_score and away_score.strip() else None
-    match.home_penalty = int(home_penalty) if home_penalty and home_penalty.strip() else None
-    match.away_penalty = int(away_penalty) if away_penalty and away_penalty.strip() else None
-    match.round = int(round) if round and round.strip() else None
-
-    if match.home_score is not None and match.away_score is not None:
-        if match.status != MatchStatus.FINISHED:
-            match.status = MatchStatus.FINISHED
-    else:
-        if match.status == MatchStatus.FINISHED:
-            match.status = MatchStatus.SCHEDULED
-
-    db.add(match)
-    await db.commit()
-
-    if old_home_score != match.home_score or old_away_score != match.away_score:
-        from app.services.stats_recalc import StatsRecalculator
+            value = int(raw)
+        except ValueError as exc:
+            raise HTTPException(422, f"Некорректное поле: {label}") from exc
+        if value < 0:
+            raise HTTPException(422, f"{label} не может быть отрицательным")
+        return value
+    match.home_score = parse_nonnegative(home_score, "Голы хозяев")
+    match.away_score = parse_nonnegative(away_score, "Голы гостей")
+    match.home_penalty = parse_nonnegative(home_penalty, "Пенальти хозяев")
+    match.away_penalty = parse_nonnegative(away_penalty, "Пенальти гостей")
+    match.round = parse_nonnegative(round, "Тур")
+    if (match.home_score is None) != (match.away_score is None):
+        raise HTTPException(422, "Нужно указать оба счёта матча")
+    if (match.home_penalty is None) != (match.away_penalty is None):
+        raise HTTPException(422, "Нужно указать оба результата серии пенальти")
+    if match.home_score is not None:
+        match.status = MatchStatus.FINISHED
+    elif match.status == MatchStatus.FINISHED:
+        match.status = MatchStatus.SCHEDULED
+    await db.flush()
+    if previous != (match.home_score, match.away_score, match.status):
         await StatsRecalculator.recalculate_all(db, match.tournament_id)
-
+    await db.commit()
     referer = request.headers.get("referer", "/admin/matches")
+    # Do not redirect to arbitrary external domains.
+    if not referer.startswith("/") or referer.startswith("//"):
+        referer = "/admin/matches"
     return RedirectResponse(url=referer, status_code=303)
+
 
 
 # Турниры
@@ -4723,55 +4759,61 @@ async def admin_generate_schedule(
     admin = await get_admin_from_cookie(request, db)
     if isinstance(admin, RedirectResponse):
         return admin
-
+    if not 1 <= circles <= 4:
+        raise HTTPException(422, "Количество кругов должно быть от 1 до 4")
     tournament = await crud_tournament.get(db, tid)
-    if not tournament:
+    if tournament is None:
         raise HTTPException(404, "Турнир не найден")
-
-    await db.execute(
-        delete(Match).where(
-            Match.tournament_id == tid,
-            Match.status == MatchStatus.SCHEDULED,
-        )
-    )
-
-    tteams = (await db.execute(
+    tteams = (await db.scalars(
         select(TournamentTeam).where(TournamentTeam.tournament_id == tid)
-    )).scalars().all()
-
+    )).all()
     if len(tteams) < 2:
-        return RedirectResponse(
-            url=f"/admin/tournaments/{tid}?msg=not_enough_teams",
-            status_code=303,
-        )
-
-    groups: dict = {}
+        return RedirectResponse(url=f"/admin/tournaments/{tid}?msg=not_enough_teams", status_code=303)
+    groups = {}
     for tt in tteams:
         groups.setdefault(tt.group_name or "", []).append(tt.team_id)
-
-    total = 0
-    for group_name, team_ids in groups.items():
-        if len(team_ids) < 2:
-            continue
-        rounds = generate_round_robin(team_ids, circles=circles)
-        for r_idx, pairs in enumerate(rounds, start=1):
-            for home_id, away_id in pairs:
-                db.add(Match(
-                    tournament_id=tid,
-                    home_team_id=home_id,
-                    away_team_id=away_id,
-                    round=r_idx,
-                    group_name=group_name or None,
-                    stage=MatchStage.GROUP if group_name else None,
-                    status=MatchStatus.SCHEDULED,
-                ))
-                total += 1
-
+    from app.services.schedule_generator import generate_for_tournament
+    # Validate and generate before deleting any existing schedule.
+    has_groups = any(bool(tt.group_name) for tt in tteams)
+    if has_groups:
+        pairs = generate_for_tournament(
+            all_team_ids=[tt.team_id for tt in tteams], circles=circles,
+            groups_info={name or "Без группы": ids for name, ids in groups.items()},
+        )
+    else:
+        pairs = generate_for_tournament(
+            all_team_ids=[tt.team_id for tt in tteams], circles=circles
+        )
+    if not pairs:
+        raise HTTPException(422, "Не удалось сформировать календарь")
+    # Prevent deleting scheduled matches with attached events.
+    scheduled_ids = select(Match.id).where(
+        Match.tournament_id == tid, Match.status == MatchStatus.SCHEDULED
+    )
+    events_count = await db.scalar(
+        select(func.count(MatchEvent.id)).where(MatchEvent.match_id.in_(scheduled_ids))
+    )
+    if events_count:
+        raise HTTPException(409, "У запланированных матчей есть события. Удаление запрещено")
+    await db.execute(delete(Match).where(
+        Match.tournament_id == tid, Match.status == MatchStatus.SCHEDULED
+    ))
+    for pair in pairs:
+        db.add(Match(
+            tournament_id=tid,
+            home_team_id=pair.home_team_id,
+            away_team_id=pair.away_team_id,
+            round=pair.round,
+            group_name=pair.group_name,
+            stage=MatchStage.GROUP if pair.group_name else None,
+            status=MatchStatus.SCHEDULED,
+        ))
     await db.commit()
     return RedirectResponse(
-        url=f"/admin/tournaments/{tid}?msg=schedule_generated&count={total}",
+        url=f"/admin/tournaments/{tid}?msg=schedule_generated&count={len(pairs)}",
         status_code=303,
     )
+
 
 
 async def _all_tournaments_for_select(db: AsyncSession):
@@ -5929,4 +5971,6 @@ async def admin_delete_registration_player(
         application_id,
         "Игрок удалён из заявки",
     )
+
+
 

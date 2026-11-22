@@ -2,15 +2,14 @@
 import asyncio
 import os
 import uuid
-
+from datetime import datetime, timezone
 from pathlib import Path
 
+import jwt
 import pytest
 import pytest_asyncio
 
-from dotenv import load_dotenv
-
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
@@ -23,36 +22,44 @@ from sqlalchemy.pool import NullPool
 
 
 # ============================================================
-# TEST ENVIRONMENT
+# 1. TEST CONFIGURATION
 # ============================================================
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
-load_dotenv(
-    PROJECT_ROOT / ".env.test",
-    override=True,
+TEST_DB_URL = (
+    "postgresql+asyncpg://"
+    "postgres:1234@localhost:5432/jliga_test"
 )
 
-# Важно: переменные окружения должны быть установлены
-# до импорта настроек приложения.
-os.environ["DB_HOST"] = os.environ.get(
-    "TEST_DB_HOST",
-    "localhost",
-)
-os.environ["DB_PORT"] = os.environ.get(
-    "TEST_DB_PORT",
-    "5432",
-)
-os.environ["DB_NAME"] = "jliga_test"
+TEST_DB_NAME = "jliga_test"
+
+ADMIN_EMAIL = "admin@example.com"
+ADMIN_PASSWORD = "adminpass123"
+
+COACH_PASSWORD = "CoachPassword123!"
+
+
+# Важно: задаём тестовую конфигурацию до импорта app.
+# Это предотвращает подключение приложения к рабочей БД.
+
+os.environ["DB_HOST"] = "localhost"
+os.environ["DB_PORT"] = "5432"
+os.environ["DB_NAME"] = TEST_DB_NAME
+os.environ["DB_USER"] = "postgres"
+os.environ["DB_PASSWORD"] = "1234"
 
 
 # ============================================================
-# PROJECT IMPORTS
+# 2. PROJECT IMPORTS
 # ============================================================
 
 from app.core.config import settings
 from app.core.database import Base
-from app.core.security import get_password_hash
+from app.core.security import (
+    ALGORITHM,
+    get_password_hash,
+)
 
 from app.db.session import get_db
 from app.main import app as fastapi_app
@@ -78,82 +85,85 @@ from app.models.registration import (
     RegistrationStatus,
 )
 
+from app.models.broadcast import (
+    BroadcastSession,
+    BroadcastPhase,
+    BroadcastGraphicType,
+)
+
+# Регистрируем все ORM-модели в Base.metadata.
 import app.models
 
 
 # ============================================================
-# CONSTANTS
-# ============================================================
-
-ADMIN_EMAIL = "admin@example.com"
-ADMIN_PASSWORD = "adminpass123"
-
-COACH_PASSWORD = "CoachPassword123!"
-
-TEST_DB_URL = (
-    "postgresql+asyncpg://"
-    f"{settings.DB_USER}:"
-    f"{settings.DB_PASSWORD}@"
-    f"{settings.DB_HOST}:"
-    f"{settings.DB_PORT}/"
-    f"{settings.DB_NAME}"
-)
-
-
-# ============================================================
-# DATABASE SAFETY
+# 3. DATABASE SAFETY
 # ============================================================
 
 def validate_test_database():
     """
-    Запрещает тестам использовать любую БД,
-    кроме jliga_test.
+    Запрещает использовать любую БД,
+    кроме выделенной jliga_test.
     """
 
-    database_name = make_url(
-        TEST_DB_URL
-    ).database
+    url = make_url(TEST_DB_URL)
 
-    if database_name != "jliga_test":
+    if url.drivername != "postgresql+asyncpg":
         raise RuntimeError(
-            "ОПАСНО: тесты пытаются использовать "
-            f"базу {database_name!r}. "
-            "Разрешена только jliga_test."
+            "Тесты должны использовать PostgreSQL + asyncpg."
+        )
+
+    if url.database != TEST_DB_NAME:
+        raise RuntimeError(
+            f"Недопустимая тестовая база: {url.database}"
+        )
+
+    if url.host not in ("localhost", "127.0.0.1"):
+        raise RuntimeError(
+            "Тестовая PostgreSQL должна быть локальной."
+        )
+
+    if str(settings.DB_NAME) != TEST_DB_NAME:
+        raise RuntimeError(
+            "Настройки приложения указывают не на jliga_test."
         )
 
 
 validate_test_database()
 
 
-async def _verify_database_identity(connection):
+async def verify_database_identity(connection):
     """
-    Дополнительно проверяем имя базы на стороне PostgreSQL.
+    Проверяем фактическую БД на сервере PostgreSQL.
     """
 
-    database_name = await connection.scalar(
+    actual_name = await connection.scalar(
         text("SELECT current_database()")
     )
 
-    if database_name != "jliga_test":
+    if actual_name != TEST_DB_NAME:
         raise RuntimeError(
-            "Подключение не к тестовой базе: "
-            f"{database_name}"
+            "Операция с БД запрещена: "
+            f"подключение установлено к {actual_name!r}."
         )
 
 
 # ============================================================
-# DATABASE SCHEMA INITIALIZATION
+# 4. DATABASE INITIALIZATION
 # ============================================================
 
-def _reset_schema_sync():
+def reset_schema_sync():
     """
-    Пересоздаёт public только в jliga_test.
+    Пересоздаёт ORM-таблицы в jliga_test.
 
-    Используем для изолированной тестовой БД.
-    Не запускать на БД с важными данными.
+    Не удаляет схему public целиком.
+    Выполняется один раз за тестовую сессию.
+
+    ВНИМАНИЕ: данные в ORM-таблицах удаляются.
     """
 
-    async def _run():
+    validate_test_database()
+
+    async def run():
         engine = create_async_engine(
             TEST_DB_URL,
             echo=False,
@@ -162,19 +172,10 @@ def _reset_schema_sync():
 
         try:
             async with engine.begin() as connection:
+                await verify_database_identity(connection)
 
-                await _verify_database_identity(
-                    connection
-                )
-
-                await connection.execute(
-                    text(
-                        "DROP SCHEMA IF EXISTS public CASCADE"
-                    )
-                )
-
-                await connection.execute(
-                    text("CREATE SCHEMA public")
+                await connection.run_sync(
+                    Base.metadata.drop_all
                 )
 
                 await connection.run_sync(
@@ -184,57 +185,53 @@ def _reset_schema_sync():
         finally:
             await engine.dispose()
 
-    asyncio.run(_run())
+    asyncio.run(run())
 
 
-@pytest.fixture(
-    scope="session",
-    autouse=True,
-)
-def _init_schema():
+@pytest.fixture(scope="session")
+def database_schema():
     """
-    Один раз пересоздаём схему перед тестовой сессией.
+    Подготовка БД только для тестов,
+    использующих PostgreSQL.
     """
 
-    _reset_schema_sync()
+    reset_schema_sync()
     yield
 
 
 # ============================================================
-# DATABASE ENGINE
+# 5. ASYNC DATABASE ENGINE
 # ============================================================
 
 @pytest_asyncio.fixture
-async def engine():
-    engine = create_async_engine(
+async def engine(database_schema):
+    test_engine = create_async_engine(
         TEST_DB_URL,
         echo=False,
         poolclass=NullPool,
     )
 
     try:
-        yield engine
+        yield test_engine
+
     finally:
-        await engine.dispose()
+        await test_engine.dispose()
 
 
 # ============================================================
-# DATABASE CLEANUP
+# 6. CLEAN DATABASE
 # ============================================================
 
-@pytest_asyncio.fixture(autouse=True)
-async def _truncate_between_tests(engine):
+@pytest_asyncio.fixture
+async def clean_database(engine):
     """
-    Очищает таблицы перед каждым тестом.
+    Очищает таблицы перед каждым DB-тестом.
 
-    Существующие тесты получают чистую БД.
+    Unit-тесты без PostgreSQL не затрагиваются.
     """
 
     async with engine.begin() as connection:
-
-        await _verify_database_identity(
-            connection
-        )
+        await verify_database_identity(connection)
 
         result = await connection.execute(
             text(
@@ -251,7 +248,6 @@ async def _truncate_between_tests(engine):
         ]
 
         if tables:
-            # Имена получены из каталога PostgreSQL.
             quoted_tables = ", ".join(
                 '"public"."'
                 + table.replace('"', '""')
@@ -270,11 +266,11 @@ async def _truncate_between_tests(engine):
 
 
 # ============================================================
-# SESSION FACTORY
+# 7. SESSION FACTORY
 # ============================================================
 
 @pytest_asyncio.fixture
-async def session_factory(engine):
+async def session_factory(engine, clean_database):
     return async_sessionmaker(
         bind=engine,
         expire_on_commit=False,
@@ -283,7 +279,7 @@ async def session_factory(engine):
 
 
 # ============================================================
-# DATABASE SESSION
+# 8. DATABASE SESSION
 # ============================================================
 
 @pytest_asyncio.fixture
@@ -291,23 +287,30 @@ async def db(session_factory):
     async with session_factory() as session:
         try:
             yield session
+
         finally:
             await session.rollback()
 
 
 # ============================================================
-# HTTP CLIENT
+# 9. FASTAPI TEST CLIENT
 # ============================================================
 
 @pytest_asyncio.fixture
 async def client(session_factory):
     """
-    HTTP-клиент для тестирования FastAPI.
+    AsyncClient с подменённой зависимостью get_db.
+
+    Все запросы работают с jliga_test.
     """
 
     async def override_get_db():
         async with session_factory() as session:
-            yield session
+            try:
+                yield session
+
+            finally:
+                await session.rollback()
 
     previous_overrides = dict(
         fastapi_app.dependency_overrides
@@ -318,7 +321,7 @@ async def client(session_factory):
     )
 
     transport = ASGITransport(
-        app=fastapi_app,
+        app=fastapi_app
     )
 
     try:
@@ -331,13 +334,14 @@ async def client(session_factory):
 
     finally:
         fastapi_app.dependency_overrides.clear()
+
         fastapi_app.dependency_overrides.update(
             previous_overrides
         )
 
 
 # ============================================================
-# ADMIN USER
+# 10. ADMIN USER
 # ============================================================
 
 @pytest_asyncio.fixture
@@ -362,11 +366,14 @@ async def admin_user(db):
 
 
 # ============================================================
-# ADMIN CLIENT
+# 11. ADMIN WEB CLIENT
 # ============================================================
 
 @pytest_asyncio.fixture
 async def admin_client(client, admin_user):
+    """
+    Авторизация администратора через web-login.
+    """
 
     response = await client.post(
         "/web-login",
@@ -385,13 +392,68 @@ async def admin_client(client, admin_user):
 
 
 # ============================================================
-# COACH DATA
+# 12. ADMIN JWT TOKEN
+# ============================================================
+
+@pytest_asyncio.fixture
+async def admin_token(admin_user):
+    """
+    JWT администратора для REST API.
+    """
+
+    payload = {
+        "sub": admin_user.email,
+    }
+
+    return jwt.encode(
+        payload,
+        settings.SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+
+
+# ============================================================
+# 13. ADMIN API CLIENT
+# ============================================================
+
+@pytest_asyncio.fixture
+async def admin_api_client(client, admin_token):
+    """
+    Авторизованный API-клиент администратора.
+    """
+
+    previous_auth = client.headers.get(
+        "Authorization"
+    )
+
+    client.headers["Authorization"] = (
+        f"Bearer {admin_token}"
+    )
+
+    try:
+        yield client
+
+    finally:
+        if previous_auth is None:
+            client.headers.pop(
+                "Authorization",
+                None,
+            )
+
+        else:
+            client.headers["Authorization"] = (
+                previous_auth
+            )
+
+
+# ============================================================
+# 14. COACH CREDENTIALS
 # ============================================================
 
 @pytest.fixture
 def coach_credentials():
     """
-    Уникальный номер для каждого теста.
+    Уникальные данные тренера.
     """
 
     unique_digits = str(
@@ -407,7 +469,7 @@ def coach_credentials():
 
 
 # ============================================================
-# COACH REGISTRATION
+# 15. COACH USER
 # ============================================================
 
 @pytest_asyncio.fixture
@@ -416,6 +478,10 @@ async def coach_user(
     db,
     coach_credentials,
 ):
+    """
+    Регистрация тренера через API.
+    """
+
     response = await client.post(
         "/api/v1/coach/register",
         json=coach_credentials,
@@ -439,7 +505,7 @@ async def coach_user(
 
 
 # ============================================================
-# AUTHENTICATED COACH CLIENT
+# 16. COACH CLIENT
 # ============================================================
 
 @pytest_asyncio.fixture
@@ -448,6 +514,10 @@ async def coach_client(
     coach_user,
     coach_credentials,
 ):
+    """
+    Авторизованный API-клиент тренера.
+    """
+
     response = await client.post(
         "/api/v1/coach/login",
         json={
@@ -464,29 +534,32 @@ async def coach_client(
         "access_token"
     ]
 
-    client.headers.update({
-        "Authorization": f"Bearer {access_token}"
-    })
-
-    yield client
-
-    client.headers.pop(
-        "Authorization",
-        None,
+    client.headers["Authorization"] = (
+        f"Bearer {access_token}"
     )
+
+    try:
+        yield client
+
+    finally:
+        client.headers.pop(
+            "Authorization",
+            None,
+        )
 
 
 # ============================================================
-# BASIC SEED
+# 17. BASIC TEST DATA
 # ============================================================
 
 @pytest_asyncio.fixture
 async def seed_basic(db):
     """
-    Четыре команды, один турнир,
-    четыре игрока и один матч.
-
-    Сохраняем структуру твоей старой фикстуры.
+    Создаёт:
+    - 4 команды
+    - 1 турнир
+    - 4 игроков
+    - 1 матч
     """
 
     teams = [
@@ -525,7 +598,6 @@ async def seed_basic(db):
     players = []
 
     for index, team in enumerate(teams):
-
         player = Player(
             first_name=f"First{index}",
             last_name=f"Last{index}",
@@ -575,13 +647,13 @@ async def seed_basic(db):
 
 
 # ============================================================
-# APPLICATION PAYLOAD
+# 18. APPLICATION PAYLOAD
 # ============================================================
 
 @pytest.fixture
 def application_payload(seed_basic):
     """
-    Готовая заявка для API-тестов.
+    Данные заявки команды.
     """
 
     team = seed_basic["teams"][0]
@@ -608,3 +680,52 @@ def application_payload(seed_basic):
             }
         ],
     }
+
+
+# ============================================================
+# 19. BROADCAST SESSION (UNIT TESTS)
+# ============================================================
+
+@pytest.fixture
+def broadcast_session():
+    """
+    ORM-объект без обращения к PostgreSQL.
+
+    Используется тестами:
+    tests/broadcast/test_clock.py
+    tests/broadcast/test_commands.py
+    """
+
+    now = datetime.now(timezone.utc)
+
+    return BroadcastSession(
+        id=1,
+        match_id=100,
+        is_active=True,
+        phase=BroadcastPhase.FIRST_HALF.value,
+        home_score=0,
+        away_score=0,
+        elapsed_ms=0,
+        clock_running=False,
+        clock_started_at=None,
+        added_time_minutes=0,
+        scoreboard_visible=True,
+        active_graphic=BroadcastGraphicType.NONE.value,
+        graphic_payload={},
+        revision=0,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+# ============================================================
+# 20. BROADCAST DATABASE SESSION
+# ============================================================
+
+@pytest_asyncio.fixture
+async def broadcast_db_session(db):
+    """
+    Реальная PostgreSQL-сессия для Broadcast Studio.
+    """
+
+    yield db

@@ -20,6 +20,7 @@ from app.models.registration import (
     RegistrationPlayer,
     RegistrationStatus,
 )
+from app.models.broadcast import BroadcastCommand, BroadcastSession
 
 
 __all__ = [
@@ -44,4 +45,6 @@ __all__ = [
     "Registration",
     "RegistrationPlayer",
     "RegistrationStatus",
+    "BroadcastCommand",
+    "BroadcastSession",
 ]

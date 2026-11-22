@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Импортируем наши роутеры
 from app.api.v1.api import api_router
 from app.api.v1 import pages
+from app.web.broadcast import router as broadcast_overlay_router
 
 # Определяем базовую директорию (папка app)
 BASE_DIR = Path(__file__).resolve().parent
@@ -39,6 +40,8 @@ app.include_router(api_router, prefix="/api/v1")
 
 # 2. Подключаем HTML-страницы (Jinja2)
 app.include_router(pages.router)
+
+app.include_router(broadcast_overlay_router)
 
 # Запуск сервера (для запуска через python app/main.py)
 if __name__ == "__main__":

@@ -1,0 +1,341 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>J-LIGA Broadcast Overlay</title>
+
+<style>
+:root {
+    --navy: #151b38;
+    --accent: #c9f12d;
+}
+* { box-sizing: border-box; }
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: transparent !important;
+    font-family: Arial, sans-serif;
+}
+#canvas {
+    width: 1920px;
+    height: 1080px;
+    position: relative;
+    transform-origin: top left;
+}
+.scoreboard {
+    position: absolute;
+    top: 55px;
+    left: 55px;
+    display: flex;
+    height: 76px;
+    filter: drop-shadow(0 5px 9px #0004);
+}
+.scoreboard.hidden { display: none; }
+.league, .team, .score, .clock {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 900;
+}
+.league {
+    width: 105px;
+    background: var(--accent);
+    color: var(--navy);
+    border-radius: 7px 0 0 7px;
+    font-size: 19px;
+}
+.team {
+    min-width: 112px;
+    max-width: 170px;
+    padding: 0 15px;
+    background: var(--navy);
+    color: white;
+    font-size: 25px;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.score {
+    min-width: 120px;
+    padding: 0 12px;
+    background: white;
+    color: var(--navy);
+    font-size: 34px;
+    font-variant-numeric: tabular-nums;
+}
+.clock {
+    min-width: 115px;
+    padding: 0 12px;
+    background: #26365a;
+    color: white;
+    font-size: 23px;
+    border-radius: 0 7px 7px 0;
+    font-variant-numeric: tabular-nums;
+}
+.phase {
+    position: absolute;
+    top: 76px;
+    left: 105px;
+    min-width: 170px;
+    background: var(--accent);
+    color: var(--navy);
+    padding: 8px 13px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 900;
+    border-radius: 0 0 6px 6px;
+}
+</style>
+</head>
+
+<body>
+<div id="canvas">
+    <div class="scoreboard hidden" id="scoreboard">
+        <div class="league">J-LIGA</div>
+        <div class="team" id="home">HOME</div>
+        <div class="score">
+            <span id="homeScore">0</span>
+            &nbsp;:&nbsp;
+            <span id="awayScore">0</span>
+        </div>
+        <div class="team" id="away">AWAY</div>
+        <div class="clock" id="clock">00:00</div>
+        <div class="phase" id="phase">ДО МАТЧА</div>
+    </div>
+</div>
+
+<script>
+"use strict";
+
+const SESSION_ID = Number({{ session_id | tojson }});
+const BASE = `/api/v1/broadcast/sessions/${SESSION_ID}`;
+
+const params = new URLSearchParams(location.search);
+
+// По умолчанию только HTTP.
+// ?realtime=1 включает WebSocket.
+const REALTIME = params.get("realtime") === "1";
+
+const POLL_MS = REALTIME ? 15000 : 3000;
+const RECONNECT_MS = 5000;
+const MAX_RECONNECTS = 3;
+
+const $ = id => document.getElementById(id);
+
+const phases = {
+    pre_match: "ДО МАТЧА",
+    not_started: "ДО МАТЧА",
+    first_half: "ПЕРВЫЙ ТАЙМ",
+    half_time: "ПЕРЕРЫВ",
+    second_half: "ВТОРОЙ ТАЙМ",
+    extra_first_half: "ДОП. ВРЕМЯ",
+    extra_second_half: "ДОП. ВРЕМЯ",
+    penalties: "ПЕНАЛЬТИ",
+    finished: "МАТЧ ЗАВЕРШЁН"
+};
+
+let state = null;
+let receivedAt = 0;
+let socket = null;
+let reconnects = 0;
+let reconnectTimer = null;
+let loading = false;
+let stopped = false;
+
+function resize() {
+    const scale = Math.min(
+        innerWidth / 1920,
+        innerHeight / 1080
+    );
+    $("canvas").style.transform = `scale(${scale})`;
+}
+
+addEventListener("resize", resize);
+resize();
+
+function formatTime(ms) {
+    const seconds = Math.floor(Math.max(0, ms) / 1000);
+    return (
+        String(Math.floor(seconds / 60)).padStart(2, "0") +
+        ":" +
+        String(seconds % 60).padStart(2, "0")
+    );
+}
+
+function elapsed() {
+    if (!state) return 0;
+
+    const base = Number(
+        state.current_elapsed_ms ??
+        state.elapsed_ms ??
+        0
+    );
+
+    if (!state.clock_running) return base;
+
+    return base + Math.max(
+        0,
+        performance.now() - receivedAt
+    );
+}
+
+function tick() {
+    if (state) $("clock").textContent = formatTime(elapsed());
+}
+
+function applyState(next) {
+    if (!next || typeof next !== "object") return;
+
+    if (
+        state &&
+        Number(next.revision) < Number(state.revision)
+    ) {
+        return;
+    }
+
+    state = next;
+    receivedAt = performance.now();
+
+    $("homeScore").textContent = next.home_score ?? 0;
+    $("awayScore").textContent = next.away_score ?? 0;
+    $("home").textContent = next.home_team_short_name || "HOME";
+    $("away").textContent = next.away_team_short_name || "AWAY";
+
+    $("phase").textContent =
+        phases[next.phase] ||
+        String(next.phase || "ДО МАТЧА").toUpperCase();
+
+    $("scoreboard").classList.toggle(
+        "hidden",
+        next.scoreboard_visible === false
+    );
+
+    tick();
+}
+
+function unwrap(message) {
+    if (!message || typeof message !== "object") return null;
+    if (message.data && typeof message.data === "object") {
+        return message.data;
+    }
+    if (message.state && typeof message.state === "object") {
+        return message.state;
+    }
+    return message;
+}
+
+async function loadState() {
+    if (loading || stopped) return;
+    loading = true;
+
+    try {
+        const response = await fetch(`${BASE}/public`, {
+            cache: "no-store"
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        applyState(unwrap(await response.json()));
+    } catch (error) {
+        console.warn("Broadcast HTTP:", error.message);
+    } finally {
+        loading = false;
+    }
+}
+
+function connectWebSocket() {
+    if (!REALTIME || stopped) return;
+
+    if (
+        socket &&
+        (
+            socket.readyState === WebSocket.OPEN ||
+            socket.readyState === WebSocket.CONNECTING
+        )
+    ) return;
+
+    const protocol = location.protocol === "https:"
+        ? "wss:"
+        : "ws:";
+
+    socket = new WebSocket(
+        `${protocol}//${location.host}${BASE}/ws`
+    );
+
+    let connected = false;
+
+    socket.onopen = () => {
+        connected = true;
+        reconnects = 0;
+        console.info("Broadcast WebSocket connected");
+    };
+
+    socket.onmessage = event => {
+        try {
+            const message = JSON.parse(event.data);
+            applyState(unwrap(message));
+        } catch (error) {
+            console.warn("Invalid broadcast message", error);
+        }
+    };
+
+    socket.onclose = event => {
+        socket = null;
+        if (stopped) return;
+
+        // 1008 означает отказ по политике доступа.
+        // При отказе во время handshake браузер часто
+        // сообщает код 1006, поэтому ограничиваем повторы.
+        if (event.code === 1008) {
+            console.warn("Broadcast viewer access denied");
+            return;
+        }
+
+        reconnects++;
+
+        if (reconnects > MAX_RECONNECTS) {
+            console.warn(
+                "WebSocket unavailable; using HTTP polling"
+            );
+            return;
+        }
+
+        clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(
+            connectWebSocket,
+            RECONNECT_MS * reconnects
+        );
+    };
+
+    socket.onerror = () => {
+        console.warn("Broadcast WebSocket connection error");
+    };
+}
+
+if (Number.isInteger(SESSION_ID) && SESSION_ID > 0) {
+    loadState();
+    setInterval(loadState, POLL_MS);
+    setInterval(tick, 100);
+
+    if (REALTIME) {
+        connectWebSocket();
+    }
+}
+
+addEventListener("pagehide", () => {
+    stopped = true;
+    clearTimeout(reconnectTimer);
+
+    if (socket) {
+        socket.close();
+        socket = null;
+    }
+});
+</script>
+</body>
+</html>

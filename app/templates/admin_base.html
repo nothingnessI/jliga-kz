@@ -3,10 +3,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>
         {% block title %}Админ-панель | J-LIGA{% endblock %}
@@ -564,6 +561,15 @@
             <span class="nav-text">Матчи</span>
         </a>
 
+        <!-- =================================
+             ТАБЛО ТРАНСЛЯЦИИ
+        ================================== -->
+
+        <a href="/broadcast/studio/1" class="nav-link">
+            <i class="bi bi-broadcast"></i>
+            <span class="nav-text">Табло трансляции</span>
+        </a>
+
         <a href="/admin/stadiums" class="nav-link">
             <i class="bi bi-geo-alt"></i>
             <span class="nav-text">Стадионы</span>
@@ -588,7 +594,7 @@
         </a>
 
         <!-- =================================
-             НОВЫЙ РАЗДЕЛ: ЗАЯВКИ ТРЕНЕРОВ
+             ЗАЯВКИ ТРЕНЕРОВ
         ================================== -->
 
         <a
@@ -852,18 +858,12 @@
             );
 
             /*
-             * Здесь используется отдельный endpoint:
-             *
              * GET /admin/api/coach-applications/count
              *
              * Ожидаемый ответ:
-             *
              * {
              *     "pending": 5
              * }
-             *
-             * Endpoint должен быть защищён
-             * существующей авторизацией администратора.
              */
 
             async function updateApplicationsBadge() {
@@ -887,7 +887,6 @@
                     }
 
                     const data = await response.json();
-
                     const count = Number(data.pending);
 
                     if (
@@ -915,15 +914,12 @@
                     }
 
                 } catch (error) {
-                    // Если API ещё не подключён,
-                    // остальная админ-панель продолжит работать.
                     badge.classList.remove("visible");
                 }
             }
 
             updateApplicationsBadge();
 
-            // Доступно дочерним шаблонам после модерации.
             window.updateApplicationsBadge =
                 updateApplicationsBadge;
 
