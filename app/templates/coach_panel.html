@@ -1,1651 +1,1653 @@
-
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Кабинет тренера | J-LIGA</title>
-
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
-
-    <style>
-        :root {
-            --sidebar: #2b3035;
-            --sidebar-dark: #212529;
-            --primary: #0d6efd;
-            --background: #f4f6f9;
-        }
-
-        body {
-            margin: 0;
-            background: var(--background);
-            font-family: "Segoe UI", Arial, sans-serif;
-            color: #243143;
-        }
-
-        .sidebar {
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            width: 260px;
-            background: var(--sidebar);
-            color: white;
-            z-index: 1050;
-            overflow-y: auto;
-            transition: transform .25s;
-        }
-
-        .sidebar-brand {
-            padding: 22px;
-            background: var(--sidebar-dark);
-            font-size: 21px;
-            font-weight: 800;
-        }
-
-        .sidebar-link {
-            display: block;
-            padding: 13px 20px;
-            color: #adb5bd;
-            text-decoration: none;
-            transition: .2s;
-        }
-
-        .sidebar-link:hover,
-        .sidebar-link.active {
-            background: var(--primary);
-            color: white;
-        }
-
-        .main-content {
-            margin-left: 260px;
-            min-height: 100vh;
-        }
-
-        .topbar {
-            height: 64px;
-            background: white;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 24px;
-            box-shadow: 0 1px 5px #00000010;
-        }
-
-        .page-content {
-            max-width: 1350px;
-            margin: auto;
-            padding: 28px;
-        }
-
-        .panel-card {
-            background: white;
-            border: none;
-            border-radius: 14px;
-            box-shadow: 0 4px 16px #1522380a;
-        }
-
-        .stat-card {
-            padding: 22px;
-        }
-
-        .stat-card strong {
-            display: block;
-            font-size: 30px;
-        }
-
-        .stat-label {
-            color: #6c757d;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .form-control,
-        .form-select {
-            min-height: 44px;
-            font-size: 16px;
-        }
-
-        .btn {
-            border-radius: 8px;
-        }
-
-        .player-card {
-            border: 1px solid #e6e9ee;
-            border-radius: 12px;
-            background: white;
-            padding: 18px;
-            margin-bottom: 12px;
-        }
-
-        .status-badge {
-            display: inline-block;
-            border-radius: 30px;
-            padding: 7px 11px;
-            font-size: 12px;
-            font-weight: 700;
-        }
-
-        .status-draft {
-            background: #eef2f7;
-            color: #475569;
-        }
-
-        .status-submitted {
-            background: #dbeafe;
-            color: #1d4ed8;
-        }
-
-        .status-approved {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .status-rejected {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .status-needs_revision {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .search-results {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            z-index: 30;
-            max-height: 240px;
-            overflow-y: auto;
-            background: white;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            box-shadow: 0 8px 20px #0002;
-        }
-
-        .search-results button {
-            width: 100%;
-            padding: 11px;
-            border: none;
-            border-bottom: 1px solid #eee;
-            background: white;
-            text-align: left;
-        }
-
-        .search-results button:hover {
-            background: #edf4ff;
-        }
-
-        .auth-wrapper {
-            max-width: 460px;
-            margin: 8vh auto;
-        }
-
-        .sidebar-backdrop {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: #0007;
-            z-index: 1040;
-        }
-
-        .photo-preview {
-            width: 100px;
-            height: 120px;
-            border-radius: 10px;
-            object-fit: cover;
-            border: 1px solid #dee2e6;
-            background: #f8fafc;
-        }
-
-        .photo-placeholder {
-            width: 100px;
-            height: 120px;
-            border: 1px dashed #cbd5e1;
-            border-radius: 10px;
-            background: #f8fafc;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #94a3b8;
-            font-size: 32px;
-        }
-
-        .photo-section {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-
-        @media (max-width: 991px) {
-            .sidebar {
-                transform: translateX(-100%);
-            }
-
-            .sidebar.show {
-                transform: translateX(0);
-            }
-
-            .sidebar-backdrop.show {
-                display: block;
-            }
-
-            .main-content {
-                margin-left: 0;
-            }
-
-            .page-content {
-                padding: 16px;
-            }
-
-            .topbar {
-                padding: 0 16px;
-            }
-        }
-    </style>
-</head>
-
-<body>
-
-<div id="authView" class="container auth-wrapper">
-    <div class="text-center mb-4">
-        <i class="bi bi-shield-shaded text-primary display-3"></i>
-        <h3 class="fw-bold mt-2">J-LIGA</h3>
-        <p class="text-muted">Личный кабинет тренера</p>
-    </div>
-
-    <div class="panel-card p-4">
-        <ul class="nav nav-pills nav-fill mb-4" id="authTabs">
-            <li class="nav-item">
-                <button type="button" class="nav-link active" data-mode="login">
-                    Войти
-                </button>
-            </li>
-            <li class="nav-item">
-                <button type="button" class="nav-link" data-mode="register">
-                    Регистрация
-                </button>
-            </li>
-        </ul>
-
-        <form id="authForm">
-            <div id="nameFields" class="row g-2 mb-3 d-none">
-                <div class="col-6">
-                    <label class="form-label">Имя</label>
-                    <input id="authFirst" class="form-control" maxlength="100">
-                </div>
-
-                <div class="col-6">
-                    <label class="form-label">Фамилия</label>
-                    <input id="authLast" class="form-control" maxlength="100">
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Телефон</label>
-                <input
-                    id="authPhone"
-                    type="tel"
-                    class="form-control"
-                    placeholder="+7 700 123 45 67"
-                    required
-                >
-            </div>
-
-            <div class="mb-4">
-                <label class="form-label">Пароль</label>
-                <input
-                    id="authPassword"
-                    type="password"
-                    class="form-control"
-                    minlength="10"
-                    required
-                >
-            </div>
-
-            <button
-                id="authSubmit"
-                type="submit"
-                class="btn btn-primary w-100 py-2 fw-bold"
-            >
-                Войти
-            </button>
-        </form>
-
-        <div id="authError" class="alert alert-danger mt-3 d-none" role="alert"></div>
-    </div>
-</div>
-
-<div id="workspace" class="d-none">
-    <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
-
-    <aside id="sidebar" class="sidebar">
-        <div class="sidebar-brand">
-            <i class="bi bi-shield-shaded text-primary me-2"></i>
-            J-LIGA
-        </div>
-
-        <div class="px-3 py-4 border-bottom border-secondary">
-            <div class="fw-bold" id="coachName">Тренер</div>
-            <div class="text-white-50 small" id="coachPhone"></div>
-        </div>
-
-        <div class="text-white-50 small fw-bold px-3 mt-4 mb-2">
-            КАБИНЕТ ТРЕНЕРА
-        </div>
-
-        <a href="#" class="sidebar-link active" id="navList">
-            <i class="bi bi-house-door me-2"></i>
-            Мои заявки
-        </a>
-
-        <a href="#" class="sidebar-link" id="navNew">
-            <i class="bi bi-plus-circle me-2"></i>
-            Подать заявку
-        </a>
-
-        <div class="px-3 mt-5">
-            <button id="logoutButton" class="btn btn-outline-light w-100">
-                <i class="bi bi-box-arrow-right me-2"></i>
-                Выйти
-            </button>
-        </div>
-    </aside>
-
-    <div class="main-content">
-        <header class="topbar">
-            <button
-                id="menuToggle"
-                class="btn btn-link text-dark d-lg-none p-0"
-                type="button"
-            >
-                <i class="bi bi-list fs-3"></i>
-            </button>
-
-            <span class="fw-bold">Кабинет тренера</span>
-
-            <a href="/" class="btn btn-sm btn-outline-primary">
-                <i class="bi bi-box-arrow-up-right me-1"></i>
-                На сайт
-            </a>
-        </header>
-
-        <main class="page-content">
-            <div id="notice" class="alert d-none" role="alert"></div>
-
-            <section id="listView">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-                    <div>
-                        <h3 class="fw-bold mb-1">Мои заявки</h3>
-                        <p class="text-muted mb-0">
-                            Заявки команд на участие в турнирах
-                        </p>
-                    </div>
-
-                    <button
-                        id="newApplication"
-                        class="btn btn-primary fw-bold"
-                        type="button"
-                    >
-                        <i class="bi bi-plus-lg me-2"></i>
-                        Подать заявку
-                    </button>
-                </div>
-
-                <div class="row g-3 mb-4">
-                    <div class="col-sm-4">
-                        <div class="panel-card stat-card">
-                            <div class="stat-label">Всего заявок</div>
-                            <strong id="countAll">0</strong>
-                        </div>
-                    </div>
-
-                    <div class="col-sm-4">
-                        <div class="panel-card stat-card">
-                            <div class="stat-label">Черновики</div>
-                            <strong id="countDraft">0</strong>
-                        </div>
-                    </div>
-
-                    <div class="col-sm-4">
-                        <div class="panel-card stat-card">
-                            <div class="stat-label">На рассмотрении</div>
-                            <strong id="countSubmitted">0</strong>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="panel-card p-3 p-md-4">
-                    <h5 class="fw-bold mb-3">История заявок</h5>
-                    <div id="applicationsList" class="d-grid gap-2">
-                        <div class="text-muted">Загрузка...</div>
-                    </div>
-                </div>
-            </section>
-
-            <section id="formView" class="d-none">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-                    <div>
-                        <button
-                            id="backToList"
-                            type="button"
-                            class="btn btn-sm btn-outline-secondary mb-2"
-                        >
-                            <i class="bi bi-arrow-left me-1"></i>
-                            К заявкам
-                        </button>
-
-                        <h3 id="formTitle" class="fw-bold mb-0">
-                            Новая заявка
-                        </h3>
-                    </div>
-
-                    <span id="formStatus" class="status-badge status-draft">
-                        Черновик
-                    </span>
-                </div>
-
-                <form id="applicationForm">
-                    <div class="panel-card p-3 p-md-4 mb-3">
-                        <h5 class="fw-bold mb-3">
-                            <i class="bi bi-trophy text-primary me-2"></i>
-                            Турнир и команда
-                        </h5>
-
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">
-                                    Турнир *
-                                </label>
-                                <select id="tournamentId" class="form-select" required>
-                                    <option value="">Выберите турнир</option>
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">
-                                    Команда *
-                                </label>
-                                <select id="teamId" class="form-select" required>
-                                    <option value="">Выберите команду</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="panel-card p-3 p-md-4 mb-3">
-                        <h5 class="fw-bold mb-3">
-                            <i class="bi bi-person-badge text-primary me-2"></i>
-                            Данные тренера
-                        </h5>
-
-                        <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label">Имя *</label>
-                                <input
-                                    id="coachFirst"
-                                    class="form-control"
-                                    maxlength="100"
-                                    required
-                                >
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label">Фамилия *</label>
-                                <input
-                                    id="coachLast"
-                                    class="form-control"
-                                    maxlength="100"
-                                    required
-                                >
-                            </div>
-
-                            <div class="col-md-4">
-                                <label class="form-label">Год рождения *</label>
-                                <input
-                                    id="coachYear"
-                                    type="number"
-                                    min="1900"
-                                    max="2100"
-                                    class="form-control"
-                                    required
-                                >
-                            </div>
-
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">
-                                    Фотография тренера *
-                                </label>
-
-                                <div class="photo-section">
-                                    <div id="coachPhotoPlaceholder" class="photo-placeholder">
-                                        <i class="bi bi-person"></i>
-                                    </div>
-
-                                    <img
-                                        id="coachPhotoPreview"
-                                        class="photo-preview d-none"
-                                        alt="Фотография тренера"
-                                    >
-
-                                    <div>
-                                        <button
-                                            id="coachPhotoButton"
-                                            type="button"
-                                            class="btn btn-outline-primary"
-                                        >
-                                            <i class="bi bi-image me-1"></i>
-                                            Указать фотографию
-                                        </button>
-
-                                        <div class="text-muted small mt-2">
-                                            Фотография будет отображаться в заявке
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <input id="coachPhoto" type="hidden">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="panel-card p-3 p-md-4 mb-3">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-                            <div>
-                                <h5 class="fw-bold mb-1">
-                                    <i class="bi bi-people text-primary me-2"></i>
-                                    Состав команды
-                                </h5>
-
-                                <div class="text-muted small">
-                                    От 1 до 25 игроков.
-                                    Можно выбрать игрока из базы.
-                                </div>
-                            </div>
-
-                            <button
-                                id="addPlayerButton"
-                                type="button"
-                                class="btn btn-outline-primary"
-                            >
-                                <i class="bi bi-person-plus me-1"></i>
-                                Добавить игрока
-                            </button>
-                        </div>
-
-                        <div id="playersContainer"></div>
-
-                        <div id="playersCounter" class="text-muted small">
-                            0 из 25 игроков
-                        </div>
-                    </div>
-
-                    <div class="d-flex flex-wrap justify-content-end gap-2 mb-5">
-                        <button
-                            id="saveDraftButton"
-                            type="submit"
-                            class="btn btn-outline-primary px-4"
-                        >
-                            <i class="bi bi-save me-2"></i>
-                            Сохранить черновик
-                        </button>
-
-                        <button
-                            id="submitApplicationButton"
-                            type="button"
-                            class="btn btn-primary px-4 fw-bold"
-                        >
-                            <i class="bi bi-send me-2"></i>
-                            Отправить заявку
-                        </button>
-                    </div>
-                </form>
-            </section>
-        </main>
-    </div>
-</div>
-
-<script>
-"use strict";
-
-const API = "/api/v1/coach";
-const TOKEN_KEY = "jliga_coach_token";
-const $ = id => document.getElementById(id);
-
-let token = sessionStorage.getItem(TOKEN_KEY);
-let authMode = "login";
-let applicationId = null;
-let locked = false;
-let teams = [];
-let tournaments = [];
-
-const positions = [
-    "Вратарь",
-    "Защитник",
-    "Полузащитник",
-    "Нападающий"
-];
-
-const statusNames = {
-    draft: "Черновик",
-    submitted: "На рассмотрении",
-    approved: "Одобрена",
-    rejected: "Отклонена",
-    needs_revision: "На исправлении"
-};
-
-function escapeHTML(value) {
-    return String(value ?? "").replace(
-        /[&<>"']/g,
-        char => ({
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;"
-        })[char]
-    );
-}
-
-function showNotice(message, type = "danger") {
-    const element = $("notice");
-    element.className = "alert alert-" + type;
-    element.textContent = message;
-
-    element.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest"
-    });
-}
-
-function clearNotice() {
-    $("notice").className = "alert d-none";
-    $("notice").textContent = "";
-}
-
-async function apiRequest(path, options = {}) {
-    const headers = {
-        ...(options.headers || {})
-    };
-
-    if (token) {
-        headers.Authorization = "Bearer " + token;
-    }
-
-    if (options.body && !(options.body instanceof FormData)) {
-        headers["Content-Type"] = "application/json";
-    }
-
-    let response;
-
-    try {
-        response = await fetch(API + path, {
-            ...options,
-            headers
-        });
-    } catch {
-        throw new Error("Нет соединения с сервером");
-    }
-
-    let data;
-
-    try {
-        data = await response.json();
-    } catch {
-        data = {};
-    }
-
-    if (!response.ok) {
-        if (response.status === 401 && token) {
-            logout();
-        }
-
-        let detail = data.detail || `Ошибка запроса (${response.status})`;
-
-        if (Array.isArray(detail)) {
-            detail = detail.map(item => item.msg).join("; ");
-        }
-
-        throw new Error(String(detail));
-    }
-
-    return data;
-}
-
-function logout() {
-    token = null;
-    sessionStorage.removeItem(TOKEN_KEY);
-
-    $("workspace").classList.add("d-none");
-    $("authView").classList.remove("d-none");
-
-    closeMenu();
-}
-
-function showWorkspace(profile) {
-    $("authView").classList.add("d-none");
-    $("workspace").classList.remove("d-none");
-
-    $("coachName").textContent =
-        profile.first_name + " " + profile.last_name;
-
-    $("coachPhone").textContent = profile.phone || "";
-}
-
-$("authTabs").addEventListener("click", event => {
-    const button = event.target.closest("[data-mode]");
-    if (!button) return;
-
-    authMode = button.dataset.mode;
-
-    document.querySelectorAll("#authTabs button").forEach(item => {
-        item.classList.toggle("active", item === button);
-    });
-
-    const isRegister = authMode === "register";
-
-    $("nameFields").classList.toggle("d-none", !isRegister);
-    $("authFirst").required = isRegister;
-    $("authLast").required = isRegister;
-
-    $("authSubmit").textContent = isRegister
-        ? "Зарегистрироваться"
-        : "Войти";
-
-    $("authError").classList.add("d-none");
-});
-
-$("authForm").addEventListener("submit", async event => {
-    event.preventDefault();
-
-    const phone = $("authPhone").value.trim();
-    const password = $("authPassword").value;
-
-    const data = {phone, password};
-
-    if (authMode === "register") {
-        data.first_name = $("authFirst").value.trim();
-        data.last_name = $("authLast").value.trim();
-    }
-
-    const button = $("authSubmit");
-    button.disabled = true;
-
-    try {
-        if (authMode === "register") {
-            await apiRequest("/register", {
-                method: "POST",
-                body: JSON.stringify(data)
-            });
-        }
-
-        const result = await apiRequest("/login", {
-            method: "POST",
-            body: JSON.stringify({phone, password})
-        });
-
-        token = result.access_token;
-        sessionStorage.setItem(TOKEN_KEY, token);
-
-        await initialize();
-    } catch (error) {
-        $("authError").textContent = error.message;
-        $("authError").classList.remove("d-none");
-    } finally {
-        button.disabled = false;
-    }
-});
-
-function closeMenu() {
-    $("sidebar").classList.remove("show");
-    $("sidebarBackdrop").classList.remove("show");
-}
-
-$("menuToggle").onclick = () => {
-    $("sidebar").classList.add("show");
-    $("sidebarBackdrop").classList.add("show");
-};
-
-$("sidebarBackdrop").onclick = closeMenu;
-$("logoutButton").onclick = logout;
-
-function switchView(view) {
-    clearNotice();
-
-    $("listView").classList.toggle("d-none", view !== "list");
-    $("formView").classList.toggle("d-none", view !== "form");
-
-    $("navList").classList.toggle("active", view === "list");
-    $("navNew").classList.toggle("active", view === "form");
-
-    closeMenu();
-
-    window.scrollTo({
-        top: 0,
-        behavior: "smooth"
-    });
-}
-
-async function loadReferences() {
-    [teams, tournaments] = await Promise.all([
-        apiRequest("/teams"),
-        apiRequest("/tournaments")
-    ]);
-
-    $("teamId").innerHTML =
-        '<option value="">Выберите команду</option>' +
-        teams.map(team => `
-            <option value="${team.id}">
-                ${escapeHTML(team.name)}
-            </option>
-        `).join("");
-
-    $("tournamentId").innerHTML =
-        '<option value="">Выберите турнир</option>' +
-        tournaments.map(tournament => `
-            <option value="${tournament.id}">
-                ${escapeHTML(tournament.name)}
-            </option>
-        `).join("");
-}
-
-async function loadApplications() {
-    const applications = await apiRequest("/applications");
-
-    $("countAll").textContent = applications.length;
-
-    $("countDraft").textContent = applications.filter(
-        item => item.status === "draft"
-    ).length;
-
-    $("countSubmitted").textContent = applications.filter(
-        item => item.status === "submitted"
-    ).length;
-
-    const container = $("applicationsList");
-    container.replaceChildren();
-
-    if (!applications.length) {
-        container.innerHTML = `
-            <div class="text-center py-5 text-muted">
-                <i class="bi bi-clipboard2 fs-1 d-block mb-2"></i>
-                Заявок пока нет. Создайте первую!
-            </div>
-        `;
-        return;
-    }
-
-    for (const application of applications) {
-        const team = teams.find(
-            item => item.id === application.team_id
-        );
-
-        const tournament = tournaments.find(
-            item => item.id === application.tournament_id
-        );
-
-        const item = document.createElement("div");
-
-        item.className =
-            "border rounded-3 p-3 " +
-            "d-flex flex-wrap align-items-center " +
-            "justify-content-between gap-3";
-
-        const status = application.status;
-        const safeStatus = Object.hasOwn(statusNames, status)
-            ? status
-            : "draft";
-
-        item.innerHTML = `
-            <div>
-                <div class="fw-bold">
-                    ${escapeHTML(team?.name || "Команда #" + application.team_id)}
-                </div>
-
-                <div class="text-muted small">
-                    ${escapeHTML(tournament?.name || "Турнир #" + application.tournament_id)}
-                    · ${application.players_count ?? 0} игроков
-                </div>
-
-                <div class="text-muted small">
-                    Заявка №${application.id}
-                </div>
-            </div>
-
-            <div class="d-flex align-items-center gap-2">
-                <span class="status-badge status-${safeStatus}">
-                    ${escapeHTML(statusNames[status] || status)}
-                </span>
-
-                <button class="btn btn-outline-primary btn-sm">
-                    ${status === "draft" ? "Редактировать" : "Просмотр"}
-                </button>
-            </div>
-        `;
-
-        item.querySelector("button").onclick = () => {
-            openApplication(application.id);
-        };
-
-        container.appendChild(item);
-    }
-}
-
-function newApplication() {
-    applicationId = null;
-    locked = false;
-
-    $("applicationForm").reset();
-    $("playersContainer").replaceChildren();
-
-    $("formTitle").textContent = "Новая заявка";
-    $("formStatus").textContent = "Черновик";
-    $("formStatus").className = "status-badge status-draft";
-
-    setCoachPhoto("");
-    addPlayer();
-    setLocked(false);
-    switchView("form");
-}
-
-$("newApplication").onclick = newApplication;
-
-$("navNew").onclick = event => {
-    event.preventDefault();
-    newApplication();
-};
-
-$("navList").onclick = async event => {
-    event.preventDefault();
-    switchView("list");
-
-    try {
-        await loadApplications();
-    } catch (error) {
-        showNotice(error.message);
-    }
-};
-
-$("backToList").onclick = async () => {
-    switchView("list");
-
-    try {
-        await loadApplications();
-    } catch (error) {
-        showNotice(error.message);
-    }
-};
-
-function normalizePhotoUrl(value) {
-    const url = String(value || "").trim();
-
-    if (!url) return "";
-
-    if (url.startsWith("/") && !url.startsWith("//")) {
-        return url;
-    }
-
-    try {
-        const parsed = new URL(url, window.location.origin);
-
-        if (parsed.protocol === "http:" || parsed.protocol === "https:") {
-            return parsed.href;
-        }
-    } catch {
-        return "";
-    }
-
-    return "";
-}
-
-function updatePhotoPreview(image, placeholder, photoUrl) {
-    const safeUrl = normalizePhotoUrl(photoUrl);
-
-    image.onload = () => {
-        image.classList.remove("d-none");
-        placeholder.classList.add("d-none");
-    };
-
-    image.onerror = () => {
-        image.classList.add("d-none");
-        placeholder.classList.remove("d-none");
-    };
-
-    if (safeUrl) {
-        image.classList.add("d-none");
-        placeholder.classList.remove("d-none");
-        image.src = safeUrl;
-    } else {
-        image.removeAttribute("src");
-        image.classList.add("d-none");
-        placeholder.classList.remove("d-none");
-    }
-}
-
-function setCoachPhoto(photoUrl) {
-    $("coachPhoto").value = photoUrl || "";
-
-    updatePhotoPreview(
-        $("coachPhotoPreview"),
-        $("coachPhotoPlaceholder"),
-        photoUrl
-    );
-}
-
-$("coachPhotoButton").onclick = () => {
-    if (locked) return;
-
-    const current = $("coachPhoto").value;
-
-    const url = prompt(
-        "Укажите ссылку на фотографию тренера:",
-        current
-    );
-
-    if (url === null) return;
-
-    const value = url.trim();
-
-    if (value && !normalizePhotoUrl(value)) {
-        showNotice("Укажите корректную ссылку на изображение");
-        return;
-    }
-
-    setCoachPhoto(value);
-};
-
-function renumberPlayers() {
-    const cards = [...$("playersContainer").children];
-
-    cards.forEach((card, index) => {
-        card.querySelector(".player-title").textContent =
-            "Игрок №" + (index + 1);
-    });
-
-    $("playersCounter").textContent =
-        cards.length + " из 25 игроков";
-
-    $("addPlayerButton").disabled =
-        locked || cards.length >= 25;
-}
-
-function addPlayer(value = {}) {
-    const container = $("playersContainer");
-
-    if (container.children.length >= 25) {
-        showNotice("Максимум 25 игроков");
-        return;
-    }
-
-    const card = document.createElement("div");
-    card.className = "player-card";
-
-    card.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <strong class="player-title">Игрок</strong>
-
-            <button
-                type="button"
-                class="btn btn-sm btn-outline-danger remove-player"
-            >
-                <i class="bi bi-trash"></i>
-                Удалить
-            </button>
-        </div>
-
-        <div class="row g-3">
-            <div class="col-12 position-relative">
-                <label class="form-label small fw-semibold">
-                    Найти существующего игрока
-                </label>
-
-                <input
-                    class="form-control player-search"
-                    placeholder="Введите имя или фамилию"
-                    autocomplete="off"
-                >
-
-                <div class="search-results d-none"></div>
-                <div class="form-text existing-note"></div>
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Имя *</label>
-                <input
-                    class="form-control player-first"
-                    maxlength="100"
-                    required
-                >
-            </div>
-
-            <div class="col-md-6">
-                <label class="form-label">Фамилия *</label>
-                <input
-                    class="form-control player-last"
-                    maxlength="100"
-                    required
-                >
-            </div>
-
-            <div class="col-md-4">
-                <label class="form-label">Дата рождения *</label>
-                <input
-                    type="date"
-                    class="form-control player-birth"
-                    required
-                >
-            </div>
-
-            <div class="col-md-4">
-                <label class="form-label">Позиция *</label>
-
-                <select class="form-select player-position" required>
-                    <option value="">Выберите позицию</option>
-
-                    ${positions.map(position => `
-                        <option value="${escapeHTML(position)}">
-                            ${escapeHTML(position)}
-                        </option>
-                    `).join("")}
-                </select>
-            </div>
-
-            <div class="col-md-4">
-                <label class="form-label">Номер *</label>
-
-                <input
-                    type="number"
-                    min="1"
-                    max="99"
-                    class="form-control player-number"
-                    required
-                >
-            </div>
-
-            <div class="col-12">
-                <label class="form-label fw-semibold">
-                    Фотография игрока *
-                </label>
-
-                <div class="photo-section">
-                    <div class="photo-placeholder player-photo-placeholder">
-                        <i class="bi bi-person"></i>
-                    </div>
-
-                    <img
-                        class="photo-preview player-photo-preview d-none"
-                        alt="Фотография игрока"
-                    >
-
-                    <div>
-                        <button
-                            type="button"
-                            class="btn btn-outline-primary player-photo-button"
-                        >
-                            <i class="bi bi-image me-1"></i>
-                            Указать фотографию
-                        </button>
-
-                        <div class="text-muted small mt-2 player-photo-description">
-                            Фотография не выбрана
-                        </div>
-                    </div>
-                </div>
-
-                <input type="hidden" class="player-photo">
-            </div>
-        </div>
-    `;
-
-    card.dataset.existingId = value.existing_player_id || "";
-
-    function fill(selector, fieldValue) {
-        card.querySelector(selector).value = fieldValue ?? "";
-    }
-
-    function setPlayerPhoto(photoUrl) {
-        const input = card.querySelector(".player-photo");
-        const image = card.querySelector(".player-photo-preview");
-        const placeholder = card.querySelector(".player-photo-placeholder");
-        const description = card.querySelector(".player-photo-description");
-
-        input.value = photoUrl || "";
-
-        description.textContent = photoUrl
-            ? "Фотография выбрана"
-            : "Фотография не выбрана";
-
-        updatePhotoPreview(image, placeholder, photoUrl);
-    }
-
-    fill(".player-first", value.first_name);
-    fill(".player-last", value.last_name);
-    fill(".player-birth", value.birth_date);
-    fill(".player-position", value.position);
-    fill(".player-number", value.jersey_number);
-
-    setPlayerPhoto(value.photo_url);
-
-    const note = card.querySelector(".existing-note");
-
-    if (value.existing_player_id) {
-        note.textContent =
-            "Игрок выбран из базы";
-    }
-
-    card.querySelector(".remove-player").onclick = () => {
-        card.remove();
-        renumberPlayers();
-    };
-
-    function resetExistingPlayer() {
-        if (!card.dataset.existingId) return;
-
-        card.dataset.existingId = "";
-        note.textContent =
-            "Данные изменены: связь с игроком базы сброшена";
-    }
-
-    card.querySelectorAll(
-        ".player-first, .player-last, " +
-        ".player-birth, .player-position"
-    ).forEach(input => {
-        input.addEventListener("input", resetExistingPlayer);
-        input.addEventListener("change", resetExistingPlayer);
-    });
-
-    card.querySelector(".player-photo-button").onclick = () => {
-        if (locked) return;
-
-        const current = card.querySelector(".player-photo").value;
-
-        const url = prompt(
-            "Укажите ссылку на фотографию игрока:",
-            current
-        );
-
-        if (url === null) return;
-
-        const photoUrl = url.trim();
-
-        if (photoUrl && !normalizePhotoUrl(photoUrl)) {
-            showNotice("Укажите корректную ссылку на изображение");
-            return;
-        }
-
-        resetExistingPlayer();
-        setPlayerPhoto(photoUrl);
-    };
-
-    const search = card.querySelector(".player-search");
-    const results = card.querySelector(".search-results");
-
-    let timer = null;
-    let searchVersion = 0;
-
-    search.addEventListener("input", () => {
-        clearTimeout(timer);
-
-        const query = search.value.trim();
-        const version = ++searchVersion;
-
-        results.classList.add("d-none");
-
-        if (query.length < 2) return;
-
-        timer = setTimeout(async () => {
-            try {
-                const players = await apiRequest(
-                    "/players/search?q=" +
-                    encodeURIComponent(query)
-                );
-
-                if (
-                    version !== searchVersion ||
-                    !card.isConnected
-                ) return;
-
-                results.replaceChildren();
-
-                for (const player of players) {
-                    const button = document.createElement("button");
-                    button.type = "button";
-
-                    button.textContent =
-                        player.last_name + " " +
-                        player.first_name +
-                        (player.birth_date
-                            ? " · " + player.birth_date
-                            : "");
-
-                    button.onclick = () => {
-                        card.dataset.existingId = String(player.id);
-
-                        fill(".player-first", player.first_name);
-                        fill(".player-last", player.last_name);
-                        fill(".player-birth", player.birth_date);
-                        fill(".player-position", player.position);
-
-                        setPlayerPhoto(player.photo_url);
-
-                        note.textContent = "Игрок выбран из базы";
-
-                        search.value = "";
-                        results.classList.add("d-none");
-                    };
-
-                    results.appendChild(button);
-                }
-
-                if (!players.length) {
-                    results.innerHTML = `
-                        <div class="p-3 text-muted small">
-                            Игроки не найдены
-                        </div>
-                    `;
-                }
-
-                results.classList.remove("d-none");
-            } catch (error) {
-                showNotice(error.message);
-            }
-        }, 300);
-    });
-
-    document.addEventListener("click", event => {
-        if (!card.contains(event.target)) {
-            results.classList.add("d-none");
-        }
-    });
-
-    container.appendChild(card);
-
-    if (locked) {
-        card.querySelectorAll("input, select, button").forEach(element => {
-            element.disabled = true;
-        });
-    }
-
-    renumberPlayers();
-}
-
-$("addPlayerButton").onclick = () => addPlayer();
-
-function setLocked(value) {
-    locked = value;
-
-    $("applicationForm").querySelectorAll(
-        "input, select, .player-photo-button, #coachPhotoButton"
-    ).forEach(element => {
-        element.disabled = locked;
-    });
-
-    $("playersContainer").querySelectorAll(
-        ".remove-player"
-    ).forEach(button => {
-        button.disabled = locked;
-    });
-
-    $("saveDraftButton").classList.toggle("d-none", locked);
-    $("submitApplicationButton").classList.toggle("d-none", locked);
-
-    renumberPlayers();
-}
-
-function buildPayload() {
-    const cards = [...$("playersContainer").children];
-
-    const players = cards.map(card => {
-        const existingId = card.dataset.existingId;
-
-        return {
-            existing_player_id: existingId
-                ? Number(existingId)
-                : null,
-
-            first_name: card.querySelector(
-                ".player-first"
-            ).value.trim(),
-
-            last_name: card.querySelector(
-                ".player-last"
-            ).value.trim(),
-
-            birth_date: card.querySelector(
-                ".player-birth"
-            ).value,
-
-            position: card.querySelector(
-                ".player-position"
-            ).value,
-
-            jersey_number: Number(
-                card.querySelector(
-                    ".player-number"
-                ).value
-            ),
-
-            photo_url: card.querySelector(
-                ".player-photo"
-            ).value.trim()
-        };
-    });
-
-    if (players.length < 1 || players.length > 25) {
-        throw new Error(
-            "В заявке должно быть от 1 до 25 игроков"
-        );
-    }
-
-    const numbers = players.map(player => player.jersey_number);
-
-    if (new Set(numbers).size !== numbers.length) {
-        throw new Error(
-            "Номера игроков не должны повторяться"
-        );
-    }
-
-    const existingIds = players
-        .filter(player => player.existing_player_id)
-        .map(player => player.existing_player_id);
-
-    if (new Set(existingIds).size !== existingIds.length) {
-        throw new Error(
-            "Один игрок из базы выбран несколько раз"
-        );
-    }
-
-    if (!$("coachPhoto").value.trim()) {
-        throw new Error("Укажите фотографию тренера");
-    }
-
-    for (const player of players) {
-        if (!player.photo_url) {
-            throw new Error(
-                "Укажите фотографию для игрока " +
-                player.first_name + " " + player.last_name
-            );
-        }
-    }
-
-    return {
-        team_id: Number($("teamId").value),
-
-        tournament_id: Number($("tournamentId").value),
-
-        coach: {
-            first_name: $("coachFirst").value.trim(),
-            last_name: $("coachLast").value.trim(),
-            birth_year: Number($("coachYear").value),
-            photo_url: $("coachPhoto").value.trim()
-        },
-
-        players
-    };
-}
-
-async function saveApplication() {
-    if (!$("applicationForm").reportValidity()) {
-        return null;
-    }
-
-    const data = buildPayload();
-
-    const path = applicationId
-        ? "/applications/" + applicationId
-        : "/applications";
-
-    const result = await apiRequest(path, {
-        method: applicationId ? "PUT" : "POST",
-        body: JSON.stringify(data)
-    });
-
-    applicationId = result.id;
-
-    return result;
-}
-
-$("applicationForm").addEventListener("submit", async event => {
-    event.preventDefault();
-
-    const button = $("saveDraftButton");
-    button.disabled = true;
-
-    try {
-        const result = await saveApplication();
-
-        if (result) {
-            showNotice(
-                "Черновик успешно сохранён",
-                "success"
-            );
-        }
-    } catch (error) {
-        showNotice(error.message);
-    } finally {
-        button.disabled = false;
-    }
-});
-
-$("submitApplicationButton").onclick = async () => {
-    if (!$("applicationForm").reportValidity()) {
-        return;
-    }
-
-    if (!confirm(
-        "Отправить заявку администратору? " +
-        "После отправки редактирование будет недоступно."
-    )) {
-        return;
-    }
-
-    const button = $("submitApplicationButton");
-    button.disabled = true;
-
-    try {
-        const result = await saveApplication();
-
-        if (!result) return;
-
-        await apiRequest(
-            "/applications/" + applicationId + "/submit",
-            {method: "POST"}
-        );
-
-        switchView("list");
-        await loadApplications();
-
-        showNotice(
-            "Заявка отправлена на рассмотрение",
-            "success"
-        );
-    } catch (error) {
-        showNotice(error.message);
-    } finally {
-        button.disabled = false;
-    }
-};
-
-async function openApplication(id) {
-    try {
-        const application = await apiRequest(
-            "/applications/" + id
-        );
-
-        applicationId = application.id;
-
-        $("formTitle").textContent =
-            "Заявка №" + application.id;
-
-        $("formStatus").textContent =
-            statusNames[application.status] ||
-            application.status;
-
-        const safeStatus = Object.hasOwn(statusNames, application.status)
-            ? application.status
-            : "draft";
-
-        $("formStatus").className =
-            "status-badge status-" + safeStatus;
-
-        $("teamId").value = application.team_id;
-        $("tournamentId").value = application.tournament_id;
-
-        const coach = application.coach || {};
-
-        $("coachFirst").value = coach.first_name || "";
-        $("coachLast").value = coach.last_name || "";
-        $("coachYear").value = coach.birth_year || "";
-
-        setCoachPhoto(coach.photo_url);
-
-        $("playersContainer").replaceChildren();
-
-        for (const player of application.players || []) {
-            addPlayer(player);
-        }
-
-        setLocked(application.status !== "draft");
-        switchView("form");
-
-        if (application.admin_comment) {
-            showNotice(
-                "Комментарий администратора: " +
-                application.admin_comment,
-                "info"
-            );
-        }
-    } catch (error) {
-        showNotice(error.message);
-    }
-}
-
-async function initialize() {
-    if (!token) return;
-
-    try {
-        const profile = await apiRequest("/me");
-
-        showWorkspace(profile);
-
-        await loadReferences();
-        await loadApplications();
-
-        switchView("list");
-    } catch (error) {
-        if (token) {
-            showNotice(error.message);
-        }
-    }
-}
-
-initialize();
-</script>
-
-</body>
-</html>
+
+<!DOCTYPE html>
+<html lang="ru" class="jliga-coach">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Кабинет тренера | J-LIGA</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --sidebar: #2b3035;
+            --sidebar-dark: #212529;
+            --primary: #0d6efd;
+            --background: #f4f6f9;
+        }
+
+        body {
+            margin: 0;
+            background: var(--background);
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: #243143;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 260px;
+            background: var(--sidebar);
+            color: white;
+            z-index: 1050;
+            overflow-y: auto;
+            transition: transform .25s;
+        }
+
+        .sidebar-brand {
+            padding: 22px;
+            background: var(--sidebar-dark);
+            font-size: 21px;
+            font-weight: 800;
+        }
+
+        .sidebar-link {
+            display: block;
+            padding: 13px 20px;
+            color: #adb5bd;
+            text-decoration: none;
+            transition: .2s;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .main-content {
+            margin-left: 260px;
+            min-height: 100vh;
+        }
+
+        .topbar {
+            height: 64px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            box-shadow: 0 1px 5px #00000010;
+        }
+
+        .page-content {
+            max-width: 1350px;
+            margin: auto;
+            padding: 28px;
+        }
+
+        .panel-card {
+            background: white;
+            border: none;
+            border-radius: 14px;
+            box-shadow: 0 4px 16px #1522380a;
+        }
+
+        .stat-card {
+            padding: 22px;
+        }
+
+        .stat-card strong {
+            display: block;
+            font-size: 30px;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .form-control,
+        .form-select {
+            min-height: 44px;
+            font-size: 16px;
+        }
+
+        .btn {
+            border-radius: 8px;
+        }
+
+        .player-card {
+            border: 1px solid #e6e9ee;
+            border-radius: 12px;
+            background: white;
+            padding: 18px;
+            margin-bottom: 12px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            border-radius: 30px;
+            padding: 7px 11px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status-draft {
+            background: #eef2f7;
+            color: #475569;
+        }
+
+        .status-submitted {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .status-approved {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status-rejected {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .status-needs_revision {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            z-index: 30;
+            max-height: 240px;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 8px 20px #0002;
+        }
+
+        .search-results button {
+            width: 100%;
+            padding: 11px;
+            border: none;
+            border-bottom: 1px solid #eee;
+            background: white;
+            text-align: left;
+        }
+
+        .search-results button:hover {
+            background: #edf4ff;
+        }
+
+        .auth-wrapper {
+            max-width: 460px;
+            margin: 8vh auto;
+        }
+
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: #0007;
+            z-index: 1040;
+        }
+
+        .photo-preview {
+            width: 100px;
+            height: 120px;
+            border-radius: 10px;
+            object-fit: cover;
+            border: 1px solid #dee2e6;
+            background: #f8fafc;
+        }
+
+        .photo-placeholder {
+            width: 100px;
+            height: 120px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 10px;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #94a3b8;
+            font-size: 32px;
+        }
+
+        .photo-section {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 991px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .sidebar-backdrop.show {
+                display: block;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .page-content {
+                padding: 16px;
+            }
+
+            .topbar {
+                padding: 0 16px;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="/static/css/jliga-responsive.css" data-jliga-responsive>
+</head>
+
+<body>
+
+<div id="authView" class="container auth-wrapper">
+    <div class="text-center mb-4">
+        <i class="bi bi-shield-shaded text-primary display-3"></i>
+        <h3 class="fw-bold mt-2">J-LIGA</h3>
+        <p class="text-muted">Личный кабинет тренера</p>
+    </div>
+
+    <div class="panel-card p-4">
+        <ul class="nav nav-pills nav-fill mb-4" id="authTabs">
+            <li class="nav-item">
+                <button type="button" class="nav-link active" data-mode="login">
+                    Войти
+                </button>
+            </li>
+            <li class="nav-item">
+                <button type="button" class="nav-link" data-mode="register">
+                    Регистрация
+                </button>
+            </li>
+        </ul>
+
+        <form id="authForm">
+            <div id="nameFields" class="row g-2 mb-3 d-none">
+                <div class="col-6">
+                    <label class="form-label">Имя</label>
+                    <input id="authFirst" class="form-control" maxlength="100">
+                </div>
+
+                <div class="col-6">
+                    <label class="form-label">Фамилия</label>
+                    <input id="authLast" class="form-control" maxlength="100">
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Телефон</label>
+                <input
+                    id="authPhone"
+                    type="tel"
+                    class="form-control"
+                    placeholder="+7 700 123 45 67"
+                    required
+                >
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Пароль</label>
+                <input
+                    id="authPassword"
+                    type="password"
+                    class="form-control"
+                    minlength="10"
+                    required
+                >
+            </div>
+
+            <button
+                id="authSubmit"
+                type="submit"
+                class="btn btn-primary w-100 py-2 fw-bold"
+            >
+                Войти
+            </button>
+        </form>
+
+        <div id="authError" class="alert alert-danger mt-3 d-none" role="alert"></div>
+    </div>
+</div>
+
+<div id="workspace" class="d-none">
+    <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
+
+    <aside id="sidebar" class="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-shield-shaded text-primary me-2"></i>
+            J-LIGA
+        </div>
+
+        <div class="px-3 py-4 border-bottom border-secondary">
+            <div class="fw-bold" id="coachName">Тренер</div>
+            <div class="text-white-50 small" id="coachPhone"></div>
+        </div>
+
+        <div class="text-white-50 small fw-bold px-3 mt-4 mb-2">
+            КАБИНЕТ ТРЕНЕРА
+        </div>
+
+        <a href="#" class="sidebar-link active" id="navList">
+            <i class="bi bi-house-door me-2"></i>
+            Мои заявки
+        </a>
+
+        <a href="#" class="sidebar-link" id="navNew">
+            <i class="bi bi-plus-circle me-2"></i>
+            Подать заявку
+        </a>
+
+        <div class="px-3 mt-5">
+            <button id="logoutButton" class="btn btn-outline-light w-100">
+                <i class="bi bi-box-arrow-right me-2"></i>
+                Выйти
+            </button>
+        </div>
+    </aside>
+
+    <div class="main-content">
+        <header class="topbar">
+            <button
+                id="menuToggle"
+                class="btn btn-link text-dark d-lg-none p-0"
+                type="button"
+            >
+                <i class="bi bi-list fs-3"></i>
+            </button>
+
+            <span class="fw-bold">Кабинет тренера</span>
+
+            <a href="/" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-box-arrow-up-right me-1"></i>
+                На сайт
+            </a>
+        </header>
+
+        <main class="page-content">
+            <div id="notice" class="alert d-none" role="alert"></div>
+
+            <section id="listView">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                    <div>
+                        <h3 class="fw-bold mb-1">Мои заявки</h3>
+                        <p class="text-muted mb-0">
+                            Заявки команд на участие в турнирах
+                        </p>
+                    </div>
+
+                    <button
+                        id="newApplication"
+                        class="btn btn-primary fw-bold"
+                        type="button"
+                    >
+                        <i class="bi bi-plus-lg me-2"></i>
+                        Подать заявку
+                    </button>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-sm-4">
+                        <div class="panel-card stat-card">
+                            <div class="stat-label">Всего заявок</div>
+                            <strong id="countAll">0</strong>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-4">
+                        <div class="panel-card stat-card">
+                            <div class="stat-label">Черновики</div>
+                            <strong id="countDraft">0</strong>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-4">
+                        <div class="panel-card stat-card">
+                            <div class="stat-label">На рассмотрении</div>
+                            <strong id="countSubmitted">0</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-card p-3 p-md-4">
+                    <h5 class="fw-bold mb-3">История заявок</h5>
+                    <div id="applicationsList" class="d-grid gap-2">
+                        <div class="text-muted">Загрузка...</div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="formView" class="d-none">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                    <div>
+                        <button
+                            id="backToList"
+                            type="button"
+                            class="btn btn-sm btn-outline-secondary mb-2"
+                        >
+                            <i class="bi bi-arrow-left me-1"></i>
+                            К заявкам
+                        </button>
+
+                        <h3 id="formTitle" class="fw-bold mb-0">
+                            Новая заявка
+                        </h3>
+                    </div>
+
+                    <span id="formStatus" class="status-badge status-draft">
+                        Черновик
+                    </span>
+                </div>
+
+                <form id="applicationForm">
+                    <div class="panel-card p-3 p-md-4 mb-3">
+                        <h5 class="fw-bold mb-3">
+                            <i class="bi bi-trophy text-primary me-2"></i>
+                            Турнир и команда
+                        </h5>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Турнир *
+                                </label>
+                                <select id="tournamentId" class="form-select" required>
+                                    <option value="">Выберите турнир</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">
+                                    Команда *
+                                </label>
+                                <select id="teamId" class="form-select" required>
+                                    <option value="">Выберите команду</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-card p-3 p-md-4 mb-3">
+                        <h5 class="fw-bold mb-3">
+                            <i class="bi bi-person-badge text-primary me-2"></i>
+                            Данные тренера
+                        </h5>
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Имя *</label>
+                                <input
+                                    id="coachFirst"
+                                    class="form-control"
+                                    maxlength="100"
+                                    required
+                                >
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Фамилия *</label>
+                                <input
+                                    id="coachLast"
+                                    class="form-control"
+                                    maxlength="100"
+                                    required
+                                >
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label">Год рождения *</label>
+                                <input
+                                    id="coachYear"
+                                    type="number"
+                                    min="1900"
+                                    max="2100"
+                                    class="form-control"
+                                    required
+                                >
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">
+                                    Фотография тренера *
+                                </label>
+
+                                <div class="photo-section">
+                                    <div id="coachPhotoPlaceholder" class="photo-placeholder">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+
+                                    <img
+                                        id="coachPhotoPreview"
+                                        class="photo-preview d-none"
+                                        alt="Фотография тренера"
+                                    >
+
+                                    <div>
+                                        <button
+                                            id="coachPhotoButton"
+                                            type="button"
+                                            class="btn btn-outline-primary"
+                                        >
+                                            <i class="bi bi-image me-1"></i>
+                                            Указать фотографию
+                                        </button>
+
+                                        <div class="text-muted small mt-2">
+                                            Фотография будет отображаться в заявке
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <input id="coachPhoto" type="hidden">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-card p-3 p-md-4 mb-3">
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                            <div>
+                                <h5 class="fw-bold mb-1">
+                                    <i class="bi bi-people text-primary me-2"></i>
+                                    Состав команды
+                                </h5>
+
+                                <div class="text-muted small">
+                                    От 1 до 25 игроков.
+                                    Можно выбрать игрока из базы.
+                                </div>
+                            </div>
+
+                            <button
+                                id="addPlayerButton"
+                                type="button"
+                                class="btn btn-outline-primary"
+                            >
+                                <i class="bi bi-person-plus me-1"></i>
+                                Добавить игрока
+                            </button>
+                        </div>
+
+                        <div id="playersContainer"></div>
+
+                        <div id="playersCounter" class="text-muted small">
+                            0 из 25 игроков
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-end gap-2 mb-5">
+                        <button
+                            id="saveDraftButton"
+                            type="submit"
+                            class="btn btn-outline-primary px-4"
+                        >
+                            <i class="bi bi-save me-2"></i>
+                            Сохранить черновик
+                        </button>
+
+                        <button
+                            id="submitApplicationButton"
+                            type="button"
+                            class="btn btn-primary px-4 fw-bold"
+                        >
+                            <i class="bi bi-send me-2"></i>
+                            Отправить заявку
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+</div>
+
+<script>
+"use strict";
+
+const API = "/api/v1/coach";
+const TOKEN_KEY = "jliga_coach_token";
+const $ = id => document.getElementById(id);
+
+let token = sessionStorage.getItem(TOKEN_KEY);
+let authMode = "login";
+let applicationId = null;
+let locked = false;
+let teams = [];
+let tournaments = [];
+
+const positions = [
+    "Вратарь",
+    "Защитник",
+    "Полузащитник",
+    "Нападающий"
+];
+
+const statusNames = {
+    draft: "Черновик",
+    submitted: "На рассмотрении",
+    approved: "Одобрена",
+    rejected: "Отклонена",
+    needs_revision: "На исправлении"
+};
+
+function escapeHTML(value) {
+    return String(value ?? "").replace(
+        /[&<>"']/g,
+        char => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#39;"
+        })[char]
+    );
+}
+
+function showNotice(message, type = "danger") {
+    const element = $("notice");
+    element.className = "alert alert-" + type;
+    element.textContent = message;
+
+    element.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest"
+    });
+}
+
+function clearNotice() {
+    $("notice").className = "alert d-none";
+    $("notice").textContent = "";
+}
+
+async function apiRequest(path, options = {}) {
+    const headers = {
+        ...(options.headers || {})
+    };
+
+    if (token) {
+        headers.Authorization = "Bearer " + token;
+    }
+
+    if (options.body && !(options.body instanceof FormData)) {
+        headers["Content-Type"] = "application/json";
+    }
+
+    let response;
+
+    try {
+        response = await fetch(API + path, {
+            ...options,
+            headers
+        });
+    } catch {
+        throw new Error("Нет соединения с сервером");
+    }
+
+    let data;
+
+    try {
+        data = await response.json();
+    } catch {
+        data = {};
+    }
+
+    if (!response.ok) {
+        if (response.status === 401 && token) {
+            logout();
+        }
+
+        let detail = data.detail || `Ошибка запроса (${response.status})`;
+
+        if (Array.isArray(detail)) {
+            detail = detail.map(item => item.msg).join("; ");
+        }
+
+        throw new Error(String(detail));
+    }
+
+    return data;
+}
+
+function logout() {
+    token = null;
+    sessionStorage.removeItem(TOKEN_KEY);
+
+    $("workspace").classList.add("d-none");
+    $("authView").classList.remove("d-none");
+
+    closeMenu();
+}
+
+function showWorkspace(profile) {
+    $("authView").classList.add("d-none");
+    $("workspace").classList.remove("d-none");
+
+    $("coachName").textContent =
+        profile.first_name + " " + profile.last_name;
+
+    $("coachPhone").textContent = profile.phone || "";
+}
+
+$("authTabs").addEventListener("click", event => {
+    const button = event.target.closest("[data-mode]");
+    if (!button) return;
+
+    authMode = button.dataset.mode;
+
+    document.querySelectorAll("#authTabs button").forEach(item => {
+        item.classList.toggle("active", item === button);
+    });
+
+    const isRegister = authMode === "register";
+
+    $("nameFields").classList.toggle("d-none", !isRegister);
+    $("authFirst").required = isRegister;
+    $("authLast").required = isRegister;
+
+    $("authSubmit").textContent = isRegister
+        ? "Зарегистрироваться"
+        : "Войти";
+
+    $("authError").classList.add("d-none");
+});
+
+$("authForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const phone = $("authPhone").value.trim();
+    const password = $("authPassword").value;
+
+    const data = {phone, password};
+
+    if (authMode === "register") {
+        data.first_name = $("authFirst").value.trim();
+        data.last_name = $("authLast").value.trim();
+    }
+
+    const button = $("authSubmit");
+    button.disabled = true;
+
+    try {
+        if (authMode === "register") {
+            await apiRequest("/register", {
+                method: "POST",
+                body: JSON.stringify(data)
+            });
+        }
+
+        const result = await apiRequest("/login", {
+            method: "POST",
+            body: JSON.stringify({phone, password})
+        });
+
+        token = result.access_token;
+        sessionStorage.setItem(TOKEN_KEY, token);
+
+        await initialize();
+    } catch (error) {
+        $("authError").textContent = error.message;
+        $("authError").classList.remove("d-none");
+    } finally {
+        button.disabled = false;
+    }
+});
+
+function closeMenu() {
+    $("sidebar").classList.remove("show");
+    $("sidebarBackdrop").classList.remove("show");
+}
+
+$("menuToggle").onclick = () => {
+    $("sidebar").classList.add("show");
+    $("sidebarBackdrop").classList.add("show");
+};
+
+$("sidebarBackdrop").onclick = closeMenu;
+$("logoutButton").onclick = logout;
+
+function switchView(view) {
+    clearNotice();
+
+    $("listView").classList.toggle("d-none", view !== "list");
+    $("formView").classList.toggle("d-none", view !== "form");
+
+    $("navList").classList.toggle("active", view === "list");
+    $("navNew").classList.toggle("active", view === "form");
+
+    closeMenu();
+
+    window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+    });
+}
+
+async function loadReferences() {
+    [teams, tournaments] = await Promise.all([
+        apiRequest("/teams"),
+        apiRequest("/tournaments")
+    ]);
+
+    $("teamId").innerHTML =
+        '<option value="">Выберите команду</option>' +
+        teams.map(team => `
+            <option value="${team.id}">
+                ${escapeHTML(team.name)}
+            </option>
+        `).join("");
+
+    $("tournamentId").innerHTML =
+        '<option value="">Выберите турнир</option>' +
+        tournaments.map(tournament => `
+            <option value="${tournament.id}">
+                ${escapeHTML(tournament.name)}
+            </option>
+        `).join("");
+}
+
+async function loadApplications() {
+    const applications = await apiRequest("/applications");
+
+    $("countAll").textContent = applications.length;
+
+    $("countDraft").textContent = applications.filter(
+        item => item.status === "draft"
+    ).length;
+
+    $("countSubmitted").textContent = applications.filter(
+        item => item.status === "submitted"
+    ).length;
+
+    const container = $("applicationsList");
+    container.replaceChildren();
+
+    if (!applications.length) {
+        container.innerHTML = `
+            <div class="text-center py-5 text-muted">
+                <i class="bi bi-clipboard2 fs-1 d-block mb-2"></i>
+                Заявок пока нет. Создайте первую!
+            </div>
+        `;
+        return;
+    }
+
+    for (const application of applications) {
+        const team = teams.find(
+            item => item.id === application.team_id
+        );
+
+        const tournament = tournaments.find(
+            item => item.id === application.tournament_id
+        );
+
+        const item = document.createElement("div");
+
+        item.className =
+            "border rounded-3 p-3 " +
+            "d-flex flex-wrap align-items-center " +
+            "justify-content-between gap-3";
+
+        const status = application.status;
+        const safeStatus = Object.hasOwn(statusNames, status)
+            ? status
+            : "draft";
+
+        item.innerHTML = `
+            <div>
+                <div class="fw-bold">
+                    ${escapeHTML(team?.name || "Команда #" + application.team_id)}
+                </div>
+
+                <div class="text-muted small">
+                    ${escapeHTML(tournament?.name || "Турнир #" + application.tournament_id)}
+                    · ${application.players_count ?? 0} игроков
+                </div>
+
+                <div class="text-muted small">
+                    Заявка №${application.id}
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <span class="status-badge status-${safeStatus}">
+                    ${escapeHTML(statusNames[status] || status)}
+                </span>
+
+                <button class="btn btn-outline-primary btn-sm">
+                    ${status === "draft" ? "Редактировать" : "Просмотр"}
+                </button>
+            </div>
+        `;
+
+        item.querySelector("button").onclick = () => {
+            openApplication(application.id);
+        };
+
+        container.appendChild(item);
+    }
+}
+
+function newApplication() {
+    applicationId = null;
+    locked = false;
+
+    $("applicationForm").reset();
+    $("playersContainer").replaceChildren();
+
+    $("formTitle").textContent = "Новая заявка";
+    $("formStatus").textContent = "Черновик";
+    $("formStatus").className = "status-badge status-draft";
+
+    setCoachPhoto("");
+    addPlayer();
+    setLocked(false);
+    switchView("form");
+}
+
+$("newApplication").onclick = newApplication;
+
+$("navNew").onclick = event => {
+    event.preventDefault();
+    newApplication();
+};
+
+$("navList").onclick = async event => {
+    event.preventDefault();
+    switchView("list");
+
+    try {
+        await loadApplications();
+    } catch (error) {
+        showNotice(error.message);
+    }
+};
+
+$("backToList").onclick = async () => {
+    switchView("list");
+
+    try {
+        await loadApplications();
+    } catch (error) {
+        showNotice(error.message);
+    }
+};
+
+function normalizePhotoUrl(value) {
+    const url = String(value || "").trim();
+
+    if (!url) return "";
+
+    if (url.startsWith("/") && !url.startsWith("//")) {
+        return url;
+    }
+
+    try {
+        const parsed = new URL(url, window.location.origin);
+
+        if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+            return parsed.href;
+        }
+    } catch {
+        return "";
+    }
+
+    return "";
+}
+
+function updatePhotoPreview(image, placeholder, photoUrl) {
+    const safeUrl = normalizePhotoUrl(photoUrl);
+
+    image.onload = () => {
+        image.classList.remove("d-none");
+        placeholder.classList.add("d-none");
+    };
+
+    image.onerror = () => {
+        image.classList.add("d-none");
+        placeholder.classList.remove("d-none");
+    };
+
+    if (safeUrl) {
+        image.classList.add("d-none");
+        placeholder.classList.remove("d-none");
+        image.src = safeUrl;
+    } else {
+        image.removeAttribute("src");
+        image.classList.add("d-none");
+        placeholder.classList.remove("d-none");
+    }
+}
+
+function setCoachPhoto(photoUrl) {
+    $("coachPhoto").value = photoUrl || "";
+
+    updatePhotoPreview(
+        $("coachPhotoPreview"),
+        $("coachPhotoPlaceholder"),
+        photoUrl
+    );
+}
+
+$("coachPhotoButton").onclick = () => {
+    if (locked) return;
+
+    const current = $("coachPhoto").value;
+
+    const url = prompt(
+        "Укажите ссылку на фотографию тренера:",
+        current
+    );
+
+    if (url === null) return;
+
+    const value = url.trim();
+
+    if (value && !normalizePhotoUrl(value)) {
+        showNotice("Укажите корректную ссылку на изображение");
+        return;
+    }
+
+    setCoachPhoto(value);
+};
+
+function renumberPlayers() {
+    const cards = [...$("playersContainer").children];
+
+    cards.forEach((card, index) => {
+        card.querySelector(".player-title").textContent =
+            "Игрок №" + (index + 1);
+    });
+
+    $("playersCounter").textContent =
+        cards.length + " из 25 игроков";
+
+    $("addPlayerButton").disabled =
+        locked || cards.length >= 25;
+}
+
+function addPlayer(value = {}) {
+    const container = $("playersContainer");
+
+    if (container.children.length >= 25) {
+        showNotice("Максимум 25 игроков");
+        return;
+    }
+
+    const card = document.createElement("div");
+    card.className = "player-card";
+
+    card.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <strong class="player-title">Игрок</strong>
+
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-danger remove-player"
+            >
+                <i class="bi bi-trash"></i>
+                Удалить
+            </button>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 position-relative">
+                <label class="form-label small fw-semibold">
+                    Найти существующего игрока
+                </label>
+
+                <input
+                    class="form-control player-search"
+                    placeholder="Введите имя или фамилию"
+                    autocomplete="off"
+                >
+
+                <div class="search-results d-none"></div>
+                <div class="form-text existing-note"></div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Имя *</label>
+                <input
+                    class="form-control player-first"
+                    maxlength="100"
+                    required
+                >
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label">Фамилия *</label>
+                <input
+                    class="form-control player-last"
+                    maxlength="100"
+                    required
+                >
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Дата рождения *</label>
+                <input
+                    type="date"
+                    class="form-control player-birth"
+                    required
+                >
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Позиция *</label>
+
+                <select class="form-select player-position" required>
+                    <option value="">Выберите позицию</option>
+
+                    ${positions.map(position => `
+                        <option value="${escapeHTML(position)}">
+                            ${escapeHTML(position)}
+                        </option>
+                    `).join("")}
+                </select>
+            </div>
+
+            <div class="col-md-4">
+                <label class="form-label">Номер *</label>
+
+                <input
+                    type="number"
+                    min="1"
+                    max="99"
+                    class="form-control player-number"
+                    required
+                >
+            </div>
+
+            <div class="col-12">
+                <label class="form-label fw-semibold">
+                    Фотография игрока *
+                </label>
+
+                <div class="photo-section">
+                    <div class="photo-placeholder player-photo-placeholder">
+                        <i class="bi bi-person"></i>
+                    </div>
+
+                    <img
+                        class="photo-preview player-photo-preview d-none"
+                        alt="Фотография игрока"
+                    >
+
+                    <div>
+                        <button
+                            type="button"
+                            class="btn btn-outline-primary player-photo-button"
+                        >
+                            <i class="bi bi-image me-1"></i>
+                            Указать фотографию
+                        </button>
+
+                        <div class="text-muted small mt-2 player-photo-description">
+                            Фотография не выбрана
+                        </div>
+                    </div>
+                </div>
+
+                <input type="hidden" class="player-photo">
+            </div>
+        </div>
+    `;
+
+    card.dataset.existingId = value.existing_player_id || "";
+
+    function fill(selector, fieldValue) {
+        card.querySelector(selector).value = fieldValue ?? "";
+    }
+
+    function setPlayerPhoto(photoUrl) {
+        const input = card.querySelector(".player-photo");
+        const image = card.querySelector(".player-photo-preview");
+        const placeholder = card.querySelector(".player-photo-placeholder");
+        const description = card.querySelector(".player-photo-description");
+
+        input.value = photoUrl || "";
+
+        description.textContent = photoUrl
+            ? "Фотография выбрана"
+            : "Фотография не выбрана";
+
+        updatePhotoPreview(image, placeholder, photoUrl);
+    }
+
+    fill(".player-first", value.first_name);
+    fill(".player-last", value.last_name);
+    fill(".player-birth", value.birth_date);
+    fill(".player-position", value.position);
+    fill(".player-number", value.jersey_number);
+
+    setPlayerPhoto(value.photo_url);
+
+    const note = card.querySelector(".existing-note");
+
+    if (value.existing_player_id) {
+        note.textContent =
+            "Игрок выбран из базы";
+    }
+
+    card.querySelector(".remove-player").onclick = () => {
+        card.remove();
+        renumberPlayers();
+    };
+
+    function resetExistingPlayer() {
+        if (!card.dataset.existingId) return;
+
+        card.dataset.existingId = "";
+        note.textContent =
+            "Данные изменены: связь с игроком базы сброшена";
+    }
+
+    card.querySelectorAll(
+        ".player-first, .player-last, " +
+        ".player-birth, .player-position"
+    ).forEach(input => {
+        input.addEventListener("input", resetExistingPlayer);
+        input.addEventListener("change", resetExistingPlayer);
+    });
+
+    card.querySelector(".player-photo-button").onclick = () => {
+        if (locked) return;
+
+        const current = card.querySelector(".player-photo").value;
+
+        const url = prompt(
+            "Укажите ссылку на фотографию игрока:",
+            current
+        );
+
+        if (url === null) return;
+
+        const photoUrl = url.trim();
+
+        if (photoUrl && !normalizePhotoUrl(photoUrl)) {
+            showNotice("Укажите корректную ссылку на изображение");
+            return;
+        }
+
+        resetExistingPlayer();
+        setPlayerPhoto(photoUrl);
+    };
+
+    const search = card.querySelector(".player-search");
+    const results = card.querySelector(".search-results");
+
+    let timer = null;
+    let searchVersion = 0;
+
+    search.addEventListener("input", () => {
+        clearTimeout(timer);
+
+        const query = search.value.trim();
+        const version = ++searchVersion;
+
+        results.classList.add("d-none");
+
+        if (query.length < 2) return;
+
+        timer = setTimeout(async () => {
+            try {
+                const players = await apiRequest(
+                    "/players/search?q=" +
+                    encodeURIComponent(query)
+                );
+
+                if (
+                    version !== searchVersion ||
+                    !card.isConnected
+                ) return;
+
+                results.replaceChildren();
+
+                for (const player of players) {
+                    const button = document.createElement("button");
+                    button.type = "button";
+
+                    button.textContent =
+                        player.last_name + " " +
+                        player.first_name +
+                        (player.birth_date
+                            ? " · " + player.birth_date
+                            : "");
+
+                    button.onclick = () => {
+                        card.dataset.existingId = String(player.id);
+
+                        fill(".player-first", player.first_name);
+                        fill(".player-last", player.last_name);
+                        fill(".player-birth", player.birth_date);
+                        fill(".player-position", player.position);
+
+                        setPlayerPhoto(player.photo_url);
+
+                        note.textContent = "Игрок выбран из базы";
+
+                        search.value = "";
+                        results.classList.add("d-none");
+                    };
+
+                    results.appendChild(button);
+                }
+
+                if (!players.length) {
+                    results.innerHTML = `
+                        <div class="p-3 text-muted small">
+                            Игроки не найдены
+                        </div>
+                    `;
+                }
+
+                results.classList.remove("d-none");
+            } catch (error) {
+                showNotice(error.message);
+            }
+        }, 300);
+    });
+
+    document.addEventListener("click", event => {
+        if (!card.contains(event.target)) {
+            results.classList.add("d-none");
+        }
+    });
+
+    container.appendChild(card);
+
+    if (locked) {
+        card.querySelectorAll("input, select, button").forEach(element => {
+            element.disabled = true;
+        });
+    }
+
+    renumberPlayers();
+}
+
+$("addPlayerButton").onclick = () => addPlayer();
+
+function setLocked(value) {
+    locked = value;
+
+    $("applicationForm").querySelectorAll(
+        "input, select, .player-photo-button, #coachPhotoButton"
+    ).forEach(element => {
+        element.disabled = locked;
+    });
+
+    $("playersContainer").querySelectorAll(
+        ".remove-player"
+    ).forEach(button => {
+        button.disabled = locked;
+    });
+
+    $("saveDraftButton").classList.toggle("d-none", locked);
+    $("submitApplicationButton").classList.toggle("d-none", locked);
+
+    renumberPlayers();
+}
+
+function buildPayload() {
+    const cards = [...$("playersContainer").children];
+
+    const players = cards.map(card => {
+        const existingId = card.dataset.existingId;
+
+        return {
+            existing_player_id: existingId
+                ? Number(existingId)
+                : null,
+
+            first_name: card.querySelector(
+                ".player-first"
+            ).value.trim(),
+
+            last_name: card.querySelector(
+                ".player-last"
+            ).value.trim(),
+
+            birth_date: card.querySelector(
+                ".player-birth"
+            ).value,
+
+            position: card.querySelector(
+                ".player-position"
+            ).value,
+
+            jersey_number: Number(
+                card.querySelector(
+                    ".player-number"
+                ).value
+            ),
+
+            photo_url: card.querySelector(
+                ".player-photo"
+            ).value.trim()
+        };
+    });
+
+    if (players.length < 1 || players.length > 25) {
+        throw new Error(
+            "В заявке должно быть от 1 до 25 игроков"
+        );
+    }
+
+    const numbers = players.map(player => player.jersey_number);
+
+    if (new Set(numbers).size !== numbers.length) {
+        throw new Error(
+            "Номера игроков не должны повторяться"
+        );
+    }
+
+    const existingIds = players
+        .filter(player => player.existing_player_id)
+        .map(player => player.existing_player_id);
+
+    if (new Set(existingIds).size !== existingIds.length) {
+        throw new Error(
+            "Один игрок из базы выбран несколько раз"
+        );
+    }
+
+    if (!$("coachPhoto").value.trim()) {
+        throw new Error("Укажите фотографию тренера");
+    }
+
+    for (const player of players) {
+        if (!player.photo_url) {
+            throw new Error(
+                "Укажите фотографию для игрока " +
+                player.first_name + " " + player.last_name
+            );
+        }
+    }
+
+    return {
+        team_id: Number($("teamId").value),
+
+        tournament_id: Number($("tournamentId").value),
+
+        coach: {
+            first_name: $("coachFirst").value.trim(),
+            last_name: $("coachLast").value.trim(),
+            birth_year: Number($("coachYear").value),
+            photo_url: $("coachPhoto").value.trim()
+        },
+
+        players
+    };
+}
+
+async function saveApplication() {
+    if (!$("applicationForm").reportValidity()) {
+        return null;
+    }
+
+    const data = buildPayload();
+
+    const path = applicationId
+        ? "/applications/" + applicationId
+        : "/applications";
+
+    const result = await apiRequest(path, {
+        method: applicationId ? "PUT" : "POST",
+        body: JSON.stringify(data)
+    });
+
+    applicationId = result.id;
+
+    return result;
+}
+
+$("applicationForm").addEventListener("submit", async event => {
+    event.preventDefault();
+
+    const button = $("saveDraftButton");
+    button.disabled = true;
+
+    try {
+        const result = await saveApplication();
+
+        if (result) {
+            showNotice(
+                "Черновик успешно сохранён",
+                "success"
+            );
+        }
+    } catch (error) {
+        showNotice(error.message);
+    } finally {
+        button.disabled = false;
+    }
+});
+
+$("submitApplicationButton").onclick = async () => {
+    if (!$("applicationForm").reportValidity()) {
+        return;
+    }
+
+    if (!confirm(
+        "Отправить заявку администратору? " +
+        "После отправки редактирование будет недоступно."
+    )) {
+        return;
+    }
+
+    const button = $("submitApplicationButton");
+    button.disabled = true;
+
+    try {
+        const result = await saveApplication();
+
+        if (!result) return;
+
+        await apiRequest(
+            "/applications/" + applicationId + "/submit",
+            {method: "POST"}
+        );
+
+        switchView("list");
+        await loadApplications();
+
+        showNotice(
+            "Заявка отправлена на рассмотрение",
+            "success"
+        );
+    } catch (error) {
+        showNotice(error.message);
+    } finally {
+        button.disabled = false;
+    }
+};
+
+async function openApplication(id) {
+    try {
+        const application = await apiRequest(
+            "/applications/" + id
+        );
+
+        applicationId = application.id;
+
+        $("formTitle").textContent =
+            "Заявка №" + application.id;
+
+        $("formStatus").textContent =
+            statusNames[application.status] ||
+            application.status;
+
+        const safeStatus = Object.hasOwn(statusNames, application.status)
+            ? application.status
+            : "draft";
+
+        $("formStatus").className =
+            "status-badge status-" + safeStatus;
+
+        $("teamId").value = application.team_id;
+        $("tournamentId").value = application.tournament_id;
+
+        const coach = application.coach || {};
+
+        $("coachFirst").value = coach.first_name || "";
+        $("coachLast").value = coach.last_name || "";
+        $("coachYear").value = coach.birth_year || "";
+
+        setCoachPhoto(coach.photo_url);
+
+        $("playersContainer").replaceChildren();
+
+        for (const player of application.players || []) {
+            addPlayer(player);
+        }
+
+        setLocked(application.status !== "draft");
+        switchView("form");
+
+        if (application.admin_comment) {
+            showNotice(
+                "Комментарий администратора: " +
+                application.admin_comment,
+                "info"
+            );
+        }
+    } catch (error) {
+        showNotice(error.message);
+    }
+}
+
+async function initialize() {
+    if (!token) return;
+
+    try {
+        const profile = await apiRequest("/me");
+
+        showWorkspace(profile);
+
+        await loadReferences();
+        await loadApplications();
+
+        switchView("list");
+    } catch (error) {
+        if (token) {
+            showNotice(error.message);
+        }
+    }
+}
+
+initialize();
+</script>
+
+    <script src="/static/js/jliga-responsive.js" defer data-jliga-responsive></script>
+</body>
+</html>

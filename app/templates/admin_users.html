@@ -1,0 +1,375 @@
+
+{% extends "admin_base.html" %}
+
+{% block title %}Пользователи | J-LIGA{% endblock %}
+{% block page_heading %}Управление пользователями{% endblock %}
+
+{% block extra_css %}
+<style>
+  .users-page { color: #172033; }
+  .users-head { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+  .users-head h1 { font-size:24px; font-weight:800; margin:0 0 4px; }
+  .users-muted { color:#667085; font-size:13px; }
+  .users-kpis { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:20px; }
+  .users-kpi { background:#fff; border:1px solid #e2e8f0; border-radius:13px; padding:16px; }
+  .users-kpi strong { font-size:27px; display:block; color:#172033; }
+  .users-kpi span { color:#667085; font-size:12px; }
+  .users-panel { background:#fff; border:1px solid #e2e8f0; border-radius:13px; overflow:hidden; }
+  .users-filters { display:grid; grid-template-columns:minmax(220px,1fr) 190px 180px; gap:10px; padding:17px; border-bottom:1px solid #e7ebf0; }
+  .users-filters :is(input,select) { min-width:0; }
+  .users-table-wrap { overflow-x:auto; max-width:100%; }
+  .users-table { width:100%; border-collapse:collapse; white-space:nowrap; font-size:13px; }
+  .users-table th { background:#f8fafc; color:#667085; text-transform:uppercase; font-size:11px; letter-spacing:.4px; padding:12px 16px; border-bottom:1px solid #e7ebf0; }
+  .users-table td { padding:14px 16px; border-bottom:1px solid #eef0f4; vertical-align:middle; }
+  .users-table tbody tr:last-child td { border-bottom:0; }
+  .users-name { font-weight:750; color:#172033; }
+  .users-email { color:#64748b; font-size:12px; }
+  .users-pill { display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border-radius:30px; font-size:11px; font-weight:750; }
+  .users-pill.ok { color:#087f4a; background:#daf5e6; }
+  .users-pill.off { color:#b42318; background:#fee4e2; }
+  .users-pill.role { color:#344054; background:#f2f4f7; }
+  .users-actions { display:flex; gap:5px; align-items:center; }
+  .users-actions .btn { white-space:nowrap; }
+  .users-mobile { display:none; }
+  .users-card { padding:15px; border-bottom:1px solid #eef0f4; }
+  .users-card:last-child { border-bottom:0; }
+  .users-card-top { display:flex; gap:10px; justify-content:space-between; align-items:flex-start; }
+  .users-card-meta { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0; }
+  .users-card-actions { display:flex; gap:8px; flex-wrap:wrap; }
+  .users-card-actions .btn { flex:1; }
+  .users-footer { padding:14px 17px; display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; border-top:1px solid #eef0f4; }
+  .users-empty { color:#667085; padding:35px 15px; text-align:center; }
+  .users-alert { padding:10px 14px; border-radius:9px; margin-bottom:13px; background:#e5f7ed; color:#086542; }
+  .users-alert.error { background:#fee4e2; color:#b42318; }
+  .users-alert:empty { display:none; }
+  .users-dialog { border:0; border-radius:15px; padding:0; width:min(590px,calc(100vw - 24px)); max-height:calc(100vh - 24px); overflow:auto; box-shadow:0 20px 70px #10182855; color:#172033; }
+  .users-dialog::backdrop { background:#10182888; }
+  .users-dialog-head { display:flex; align-items:center; justify-content:space-between; padding:17px 20px; border-bottom:1px solid #e7ebf0; gap:10px; }
+  .users-dialog-head h2 { margin:0; font-size:19px; font-weight:750; }
+  .users-dialog-body { padding:19px 20px; }
+  .users-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:13px; }
+  .users-field { display:flex; flex-direction:column; gap:5px; min-width:0; }
+  .users-field.full { grid-column:span 2; }
+  .users-field label { font-size:12px; font-weight:700; }
+  .users-field .form-control,.users-field .form-select { width:100%; }
+  .users-checks { display:flex; flex-wrap:wrap; gap:15px; margin-top:14px; }
+  .users-dialog-foot { display:flex; justify-content:flex-end; flex-wrap:wrap; gap:9px; padding:13px 20px; border-top:1px solid #e7ebf0; }
+  .users-password-input { font-family:ui-monospace,Consolas,monospace; font-size:14px; }
+
+  @media(max-width:850px) {
+    .users-filters { grid-template-columns:1fr 1fr; }
+    .users-filters .users-search { grid-column:span 2; }
+  }
+
+  @media(max-width:700px) {
+    .users-table-wrap { display:none; }
+    .users-mobile { display:block; }
+    .users-kpis { gap:8px; }
+    .users-kpi { padding:12px; }
+    .users-kpi strong { font-size:23px; }
+    .users-head h1 { font-size:21px; }
+    .users-filters { grid-template-columns:1fr; padding:13px; }
+    .users-filters .users-search { grid-column:auto; }
+    .users-form-grid { grid-template-columns:1fr; }
+    .users-field.full { grid-column:auto; }
+    .users-dialog-body { padding:15px; }
+    .users-dialog-head { padding:14px 15px; }
+  }
+</style>
+{% endblock %}
+
+{% block admin_content %}
+<section class="users-page">
+  <div class="users-head">
+    <div>
+      <h1>
+        <i class="bi bi-people-fill text-primary me-2"></i>
+        Пользователи
+      </h1>
+      <div class="users-muted">
+        Аккаунты, роли, команды и доступ к J-LIGA
+      </div>
+    </div>
+
+    <button type="button" class="btn btn-primary" id="usersAdd">
+      <i class="bi bi-person-plus me-1"></i>
+      Добавить пользователя
+    </button>
+  </div>
+
+  <div class="users-kpis">
+    <div class="users-kpi">
+      <strong id="usersTotal">—</strong>
+      <span>Всего пользователей</span>
+    </div>
+    <div class="users-kpi">
+      <strong id="usersActive">—</strong>
+      <span>Активные</span>
+    </div>
+    <div class="users-kpi">
+      <strong id="usersBlocked">—</strong>
+      <span>Заблокированы</span>
+    </div>
+  </div>
+
+  <div
+    id="usersAlert"
+    class="users-alert"
+    role="status"
+    aria-live="polite"
+  ></div>
+
+  <div class="users-panel">
+    <div class="users-filters">
+      <input
+        id="usersSearch"
+        class="form-control users-search"
+        type="search"
+        placeholder="Поиск по имени, email или телефону"
+        aria-label="Поиск пользователя"
+      >
+
+      <select
+        id="usersRole"
+        class="form-select"
+        aria-label="Фильтр по роли"
+      >
+        <option value="">Все роли</option>
+        <option value="admin">Администратор</option>
+        <option value="editor">Редактор</option>
+        <option value="captain">Капитан</option>
+        <option value="user">Пользователь</option>
+      </select>
+
+      <select
+        id="usersActiveFilter"
+        class="form-select"
+        aria-label="Фильтр по статусу"
+      >
+        <option value="all">Все статусы</option>
+        <option value="active">Активные</option>
+        <option value="blocked">Заблокированные</option>
+      </select>
+    </div>
+
+    <div class="users-table-wrap">
+      <table class="users-table" aria-label="Список пользователей">
+        <thead>
+          <tr>
+            <th>Пользователь</th>
+            <th>Роль</th>
+            <th>Команда</th>
+            <th>Статус</th>
+            <th>Регистрация</th>
+            <th>Действия</th>
+          </tr>
+        </thead>
+        <tbody id="usersTable">
+          <tr>
+            <td colspan="6" class="users-empty">Загрузка…</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="usersMobile" class="users-mobile"></div>
+
+    <div class="users-footer">
+      <span class="users-muted" id="usersCount">Загрузка…</span>
+
+      <div class="d-flex align-items-center gap-2">
+        <button
+          class="btn btn-outline-secondary btn-sm"
+          id="usersPrev"
+          type="button"
+        >Назад</button>
+
+        <span class="users-muted" id="usersPage">1 / 1</span>
+
+        <button
+          class="btn btn-outline-secondary btn-sm"
+          id="usersNext"
+          type="button"
+        >Далее</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="users-muted mt-3">
+    Блокировка сохраняет историю и связи пользователя.
+    Пароли не отображаются; новый временный пароль
+    показывается только один раз.
+  </p>
+</section>
+
+<!-- СОЗДАНИЕ / РЕДАКТИРОВАНИЕ -->
+
+<dialog
+  id="usersDialog"
+  class="users-dialog"
+  aria-labelledby="usersDialogTitle"
+>
+  <form id="usersForm">
+    <div class="users-dialog-head">
+      <h2 id="usersDialogTitle">Пользователь</h2>
+      <button
+        id="usersClose"
+        class="btn btn-light btn-sm"
+        type="button"
+        aria-label="Закрыть"
+      >✕</button>
+    </div>
+
+    <div class="users-dialog-body">
+      <div class="users-form-grid">
+        <div class="users-field">
+          <label for="ufLast">Фамилия *</label>
+          <input
+            class="form-control"
+            id="ufLast"
+            maxlength="100"
+            required
+          >
+        </div>
+
+        <div class="users-field">
+          <label for="ufFirst">Имя *</label>
+          <input
+            class="form-control"
+            id="ufFirst"
+            maxlength="100"
+            required
+          >
+        </div>
+
+        <div class="users-field full">
+          <label for="ufEmail">Email *</label>
+          <input
+            class="form-control"
+            id="ufEmail"
+            type="email"
+            maxlength="255"
+            autocomplete="off"
+            required
+          >
+        </div>
+
+        <div class="users-field">
+          <label for="ufPhone">Телефон</label>
+          <input
+            class="form-control"
+            id="ufPhone"
+            type="tel"
+            maxlength="20"
+          >
+        </div>
+
+        <div class="users-field">
+          <label for="ufRole">Роль</label>
+          <select class="form-select" id="ufRole">
+            <option value="user">Пользователь</option>
+            <option value="captain">Капитан</option>
+            <option value="editor">Редактор</option>
+            <option value="admin">Администратор</option>
+          </select>
+        </div>
+
+        <div class="users-field full">
+          <label for="ufTeam">Команда</label>
+          <select class="form-select" id="ufTeam">
+            <option value="">Не привязана</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="users-checks">
+        <label>
+          <input type="checkbox" id="ufActive" checked>
+          Аккаунт активен
+        </label>
+
+        <label>
+          <input type="checkbox" id="ufVerified" checked>
+          Email подтверждён
+        </label>
+      </div>
+
+      <p class="users-muted mt-3 mb-0">
+        Роль «Администратор» даёт полный доступ
+        к административным маршрутам.
+        Остальные роли не получают эти права автоматически.
+      </p>
+    </div>
+
+    <div class="users-dialog-foot">
+      <button
+        class="btn btn-outline-secondary"
+        type="button"
+        id="usersCancel"
+      >Отмена</button>
+
+      <button
+        class="btn btn-primary"
+        type="submit"
+        id="usersSave"
+      >Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ВРЕМЕННЫЙ ПАРОЛЬ -->
+
+<dialog
+  id="passwordDialog"
+  class="users-dialog"
+  aria-labelledby="passwordDialogTitle"
+>
+  <div class="users-dialog-head">
+    <h2 id="passwordDialogTitle">Временный пароль</h2>
+    <button
+      type="button"
+      class="btn btn-light btn-sm"
+      id="passwordClose"
+    >✕</button>
+  </div>
+
+  <div class="users-dialog-body">
+    <p id="passwordMessage">
+      Пароль создан. Передай его пользователю безопасным способом.
+    </p>
+
+    <div class="d-flex gap-2 flex-wrap">
+      <input
+        id="passwordValue"
+        class="form-control users-password-input"
+        readonly
+        aria-label="Временный пароль"
+        style="flex:1;min-width:185px"
+      >
+
+      <button
+        type="button"
+        class="btn btn-outline-primary"
+        id="passwordCopy"
+      >Копировать</button>
+    </div>
+
+    <p class="users-muted mt-3 mb-0">
+      После закрытия окна пароль здесь больше не показывается.
+      Если он потерян, создай новый.
+    </p>
+  </div>
+
+  <div class="users-dialog-foot">
+    <button
+      id="passwordDone"
+      type="button"
+      class="btn btn-primary"
+    >Готово</button>
+  </div>
+</dialog>
+{% endblock %}
+
+{% block extra_js %}
+<script src="/static/js/admin-users.js" defer></script>
+{% endblock %}

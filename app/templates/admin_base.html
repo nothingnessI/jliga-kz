@@ -1,1009 +1,2020 @@
 
+
 <!DOCTYPE html>
-<html lang="ru">
+
+<html lang="ru" class="jliga-admin">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+
+
     <title>
+
         {% block title %}Админ-панель | J-LIGA{% endblock %}
+
     </title>
 
-    <link
-        rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
-    >
+
 
     <link
+
         rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+
     >
+
+
+
+    <link
+
+        rel="stylesheet"
+
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+
+    >
+
+
 
     <style>
+
         :root {
+
             --sidebar-width: 260px;
+
             --sidebar-bg: #2b3035;
+
             --sidebar-header-bg: #212529;
+
             --sidebar-hover: #3c4146;
+
             --primary-color: #0d6efd;
+
             --page-bg: #f4f6f9;
+
         }
+
+
 
         * {
+
             box-sizing: border-box;
+
         }
+
+
 
         body {
+
             margin: 0;
+
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+
             background: var(--page-bg);
+
             overflow-x: hidden;
+
         }
 
+
+
         /* =========================================
+
            SIDEBAR
+
         ========================================= */
+
+
 
         .sidebar {
+
             position: fixed;
+
             top: 0;
+
             left: 0;
+
             z-index: 1050;
+
             width: var(--sidebar-width);
+
             height: 100vh;
+
             overflow-y: auto;
+
             background: var(--sidebar-bg);
+
             color: #fff;
+
             transition:
+
                 transform .25s ease,
+
                 visibility .25s ease;
+
         }
+
+
 
         .sidebar-header {
+
             display: block;
+
             padding: 20px;
+
             color: #fff;
+
             text-decoration: none;
+
             background: var(--sidebar-header-bg);
+
             border-bottom: 1px solid #3c4146;
+
         }
+
+
 
         .sidebar-header:hover {
+
             color: #fff;
+
             background: #1a1e21;
+
         }
+
+
 
         .sidebar-user {
+
             display: flex;
+
             align-items: center;
+
             gap: 10px;
+
             padding: 16px;
+
             border-bottom: 1px solid #495057;
+
         }
+
+
 
         .sidebar-avatar {
+
             width: 42px;
+
             height: 42px;
+
             flex: 0 0 42px;
+
             border-radius: 50%;
+
             background: #495057;
+
             display: flex;
+
             align-items: center;
+
             justify-content: center;
+
             font-size: 20px;
+
         }
+
+
 
         .sidebar-user-info {
+
             min-width: 0;
+
             overflow: hidden;
+
         }
+
+
 
         .sidebar-user-name {
+
             font-size: 14px;
+
             font-weight: 700;
+
         }
+
+
 
         .sidebar-user-email {
+
             font-size: 12px;
+
             color: #adb5bd;
+
             overflow: hidden;
+
             text-overflow: ellipsis;
+
             white-space: nowrap;
+
         }
 
+
+
         /* =========================================
+
            NAVIGATION
+
         ========================================= */
+
+
 
         .sidebar .nav-category {
+
             padding: 19px 20px 9px;
+
             color: #9299a0;
+
             font-size: 12px;
+
             text-transform: uppercase;
+
             font-weight: 700;
+
             letter-spacing: 1px;
+
         }
+
+
 
         .sidebar .nav-link {
+
             display: flex;
+
             align-items: center;
+
             gap: 10px;
+
             padding: 12px 20px;
+
             color: #adb5bd;
+
             text-decoration: none;
+
             border-radius: 0;
+
             font-size: 15px;
+
             transition:
+
                 background-color .2s,
+
                 color .2s;
+
         }
+
+
 
         .sidebar .nav-link > i {
+
             width: 21px;
+
             flex-shrink: 0;
+
             font-size: 17px;
+
             text-align: center;
+
         }
+
+
 
         .sidebar .nav-link:hover {
+
             background: var(--sidebar-hover);
+
             color: #fff;
+
         }
+
+
 
         .sidebar .nav-link.active {
+
             background: var(--primary-color);
+
             color: #fff;
+
         }
+
+
 
         .sidebar .nav-link .nav-text {
+
             flex: 1;
+
         }
 
+
+
         /* =========================================
+
            BADGES
+
         ========================================= */
+
+
 
         .applications-badge,
+
         .broadcast-badge {
+
             display: none;
+
             align-items: center;
+
             justify-content: center;
+
             min-width: 23px;
+
             height: 23px;
+
             padding: 0 6px;
+
             border-radius: 16px;
+
             font-size: 11px;
+
             font-weight: 700;
+
             color: #fff;
+
             background: #dc3545;
+
         }
+
+
 
         .applications-badge.visible,
+
         .broadcast-badge.visible {
+
             display: inline-flex;
+
         }
+
+
 
         .broadcast-badge {
+
             background: #198754;
+
         }
+
+
 
         .sidebar .nav-link.active .applications-badge,
+
         .sidebar .nav-link.active .broadcast-badge {
+
             background: #fff;
+
             color: #0d6efd;
+
         }
 
+
+
         /* =========================================
+
            MAIN CONTENT
+
         ========================================= */
+
+
 
         .main-content {
+
             margin-left: var(--sidebar-width);
+
             min-height: 100vh;
+
             display: flex;
+
             flex-direction: column;
+
         }
+
+
 
         .topbar {
+
             min-height: 60px;
+
             padding: 10px 20px;
+
             background: #fff;
+
             box-shadow: 0 1px 3px rgba(0,0,0,.1);
+
             display: flex;
+
             align-items: center;
+
             justify-content: space-between;
+
             gap: 12px;
+
         }
+
+
 
         .topbar-title {
+
             color: #343a40;
+
             font-size: 15px;
+
             font-weight: 600;
+
         }
+
+
 
         .topbar-actions {
+
             display: flex;
+
             align-items: center;
+
             gap: 15px;
+
         }
+
+
 
         .page-container {
+
             flex: 1;
+
             padding: 24px;
+
         }
 
+
+
         /* =========================================
+
            STATISTICS
+
         ========================================= */
+
+
 
         .stat-card {
+
             display: flex;
+
             align-items: center;
+
             padding: 20px;
+
             border: none;
+
             border-radius: 8px;
+
             color: #fff;
+
             box-shadow: 0 2px 5px rgba(0,0,0,.1);
+
         }
+
+
 
         .stat-card .icon {
+
             font-size: 2.5rem;
+
             margin-right: 15px;
+
             opacity: .8;
+
         }
+
+
 
         .stat-card .number {
+
             font-size: 1.8rem;
+
             font-weight: 700;
+
             line-height: 1;
+
         }
+
+
 
         .stat-card .label {
+
             font-size: .9rem;
+
             opacity: .9;
+
         }
 
+
+
         /* =========================================
+
            ADMIN COMPONENTS
+
         ========================================= */
+
+
 
         .admin-card {
+
             background: #fff;
+
             border: 1px solid #e9ecef;
+
             border-radius: 12px;
+
             box-shadow: 0 2px 8px rgba(0,0,0,.04);
+
         }
+
+
 
         .admin-card-header {
+
             padding: 18px 20px;
+
             border-bottom: 1px solid #e9ecef;
+
             font-weight: 700;
+
         }
+
+
 
         .admin-card-body {
+
             padding: 20px;
+
         }
+
+
 
         .admin-page-title {
+
             font-size: 25px;
+
             font-weight: 700;
+
             margin-bottom: 6px;
+
         }
+
+
 
         .admin-page-description {
+
             font-size: 14px;
+
             color: #6c757d;
+
         }
+
+
 
         .table {
+
             vertical-align: middle;
+
         }
+
+
 
         .table th {
+
             font-size: 13px;
+
             font-weight: 700;
+
             color: #495057;
+
         }
+
+
 
         .btn {
+
             border-radius: 7px;
+
         }
 
+
+
         /* =========================================
+
            PLAYER PHOTOS
+
         ========================================= */
+
+
 
         .admin-photo,
+
         .admin-photo-small {
+
             object-fit: cover;
+
             border: 1px solid #dee2e6;
+
             background: #f8f9fa;
+
         }
+
+
 
         .admin-photo {
+
             width: 80px;
+
             height: 100px;
+
             border-radius: 8px;
+
         }
+
+
 
         .admin-photo-small {
+
             width: 48px;
+
             height: 56px;
+
             border-radius: 6px;
+
         }
+
+
 
         .admin-photo-placeholder {
+
             width: 80px;
+
             height: 100px;
+
             display: flex;
+
             justify-content: center;
+
             align-items: center;
+
             border: 1px dashed #ced4da;
+
             border-radius: 8px;
+
             color: #adb5bd;
+
             background: #f1f3f5;
+
             font-size: 28px;
+
         }
 
+
+
         /* =========================================
+
            APPLICATION STATUS
+
         ========================================= */
+
+
 
         .application-status {
+
             display: inline-flex;
+
             align-items: center;
+
             padding: 6px 12px;
+
             border-radius: 20px;
+
             font-size: 12px;
+
             font-weight: 700;
+
             white-space: nowrap;
+
         }
+
+
 
         .application-status-draft {
+
             background: #e9ecef;
+
             color: #495057;
+
         }
+
+
 
         .application-status-submitted {
+
             background: #cfe2ff;
+
             color: #084298;
+
         }
+
+
 
         .application-status-approved {
+
             background: #d1e7dd;
+
             color: #0f5132;
+
         }
+
+
 
         .application-status-rejected {
+
             background: #f8d7da;
+
             color: #842029;
+
         }
+
+
 
         .application-status-needs_revision {
+
             background: #fff3cd;
+
             color: #664d03;
+
         }
+
+
 
         /* =========================================
+
            MOBILE SIDEBAR
+
         ========================================= */
 
+
+
         .sidebar-backdrop {
+
             display: none;
+
             position: fixed;
+
             inset: 0;
+
             background: rgba(0,0,0,.55);
+
             z-index: 1040;
+
         }
+
+
 
         @media (max-width: 991.98px) {
+
             .sidebar {
+
                 transform: translateX(-100%);
+
                 visibility: hidden;
+
                 pointer-events: none;
+
             }
+
+
 
             .sidebar.show {
+
                 transform: translateX(0);
+
                 visibility: visible;
+
                 pointer-events: auto;
+
             }
+
+
 
             .sidebar-backdrop.show {
+
                 display: block;
+
             }
+
+
 
             .main-content {
+
                 margin-left: 0;
+
             }
+
+
 
             .page-container {
+
                 padding: 16px;
+
             }
+
+
 
             .topbar {
+
                 padding: 10px 15px;
+
             }
+
         }
+
+
 
         @media (max-width: 575.98px) {
+
             .topbar-title {
+
                 font-size: 13px;
+
             }
+
+
 
             .stat-card {
+
                 padding: 15px;
+
             }
+
+
 
             .stat-card .number {
+
                 font-size: 1.5rem;
+
             }
+
+
 
             .admin-page-title {
+
                 font-size: 21px;
+
             }
+
+
 
             .admin-card-body {
+
                 padding: 15px;
+
             }
+
         }
+
     </style>
 
+
+
     {# Дочерние шаблоны могут добавлять свой CSS. #}
+
     {% block extra_css %}{% endblock %}
+
+    <link rel="stylesheet" href="/static/css/jliga-responsive.css" data-jliga-responsive>
 </head>
+
+
 
 <body>
 
+
+
     <!-- MOBILE BACKDROP -->
 
+
+
     <div
+
         class="sidebar-backdrop"
+
         id="sidebar-backdrop"
+
     ></div>
 
+
+
     <!-- =========================================
+
          SIDEBAR
+
     ========================================= -->
 
+
+
     <aside
+
         class="sidebar"
+
         id="sidebar"
+
         aria-label="Навигация администратора"
+
     >
+
+
 
         <!-- LOGO -->
 
+
+
         <a
+
             href="/"
+
             target="_blank"
+
             rel="noopener noreferrer"
+
             class="sidebar-header"
+
         >
+
             <div class="d-flex align-items-center">
+
                 <i class="bi bi-shield-shaded fs-3 me-2 text-primary"></i>
+
                 <h5 class="m-0 fw-bold">
+
                     САЙТ ЛИГИ
+
                 </h5>
+
             </div>
+
         </a>
+
+
 
         <!-- USER -->
 
+
+
         <div class="sidebar-user">
 
+
+
             <div class="sidebar-avatar">
+
                 <i class="bi bi-person text-white"></i>
+
             </div>
+
+
 
             <div class="sidebar-user-info">
 
+
+
                 <div class="sidebar-user-name">
+
                     J-LIGA
+
                 </div>
 
+
+
                 <div class="sidebar-user-email">
+
                     {{ user.email if user is defined and user else 'Администратор' }}
+
                 </div>
+
+
 
             </div>
 
+
+
         </div>
+
+
 
         <!-- =========================================
+
              MAIN MENU
+
         ========================================= -->
 
+
+
         <div class="nav-category">
+
             Основное
+
         </div>
+
+
 
         <a href="/admin" class="nav-link">
+
             <i class="bi bi-house-door"></i>
+
             <span class="nav-text">Главная</span>
+
         </a>
+
+
 
         <a href="/admin/news" class="nav-link">
+
             <i class="bi bi-newspaper"></i>
+
             <span class="nav-text">Новости</span>
+
         </a>
+
+
 
         <a href="/admin/media" class="nav-link">
+
             <i class="bi bi-images"></i>
+
             <span class="nav-text">Медиа</span>
+
         </a>
+
+
 
         <a href="/admin/partners" class="nav-link">
+
             <i class="bi bi-briefcase"></i>
+
             <span class="nav-text">Партнёры</span>
+
         </a>
+
+
 
         <a href="/admin/staff" class="nav-link">
+
             <i class="bi bi-person-badge"></i>
+
             <span class="nav-text">Сотрудники</span>
+
         </a>
+
+
 
         <a href="#" class="nav-link">
+
             <i class="bi bi-people"></i>
+
             <span class="nav-text">Пользователи</span>
+
         </a>
+
+
 
         <!-- =========================================
+
              TOURNAMENTS
+
         ========================================= -->
 
+
+
         <div class="nav-category">
+
             Турниры и матчи
+
         </div>
 
+
+
         <a href="/admin/tournaments" class="nav-link">
+
             <i class="bi bi-trophy"></i>
+
             <span class="nav-text">Мои турниры</span>
+
         </a>
 
+
+
         <a href="/admin/matches" class="nav-link">
+
             <i class="bi bi-calendar-event"></i>
+
             <span class="nav-text">Матчи</span>
+
         </a>
+
+
 
         <!-- BROADCAST CONTROL -->
 
+
+
         <a
+
             href="/admin/broadcast"
+
             class="nav-link"
+
             id="broadcast-navigation-link"
+
         >
+
             <i class="bi bi-broadcast-pin"></i>
 
+
+
             <span class="nav-text">
+
                 Трансляции
+
             </span>
 
+
+
             <span
+
                 id="active-broadcasts-badge"
+
                 class="broadcast-badge"
+
                 aria-label="Активные эфиры"
+
             ></span>
+
         </a>
+
+
 
         <a href="/admin/stadiums" class="nav-link">
+
             <i class="bi bi-geo-alt"></i>
+
             <span class="nav-text">Стадионы</span>
+
         </a>
+
+
 
         <!-- =========================================
+
              PARTICIPANTS
+
         ========================================= -->
 
+
+
         <div class="nav-category">
+
             Участники
+
         </div>
 
+
+
         <a href="/admin/teams" class="nav-link">
+
             <i class="bi bi-shield"></i>
+
             <span class="nav-text">Команды</span>
+
         </a>
 
+
+
         <a href="/admin/players" class="nav-link">
+
             <i class="bi bi-person"></i>
+
             <span class="nav-text">Игроки</span>
+
         </a>
+
+
 
         <!-- COACH APPLICATIONS -->
 
+
+
         <a
+
             href="/admin/coach-applications"
+
             class="nav-link"
+
             id="coach-applications-link"
+
         >
+
             <i class="bi bi-clipboard2-check"></i>
 
+
+
             <span class="nav-text">
+
                 Заявки тренеров
+
             </span>
+
+
 
             <span
+
                 id="pending-applications-badge"
+
                 class="applications-badge"
+
                 aria-label="Заявки на проверке"
+
             ></span>
+
         </a>
+
+
 
         <a
+
             href="/admin/disqualifications"
+
             class="nav-link"
+
         >
+
             <i class="bi bi-card-list"></i>
 
+
+
             <span class="nav-text">
+
                 Дисквалификации
+
             </span>
+
         </a>
+
+
 
         <!-- LOGOUT -->
 
+
+
         <div class="mt-5 mb-3 px-3">
 
+
+
             <a
+
                 href="/logout"
+
                 class="btn btn-outline-danger w-100 btn-sm"
+
             >
+
                 <i class="bi bi-box-arrow-right me-1"></i>
+
                 Выйти
+
             </a>
+
+
 
         </div>
 
+
+
     </aside>
 
+
+
     <!-- =========================================
+
          MAIN CONTENT
+
     ========================================= -->
 
+
+
     <div
+
         class="main-content"
+
         id="main-content"
+
     >
+
+
 
         <!-- TOPBAR -->
 
+
+
         <header class="topbar">
+
+
 
             <div class="d-flex align-items-center gap-3">
 
+
+
                 <button
+
                     type="button"
+
                     class="btn btn-link text-dark p-0 d-lg-none"
+
                     id="menu-toggle"
+
                     aria-label="Открыть меню"
+
                     aria-controls="sidebar"
+
                     aria-expanded="false"
+
                 >
+
                     <i class="bi bi-list fs-2"></i>
+
                 </button>
 
+
+
                 <div class="topbar-title">
+
                     {% block page_heading %}
+
                         Панель управления
+
                     {% endblock %}
+
                 </div>
 
+
+
             </div>
+
+
 
             <div class="topbar-actions">
 
+
+
                 <a
+
                     href="/"
+
                     target="_blank"
+
                     rel="noopener noreferrer"
+
                     class="btn btn-sm btn-outline-primary d-none d-sm-inline-flex"
+
                 >
+
                     <i class="bi bi-box-arrow-up-right me-1"></i>
+
                     На сайт
+
                 </a>
 
+
+
                 <span class="text-muted small d-none d-md-block">
+
                     Администрирование J-LIGA
+
                 </span>
+
+
 
             </div>
 
+
+
         </header>
+
+
 
         <!-- PAGE CONTENT -->
 
+
+
         <main class="container-fluid page-container">
+
             {% block admin_content %}{% endblock %}
+
         </main>
+
+
 
     </div>
 
+
+
     <!-- BOOTSTRAP -->
+
+
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+
+
     <!-- =========================================
+
          SIDEBAR CONTROLLER
+
     ========================================= -->
 
+
+
     <script>
+
     document.addEventListener("DOMContentLoaded", () => {
 
+
+
         const toggleBtn = document.getElementById(
+
             "menu-toggle"
+
         );
+
+
 
         const sidebar = document.getElementById(
+
             "sidebar"
+
         );
+
+
 
         const backdrop = document.getElementById(
+
             "sidebar-backdrop"
+
         );
+
+
 
         const navLinks = [
+
             ...document.querySelectorAll(".sidebar .nav-link")
+
         ];
 
+
+
         /* =========================================
+
            MOBILE NAVIGATION
+
         ========================================= */
+
+
 
         function closeSidebar() {
+
             sidebar.classList.remove("show");
+
             backdrop.classList.remove("show");
 
+
+
             toggleBtn?.setAttribute(
+
                 "aria-expanded",
+
                 "false"
+
             );
+
         }
+
+
 
         function openSidebar() {
+
             sidebar.classList.add("show");
+
             backdrop.classList.add("show");
 
+
+
             toggleBtn?.setAttribute(
+
                 "aria-expanded",
+
                 "true"
+
             );
+
         }
 
+
+
         toggleBtn?.addEventListener("click", () => {
+
             if (sidebar.classList.contains("show")) {
+
                 closeSidebar();
+
             } else {
+
                 openSidebar();
+
             }
+
         });
+
+
 
         backdrop.addEventListener(
+
             "click",
+
             closeSidebar
+
         );
+
+
 
         navLinks.forEach(link => {
+
             link.addEventListener(
+
                 "click",
+
                 closeSidebar
+
             );
+
         });
 
+
+
         document.addEventListener(
+
             "keydown",
+
             event => {
+
                 if (event.key === "Escape") {
+
                     closeSidebar();
+
                 }
+
             }
+
         );
 
+
+
         /* =========================================
+
            ACTIVE NAVIGATION LINK
+
         ========================================= */
 
+
+
         const pathname =
+
             location.pathname.replace(/\/+$/, "") || "/";
 
+
+
         const normalized = href =>
+
             href.replace(/\/+$/, "") || "/";
 
+
+
         let selected = null;
+
         let maxLength = -1;
 
+
+
         for (const link of navLinks) {
+
             const href = link.getAttribute("href") || "";
 
+
+
             if (!href.startsWith("/")) {
+
                 continue;
+
             }
+
+
 
             const path = normalized(href);
 
+
+
             const matches =
+
                 pathname === path ||
+
                 (
+
                     path !== "/admin" &&
+
                     pathname.startsWith(path + "/")
+
                 );
+
+
 
             if (
+
                 matches &&
+
                 path.length > maxLength
+
             ) {
+
                 selected = link;
+
                 maxLength = path.length;
+
             }
+
         }
+
+
 
         // Если администратор открыл отдельную
+
         // студию, относим её к разделу эфиров.
 
+
+
         if (
+
             pathname === "/broadcast/control" ||
+
             pathname.startsWith("/broadcast/studio/")
+
         ) {
+
             selected = document.getElementById(
+
                 "broadcast-navigation-link"
+
             );
+
         }
 
+
+
         navLinks.forEach(link => {
+
             link.classList.toggle(
+
                 "active",
+
                 link === selected
+
             );
+
+
 
             if (link === selected) {
+
                 link.setAttribute(
+
                     "aria-current",
+
                     "page"
+
                 );
+
             } else {
+
                 link.removeAttribute(
+
                     "aria-current"
+
                 );
+
             }
+
         });
 
+
+
         /* =========================================
+
            COACH APPLICATIONS BADGE
+
         ========================================= */
 
+
+
         async function updateApplicationsBadge() {
+
             const badge = document.getElementById(
+
                 "pending-applications-badge"
+
             );
+
+
 
             if (!badge) return;
 
+
+
             try {
+
                 const response = await fetch(
+
                     "/admin/api/coach-applications/count",
+
                     {
+
                         credentials: "same-origin",
+
                         cache: "no-store",
+
                         headers: {
+
                             "Accept": "application/json"
+
                         }
+
                     }
+
                 );
 
+
+
                 if (!response.ok) {
+
                     throw new Error(
+
                         "Applications API unavailable"
+
                     );
+
                 }
+
+
 
                 const data = await response.json();
+
                 const count = Number(data.pending);
 
+
+
                 if (
+
                     !Number.isInteger(count) ||
+
                     count <= 0
+
                 ) {
+
                     badge.textContent = "";
+
                     badge.classList.remove("visible");
+
                     return;
+
                 }
 
+
+
                 badge.textContent =
+
                     count > 99
+
                         ? "99+"
+
                         : String(count);
+
+
 
                 badge.classList.add("visible");
 
+
+
                 badge.setAttribute(
+
                     "aria-label",
+
                     `Заявок на проверке: ${count}`
+
                 );
 
+
+
             } catch (_) {
+
                 badge.classList.remove("visible");
+
             }
+
         }
 
+
+
         /* =========================================
+
            ACTIVE BROADCASTS BADGE
+
         ========================================= */
 
+
+
         async function updateBroadcastBadge() {
+
             const badge = document.getElementById(
+
                 "active-broadcasts-badge"
+
             );
+
+
 
             if (!badge) return;
 
+
+
             try {
+
                 const response = await fetch(
+
                     "/api/v1/broadcast/control/sessions?limit=500",
+
                     {
+
                         credentials: "same-origin",
+
                         cache: "no-store",
+
                         headers: {
+
                             "Accept": "application/json"
+
                         }
+
                     }
+
                 );
 
+
+
                 if (!response.ok) {
+
                     throw new Error(
+
                         "Broadcast API unavailable"
+
                     );
+
                 }
+
+
 
                 const sessions = await response.json();
 
+
+
                 if (!Array.isArray(sessions)) {
+
                     throw new Error(
+
                         "Unexpected response"
+
                     );
+
                 }
 
+
+
                 const count = sessions.filter(
+
                     session => session.is_active
+
                 ).length;
 
+
+
                 badge.textContent =
+
                     count > 99
+
                         ? "99+"
+
                         : String(count);
 
+
+
                 badge.classList.toggle(
+
                     "visible",
+
                     count > 0
+
                 );
+
+
 
                 badge.setAttribute(
+
                     "aria-label",
+
                     `Активных эфиров: ${count}`
+
                 );
 
+
+
             } catch (_) {
+
                 badge.classList.remove("visible");
+
             }
+
         }
 
+
+
         /* =========================================
+
            INIT
+
         ========================================= */
 
+
+
         window.updateApplicationsBadge =
+
             updateApplicationsBadge;
 
+
+
         window.updateBroadcastBadge =
+
             updateBroadcastBadge;
 
+
+
         updateApplicationsBadge();
+
         updateBroadcastBadge();
 
+
+
     });
+
     </script>
+
+
 
     <!-- SCRIPTS OF CHILD TEMPLATES -->
 
+
+
     {% block extra_js %}{% endblock %}
 
+
+
+    <script src="/static/js/jliga-responsive.js" defer data-jliga-responsive></script>
 </body>
+
 </html>
+

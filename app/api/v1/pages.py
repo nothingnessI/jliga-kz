@@ -780,7 +780,7 @@ async def tournament_page(
         }
 
     for m in matches_raw:
-        if m.status != MatchStatus.FINISHED or m.home_score is None or m.away_score is None:
+        if m.home_score is None or m.away_score is None:
             continue
 
         h = standings_dict.get(m.home_team_id)
@@ -827,7 +827,7 @@ async def tournament_page(
     teams_list = [s.team for s in standings]
 
     for m in matches_raw:
-        m.local_match_date = to_local_time(m.match_date)
+        m.match_date = to_local_time(m.match_date)
 
     fallback_date = datetime.min.replace(tzinfo=timezone.utc)
     matches = sorted(
@@ -941,58 +941,116 @@ async def tournament_page(
             "away_penalty": m.away_penalty,
             "stage_name": m.stage_name,
             "tech_loss": m.tech_loss,
-            "date": to_local_time(m.match_date).strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
+            "date": m.match_date.strftime('%d.%m.%Y %H:%M') if m.match_date else 'TBA',
             "stadium": m.stadium or 'Стадион TBA',
             "events": events_list,
             "status": m.status.value if hasattr(m.status, 'value') else str(m.status)
         }
 
+    # Календарь: сохраняем отдельные туры, не группируем LEAGUE в один блок.
     matches_by_round = defaultdict(list)
     matches_by_date = defaultdict(list)
 
-    calendar_matches = matches
-    if not show_past:
-        calendar_matches = [m for m in matches if m.status in [MatchStatus.SCHEDULED, MatchStatus.LIVE]]
+    calendar_matches = [
+        m for m in matches
+        if show_past or m.status in (MatchStatus.SCHEDULED, MatchStatus.LIVE)
+    ]
 
-    calendar_matches.sort(key=lambda x: (
-        0 if x.status == MatchStatus.SCHEDULED else 1,
-        x.match_date.timestamp() if x.status == MatchStatus.SCHEDULED and x.match_date else 9999999999,
-        -x.match_date.timestamp() if x.status != MatchStatus.SCHEDULED and x.match_date else 0
-    ))
+    def numeric_round(m):
+        value = str(m.round).strip() if m.round is not None else ""
+        if value.isdigit() and int(value) > 0:
+            return int(value)
+        found = re.fullmatch(r"(\d+)\s*(?:ТУР|ROUND)", value, re.IGNORECASE)
+        return int(found.group(1)) if found else None
+
+    def playoff_stage(m):
+        name = (m.stage_name or "").strip()
+        is_playoff = m.stage in (MatchStage.PLAYOFF, MatchStage.FINAL)
+        if not is_playoff:
+            is_playoff = bool(re.search(
+                r"ПЛЕЙ[- ]?ОФФ|PLAY[- ]?OFF|1\s*/\s*(?:2|4|8|16)\s*ФИНАЛ|"
+                r"(?:ПОЛУ|ЧЕТВЕРТЬ|ВОСЬМ)ФИНАЛ|\bФИНАЛ\b|ЗА\s*\d+\s*МЕСТ",
+                name, re.IGNORECASE
+            ))
+        return is_playoff
+
+    def round_title(m):
+        number = numeric_round(m)
+        name = (m.stage_name or "").strip().upper()
+
+        # Только реальный плей-офф группируем по названию стадии.
+        if playoff_stage(m):
+            if name and name not in ("PLAYOFF", "PLAY-OFF", "ПЛЕЙ-ОФФ"):
+                return name
+            if number is not None:
+                return f"ПЛЕЙ-ОФФ — {number} ТУР"
+            return "ПЛЕЙ-ОФФ"
+
+        # LEAGUE и GROUP не перекрывают номер тура.
+        if number is not None:
+            return f"{number} ТУР"
+
+        if name and name not in (
+            "LEAGUE", "GROUP", "GROUP STAGE", "ГРУППОВОЙ ЭТАП", "REGULAR"
+        ):
+            return name
+        return "БЕЗ УКАЗАННОГО ТУРА"
+
+    def playoff_rank(title):
+        checks = (
+            (r"1\s*/\s*16", 0),
+            (r"1\s*/\s*8|ВОСЬМ", 1),
+            (r"1\s*/\s*4|ЧЕТВЕРТЬ", 2),
+            (r"1\s*/\s*2|ПОЛУ", 3),
+            (r"ЗА\s*3\s*МЕСТ|ТРЕТЬ", 4),
+            (r"ФИНАЛ", 5),
+        )
+        for pattern, rank in checks:
+            if re.search(pattern, title, re.IGNORECASE):
+                return rank
+        return 6
+
+    def timestamp(m):
+        return m.match_date.timestamp() if m.match_date else float("inf")
+
+    # Даты внутри тура строго по возрастанию; статус больше не перемешивает игры.
+    calendar_matches.sort(key=lambda m: (timestamp(m), m.id))
+
+    months_ru = {
+        1: "ЯНВАРЯ", 2: "ФЕВРАЛЯ", 3: "МАРТА", 4: "АПРЕЛЯ",
+        5: "МАЯ", 6: "ИЮНЯ", 7: "ИЮЛЯ", 8: "АВГУСТА",
+        9: "СЕНТЯБРЯ", 10: "ОКТЯБРЯ", 11: "НОЯБРЯ", 12: "ДЕКАБРЯ",
+    }
+    weekdays_ru = {
+        0: "ПОНЕДЕЛЬНИК", 1: "ВТОРНИК", 2: "СРЕДА",
+        3: "ЧЕТВЕРГ", 4: "ПЯТНИЦА", 5: "СУББОТА", 6: "ВОСКРЕСЕНЬЕ",
+    }
 
     for m in calendar_matches:
-        if m.status == MatchStatus.SCHEDULED:
-            group_key = "БЛИЖАЙШИЕ МАТЧИ"
-        else:
-            if m.stage_name:
-                group_key = m.stage_name.upper()
-            elif m.round and str(m.round).isdigit() and int(m.round) > 0:
-                group_key = f"{m.round} ТУР"
-            else:
-                group_key = "ГРУППОВОЙ ЭТАП"
-
-        matches_by_round[group_key].append(m)
+        matches_by_round[round_title(m)].append(m)
 
         if m.match_date:
-            months_ru = {1: "ЯНВАРЯ", 2: "ФЕВРАЛЯ", 3: "МАРТА", 4: "АПРЕЛЯ", 5: "МАЯ", 6: "ИЮНЯ",
-                         7: "ИЮЛЯ", 8: "АВГУСТА", 9: "СЕНТЯБРЯ", 10: "ОКТЯБРЯ", 11: "НОЯБРЯ", 12: "ДЕКАБРЯ"}
-            weekdays_ru = {0: "ПОНЕДЕЛЬНИК", 1: "ВТОРНИК", 2: "СРЕДА", 3: "ЧЕТВЕРГ", 4: "ПЯТНИЦА", 5: "СУББОТА",
-                           6: "ВОСКРЕСЕНЬЕ"}
             dt = m.match_date
-            date_str = f"{dt.day} {months_ru[dt.month]}, {weekdays_ru[dt.weekday()]}"
-            matches_by_date[date_str].append(m)
+            date_title = (
+                f"{dt.day} {months_ru[dt.month]}, {weekdays_ru[dt.weekday()]}"
+            )
         else:
-            matches_by_date['ДАТА TBA'].append(m)
+            date_title = "ДАТА TBA"
+        matches_by_date[date_title].append(m)
 
-    def group_sort_key(item):
-        key = item[0]
-        if key == "БЛИЖАЙШИЕ МАТЧИ": return (0, 0)
-        if "ПЛЕЙ-ОФФ" in key or "ФИНАЛ" in key or "1/" in key: return (2, 0)
-        match = re.search(r'\d+', key)
-        if match: return (1, int(match.group()))
-        return (1, 999)
+    def round_group_sort_key(item):
+        title, group = item
+        first = group[0]
+        if playoff_stage(first):
+            return (1, playoff_rank(title), numeric_round(first) or 999999, title)
+        number = numeric_round(first)
+        if number is not None:
+            return (0, number, 0, title)
+        return (0, 999999, 0, title)
 
-    matches_by_round = dict(sorted(matches_by_round.items(), key=group_sort_key))
+    matches_by_round = dict(sorted(
+        matches_by_round.items(), key=round_group_sort_key
+    ))
 
     stmt_stats_goals = select(TeamPlayer).join(Player).where(
         TeamPlayer.tournament_id == tournament_id, func.coalesce(TeamPlayer.stats_goals, 0) > 0
@@ -1043,6 +1101,7 @@ async def tournament_page(
         "show_past": show_past,
         "now": datetime.now(timezone.utc)
     })
+
 
 
 @router.get("/participants/teams")

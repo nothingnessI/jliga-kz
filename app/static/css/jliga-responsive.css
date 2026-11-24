@@ -1,0 +1,380 @@
+
+/* J-LIGA responsive layer — additive, scoped, and non-destructive.
+   Does not change any business logic, API, template blocks, or broadcast canvas. */
+
+html.jliga-site,
+html.jliga-admin,
+html.jliga-studio,
+html.jliga-control,
+html.jliga-coach,
+html.jliga-standalone {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+html:is(.jliga-site, .jliga-admin, .jliga-studio, .jliga-control, .jliga-coach, .jliga-standalone) {
+    max-width: 100%;
+}
+
+html:is(.jliga-site, .jliga-admin, .jliga-studio, .jliga-control, .jliga-coach, .jliga-standalone) body {
+    min-width: 0;
+}
+
+html:is(.jliga-site, .jliga-admin, .jliga-studio, .jliga-control, .jliga-coach, .jliga-standalone) img:not(.emoji) {
+    max-width: 100%;
+}
+
+/* Scrolling tables: the original <table> remains untouched. */
+.jliga-table-scroll {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    border-radius: 8px;
+}
+
+.jliga-table-scroll > table {
+    margin-bottom: 0;
+}
+
+.jliga-table-scroll:focus-visible {
+    outline: 2px solid #0d6efd;
+    outline-offset: 2px;
+}
+
+@media (max-width: 991.98px) {
+    html.jliga-site .logo-text {
+        font-size: clamp(17px, 4.8vw, 23px);
+        white-space: normal;
+        line-height: 1.08;
+        overflow-wrap: anywhere;
+    }
+
+    html.jliga-site .header-top .container-fluid {
+        gap: 12px;
+    }
+
+    html.jliga-site .main-logo {
+        max-height: 56px;
+        width: auto;
+    }
+
+    html.jliga-site .mega-menu {
+        max-width: 100%;
+    }
+
+    html.jliga-site .mega-bottom-bar {
+        gap: 0;
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    html.jliga-site .mega-bottom-bar a {
+        display: block;
+        padding: 12px 18px;
+        text-align: left;
+    }
+
+    html.jliga-site .nav-main .dropdown-menu {
+        max-width: 100%;
+        box-shadow: none;
+    }
+
+    html.jliga-site .partners-scroll-container {
+        max-width: 100%;
+    }
+
+    /* Existing sidebar controllers stay in charge of opening/closing. */
+    html.jliga-admin .main-content,
+    html.jliga-coach .main-content {
+        min-width: 0;
+    }
+
+    html.jliga-admin .page-container,
+    html.jliga-coach .page-content {
+        padding: 16px;
+    }
+
+    html.jliga-admin .topbar,
+    html.jliga-coach .topbar {
+        gap: 10px;
+    }
+
+    html.jliga-studio .shell {
+        width: 100%;
+        max-width: 100%;
+        padding: 14px;
+    }
+
+    html.jliga-studio .columns,
+    html.jliga-studio .roster-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    html.jliga-studio .columns > *,
+    html.jliga-studio .roster-grid > * {
+        min-width: 0;
+    }
+
+    html.jliga-control main {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 767.98px) {
+    /* Prevent iOS focus zoom without disabling browser zoom. */
+    html:is(.jliga-site, .jliga-admin, .jliga-studio, .jliga-control, .jliga-coach, .jliga-standalone)
+      :is(input:not([type="checkbox"]):not([type="radio"]), textarea, select) {
+        font-size: 16px;
+        max-width: 100%;
+    }
+
+    html:is(.jliga-site, .jliga-admin, .jliga-studio, .jliga-control, .jliga-coach, .jliga-standalone)
+      :is(button, .btn, a.btn, [role="button"]) {
+        touch-action: manipulation;
+    }
+
+    html:is(.jliga-site, .jliga-admin, .jliga-studio, .jliga-control, .jliga-coach, .jliga-standalone)
+      :is(button:not(.btn-sm):not(.btn-close), .btn:not(.btn-sm), select) {
+        min-height: 40px;
+    }
+
+    html:is(.jliga-site, .jliga-admin, .jliga-coach, .jliga-standalone) .modal-dialog {
+        margin: 10px;
+        max-width: calc(100% - 20px);
+    }
+
+    html:is(.jliga-site, .jliga-admin, .jliga-coach, .jliga-standalone) .modal-body {
+        overflow-wrap: anywhere;
+    }
+
+    html.jliga-site .container-fluid.px-xl-5 {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+
+    html.jliga-site .footer-line {
+        align-items: flex-start;
+    }
+
+    html.jliga-site :is(.mega-list a, .nav-main .nav-link) {
+        white-space: normal;
+    }
+
+    html.jliga-admin .page-container {
+        padding: 12px;
+    }
+
+    html.jliga-admin .topbar {
+        padding: 10px 12px;
+    }
+
+    html.jliga-admin .topbar-title {
+        overflow-wrap: anywhere;
+    }
+
+    html.jliga-admin :is(.admin-card-body, .bc-box, .broadcast-panel) {
+        padding: 14px;
+    }
+
+    html.jliga-admin .dash-header,
+    html.jliga-admin .bc-header,
+    html.jliga-admin .broadcast-header,
+    html.jliga-admin .bc-toolbar,
+    html.jliga-admin .broadcast-toolbar {
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    html.jliga-admin .guide-container {
+        padding: 16px;
+    }
+
+    html.jliga-admin .timeline {
+        padding-left: 26px;
+    }
+
+    html.jliga-admin .timeline-content {
+        padding: 13px;
+    }
+
+    html.jliga-admin :is(.bc-actions, .broadcast-controls) {
+        grid-template-columns: 1fr;
+    }
+
+    html.jliga-admin :is(.bc-metrics, .broadcast-stats) {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    html.jliga-admin :is(.bc-cards, .broadcast-grid) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    html.jliga-admin :is(.bc-card, .broadcast-card) {
+        min-width: 0;
+    }
+
+    html.jliga-admin .bc-toolbar :is(input, select),
+    html.jliga-admin .broadcast-toolbar :is(input, select) {
+        width: 100%;
+        max-width: none;
+    }
+
+    html.jliga-studio .topbar {
+        flex-wrap: wrap;
+        align-items: flex-start;
+    }
+
+    html.jliga-studio .topbar > .row {
+        flex-wrap: wrap;
+    }
+
+    html.jliga-studio .teamheads > div {
+        font-size: 12px;
+    }
+
+    html.jliga-studio .scoreline {
+        gap: 6px;
+    }
+
+    html.jliga-studio .scoregroup {
+        gap: 5px;
+    }
+
+    html.jliga-studio .scorevalue {
+        min-width: 32px;
+        font-size: 32px;
+    }
+
+    html.jliga-studio .timer {
+        font-size: clamp(26px, 8vw, 38px);
+    }
+
+    html.jliga-studio .timerline {
+        gap: 5px;
+    }
+
+    html.jliga-studio .adjust {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    html.jliga-studio .match-picker {
+        min-width: 0;
+    }
+
+    html.jliga-studio .match-dropdown {
+        min-width: 0;
+    }
+
+    html.jliga-studio .player-actions .btn {
+        min-height: 38px;
+    }
+
+    html.jliga-studio .roster-tools {
+        flex-wrap: wrap;
+    }
+
+    html.jliga-studio .preview {
+        max-width: 100%;
+    }
+
+    html.jliga-control main {
+        padding: 12px;
+    }
+
+    html.jliga-control .toolbar {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    html.jliga-control .toolbar select {
+        grid-column: auto;
+        min-width: 0;
+    }
+
+    html.jliga-control #sessions {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    html.jliga-control .card {
+        min-width: 0;
+    }
+
+    html.jliga-coach .page-content {
+        padding: 12px;
+    }
+
+    html.jliga-coach .auth-wrapper {
+        max-width: 100%;
+    }
+
+    html.jliga-coach .panel-card {
+        padding: 14px;
+    }
+
+    html.jliga-coach .topbar {
+        padding: 10px 12px;
+    }
+}
+
+@media (max-width: 479.98px) {
+    html.jliga-site .main-logo {
+        height: 42px;
+    }
+
+    html.jliga-site .logo-text {
+        font-size: 18px;
+    }
+
+    html.jliga-site .partners-scroll-container {
+        gap: 12px;
+    }
+
+    html.jliga-admin :is(.bc-metrics, .broadcast-stats) {
+        grid-template-columns: 1fr;
+    }
+
+    html.jliga-admin :is(.bc-card-buttons, .broadcast-card-actions) {
+        grid-template-columns: 1fr;
+    }
+
+    html.jliga-admin :is(.bc-card-buttons .bc-span, .broadcast-card-actions .full) {
+        grid-column: auto;
+    }
+
+    html.jliga-studio .shell {
+        padding: 9px;
+    }
+
+    html.jliga-studio .grid2 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    html.jliga-studio .grid2 .btn {
+        padding: 9px 6px;
+        overflow-wrap: anywhere;
+    }
+
+    html.jliga-studio .roster-wrap {
+        padding: 9px;
+    }
+
+    html.jliga-control .links {
+        grid-template-columns: 1fr;
+    }
+
+    html.jliga-control .links button {
+        grid-column: auto;
+    }
+}
+
+/* Do not force animations when the visitor prefers reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+    html:is(.jliga-site, .jliga-admin, .jliga-studio, .jliga-control, .jliga-coach, .jliga-standalone) *,
+    html:is(.jliga-site, .jliga-admin, .jliga-studio, .jliga-control, .jliga-coach, .jliga-standalone) *::before,
+    html:is(.jliga-site, .jliga-admin, .jliga-studio, .jliga-control, .jliga-coach, .jliga-standalone) *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}

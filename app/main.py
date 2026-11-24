@@ -8,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.v1.api import api_router
 from app.api.v1 import pages
 from app.web.broadcast import router as broadcast_web_router
+from app.web.admin_users import router as admin_users_router
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -69,6 +70,10 @@ app.include_router(
 # Центр трансляций, студии, OBS и LIVE.
 app.include_router(
     broadcast_web_router,
+)
+
+app.include_router(
+    admin_users_router,
 )
 
 

@@ -1,638 +1,640 @@
-
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>J-LIGA — Все эфиры</title>
-
-<style>
-:root {
-    color-scheme: dark;
-    --bg: #292929;
-    --card: #303030;
-    --edge: #505050;
-    --accent: #c9f12d;
-    --pink: #e94c94;
-}
-
-* { box-sizing: border-box; }
-
-body {
-    margin: 0;
-    background: var(--bg);
-    color: #f7f7f7;
-    font: 14px system-ui, Arial, sans-serif;
-}
-
-main {
-    max-width: 1180px;
-    margin: auto;
-    padding: 22px;
-}
-
-h1 {
-    font-size: 24px;
-    margin: 0 0 5px;
-}
-
-h2 {
-    font-size: 16px;
-    margin: 0 0 10px;
-}
-
-.muted { color: #b5b7c0; }
-
-.top {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-.toolbar {
-    margin: 20px 0;
-    display: grid;
-    grid-template-columns: minmax(260px,1fr) auto auto;
-    gap: 9px;
-}
-
-select,
-button,
-.link {
-    border: 1px solid var(--edge);
-    border-radius: 6px;
-    background: #454545;
-    color: #fff;
-    min-height: 43px;
-    padding: 11px;
-    font: inherit;
-}
-
-select { width: 100%; }
-
-button {
-    cursor: pointer;
-    font-weight: 700;
-}
-
-button:hover { filter: brightness(1.1); }
-
-button:disabled {
-    opacity: .5;
-    cursor: wait;
-}
-
-.link {
-    display: inline-flex;
-    align-items: center;
-    text-decoration: none;
-    justify-content: center;
-}
-
-.primary {
-    background: #087c4d;
-    border-color: #087c4d;
-}
-
-#message {
-    min-height: 22px;
-    margin: 12px 0;
-    color: #bbe98f;
-}
-
-#message.error { color: #ff9c9c; }
-
-#sessions {
-    display: grid;
-    grid-template-columns:
-        repeat(auto-fill,minmax(310px,1fr));
-    gap: 14px;
-}
-
-.card {
-    border: 1px solid var(--edge);
-    border-radius: 9px;
-    padding: 16px;
-    background: var(--card);
-}
-
-.card.active { border-color: #288859; }
-
-.card .heading {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.pill {
-    font-size: 11px;
-    color: #ffbcbc;
-}
-
-.pill.live { color: #a5efbc; }
-
-.match {
-    font-size: 17px;
-    font-weight: 850;
-    min-height: 48px;
-}
-
-.score {
-    font-size: 30px;
-    font-weight: 900;
-    color: var(--accent);
-    margin: 8px 0;
-}
-
-.links {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 7px;
-    margin-top: 14px;
-}
-
-.links button { grid-column: span 2; }
-
-.tiny {
-    font-size: 12px;
-    margin-top: 6px;
-}
-
-@media(max-width:620px) {
-    .toolbar {
-        grid-template-columns: 1fr 1fr;
-    }
-
-    .toolbar select { grid-column: span 2; }
-}
-</style>
-</head>
-
-<body>
-<main>
-
-    <div class="top">
-        <div>
-            <h1>J-LIGA · ЦЕНТР ТРАНСЛЯЦИЙ</h1>
-
-            <div class="muted">
-                Разные матчи — разные студии
-                и источники OBS/vMix
-            </div>
-        </div>
-
-        <button id="refresh">
-            ↻ Обновить
-        </button>
-    </div>
-
-    <div class="toolbar">
-        <select
-            id="matchSelect"
-            aria-label="Выбор матча"
-        >
-            <option value="">
-                Загрузка матчей…
-            </option>
-        </select>
-
-        <button id="create" class="primary">
-            + Создать / открыть эфир
-        </button>
-
-        <button id="copyLink">
-            Скопировать ссылку
-        </button>
-    </div>
-
-    <div id="message" role="status"></div>
-
-    <h2>Управляемые трансляции</h2>
-
-    <div id="sessions"></div>
-
-</main>
-
-<script>
-"use strict";
-
-const API = "/api/v1/broadcast";
-const $ = id => document.getElementById(id);
-
-let sessions = [];
-let busy = false;
-
-function say(value, error = false) {
-    $("message").textContent = value;
-
-    $("message").classList.toggle(
-        "error",
-        error
-    );
-}
-
-async function json(url, opts = {}) {
-    const response = await fetch(url, {
-        ...opts,
-        credentials: "same-origin",
-        cache: "no-store",
-        headers: {
-            Accept: "application/json",
-            ...(opts.headers || {})
-        }
-    });
-
-    const data = await response.json()
-        .catch(() => null);
-
-    if (!response.ok) {
-        throw new Error(
-            typeof data?.detail === "string"
-                ? data.detail
-                : data?.detail?.message ||
-                  `HTTP ${response.status}`
-        );
-    }
-
-    return data;
-}
-
-function span(tag, cls, text) {
-    const element = document.createElement(tag);
-
-    if (cls) element.className = cls;
-
-    if (text !== undefined) {
-        element.textContent = String(text);
-    }
-
-    return element;
-}
-
-function formatDate(date) {
-    if (!date) return "Дата не указана";
-
-    const parsed = new Date(date);
-
-    if (Number.isNaN(parsed.getTime())) {
-        return date;
-    }
-
-    return new Intl.DateTimeFormat(
-        "ru-RU",
-        {
-            day: "numeric",
-            month: "long",
-            hour: "2-digit",
-            minute: "2-digit",
-            timeZone: "Asia/Almaty"
-        }
-    ).format(parsed);
-}
-
-function makeLink(text, url) {
-    const element = span("a", "link", text);
-
-    element.href = url;
-    element.target = "_blank";
-    element.rel = "noopener";
-
-    return element;
-}
-
-function render() {
-    const root = $("sessions");
-
-    root.replaceChildren();
-
-    if (!sessions.length) {
-        root.append(
-            span(
-                "p",
-                "muted",
-                "Эфиры ещё не созданы. Выбери матч выше."
-            )
-        );
-
-        return;
-    }
-
-    for (const session of sessions) {
-        const card = span(
-            "section",
-            `card ${session.is_active ? "active" : ""}`
-        );
-
-        const header = span("div", "heading");
-
-        header.append(
-            span(
-                "strong",
-                "",
-                `${session.tournament} · эфир #${session.id}`
-            ),
-            span(
-                "span",
-                `pill ${session.is_active ? "live" : ""}`,
-                session.is_active
-                    ? "● В ЭФИРЕ"
-                    : "● ВЫКЛЮЧЕН"
-            )
-        );
-
-        card.append(header);
-
-        card.append(
-            span(
-                "div",
-                "match",
-                `${session.home} — ${session.away}`
-            )
-        );
-
-        card.append(
-            span(
-                "div",
-                "score",
-                `${session.home_score ?? "—"} : ${session.away_score ?? "—"}`
-            )
-        );
-
-        card.append(
-            span(
-                "div",
-                "muted tiny",
-                `${formatDate(session.match_date)} · ` +
-                `${session.status} · ${session.phase}`
-            )
-        );
-
-        const actions = span("div", "links");
-
-        actions.append(
-            makeLink(
-                "Панель оператора",
-                `/broadcast/studio/${session.id}`
-            )
-        );
-
-        actions.append(
-            makeLink(
-                "Графика OBS",
-                `/broadcast/overlay/${session.id}`
-            )
-        );
-
-        const toggle = span(
-            "button",
-            session.is_active ? "" : "primary",
-            session.is_active
-                ? "Отключить эфир"
-                : "Активировать эфир"
-        );
-
-        toggle.onclick = () => toggleSession(session);
-
-        actions.append(toggle);
-
-        const sync = span(
-            "button",
-            "",
-            "↻ Счёт из турнира"
-        );
-
-        sync.onclick = () => syncScore(session);
-
-        actions.append(sync);
-
-        card.append(actions);
-        root.append(card);
-    }
-}
-
-async function loadMatches() {
-    const matches = await json(
-        `${API}/control/matches`
-    );
-
-    const select = $("matchSelect");
-    const previous = select.value;
-
-    select.replaceChildren();
-
-    select.add(
-        new Option("Выберите матч", "")
-    );
-
-    for (const match of matches) {
-        select.add(
-            new Option(
-                `${formatDate(match.date)} · ` +
-                `${match.home} — ${match.away} · ` +
-                `${match.tournament} (#${match.id})`,
-                String(match.id)
-            )
-        );
-    }
-
-    select.value = previous || "";
-}
-
-async function load() {
-    if (busy) return;
-
-    try {
-        sessions = await json(
-            `${API}/control/sessions`
-        );
-
-        render();
-
-    } catch (error) {
-        say(
-            `Не удалось получить трансляции: ${error.message}`,
-            true
-        );
-    }
-}
-
-async function execute(session, action) {
-    const current = await json(
-        `${API}/sessions/${session.id}`
-    );
-
-    await json(
-        `${API}/sessions/${session.id}/commands`,
-        {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                action,
-                expected_revision: current.revision,
-                payload: {}
-            })
-        }
-    );
-}
-
-async function toggleSession(session) {
-    if (busy) return;
-
-    busy = true;
-
-    try {
-        await execute(
-            session,
-            session.is_active
-                ? "DEACTIVATE"
-                : "ACTIVATE"
-        );
-
-        say("Состояние эфира сохранено");
-
-    } catch (error) {
-        say(error.message, true);
-
-    } finally {
-        busy = false;
-        await load();
-    }
-}
-
-async function syncScore(session) {
-    if (busy) return;
-
-    busy = true;
-
-    try {
-        const current = await json(
-            `${API}/sessions/${session.id}`
-        );
-
-        await json(
-            `${API}/control/sessions/${session.id}/sync`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    expected_revision: current.revision
-                })
-            }
-        );
-
-        say("Счёт из матча синхронизирован");
-
-    } catch (error) {
-        say(error.message, true);
-
-    } finally {
-        busy = false;
-        await load();
-    }
-}
-
-$("create").onclick = async () => {
-    const id = Number($("matchSelect").value);
-
-    if (!id) {
-        return say("Выберите матч", true);
-    }
-
-    if (busy) return;
-
-    busy = true;
-
-    try {
-        const session = await json(
-            `${API}/control/start`,
-            {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    match_id: id
-                })
-            }
-        );
-
-        say(`Готово: эфир #${session.id}`);
-
-        window.open(
-            `/broadcast/studio/${session.id}`,
-            "_blank",
-            "noopener"
-        );
-
-    } catch (error) {
-        say(
-            `Не удалось создать эфир: ${error.message}`,
-            true
-        );
-
-    } finally {
-        busy = false;
-        await load();
-    }
-};
-
-$("copyLink").onclick = async () => {
-    const selected = Number(
-        $("matchSelect").value
-    );
-
-    const session = sessions.find(
-        item => item.match_id === selected
-    );
-
-    if (!session) {
-        return say(
-            "Сначала создайте эфир для матча",
-            true
-        );
-    }
-
-    try {
-        await navigator.clipboard.writeText(
-            `${location.origin}/broadcast/overlay/${session.id}`
-        );
-
-        say("Ссылка OBS скопирована");
-
-    } catch (error) {
-        say("Не удалось скопировать ссылку", true);
-    }
-};
-
-$("refresh").onclick = () =>
-    Promise.all([
-        loadMatches(),
-        load()
-    ]).catch(error => {
-        say(error.message, true);
-    });
-
-(async () => {
-    try {
-        await Promise.all([
-            loadMatches(),
-            load()
-        ]);
-
-    } catch (error) {
-        say(error.message, true);
-    }
-})();
-
-setInterval(load, 5000);
-</script>
-</body>
-</html>
+
+<!DOCTYPE html>
+<html lang="ru" class="jliga-control">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>J-LIGA — Все эфиры</title>
+
+<style>
+:root {
+    color-scheme: dark;
+    --bg: #292929;
+    --card: #303030;
+    --edge: #505050;
+    --accent: #c9f12d;
+    --pink: #e94c94;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--bg);
+    color: #f7f7f7;
+    font: 14px system-ui, Arial, sans-serif;
+}
+
+main {
+    max-width: 1180px;
+    margin: auto;
+    padding: 22px;
+}
+
+h1 {
+    font-size: 24px;
+    margin: 0 0 5px;
+}
+
+h2 {
+    font-size: 16px;
+    margin: 0 0 10px;
+}
+
+.muted { color: #b5b7c0; }
+
+.top {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.toolbar {
+    margin: 20px 0;
+    display: grid;
+    grid-template-columns: minmax(260px,1fr) auto auto;
+    gap: 9px;
+}
+
+select,
+button,
+.link {
+    border: 1px solid var(--edge);
+    border-radius: 6px;
+    background: #454545;
+    color: #fff;
+    min-height: 43px;
+    padding: 11px;
+    font: inherit;
+}
+
+select { width: 100%; }
+
+button {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+button:hover { filter: brightness(1.1); }
+
+button:disabled {
+    opacity: .5;
+    cursor: wait;
+}
+
+.link {
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    justify-content: center;
+}
+
+.primary {
+    background: #087c4d;
+    border-color: #087c4d;
+}
+
+#message {
+    min-height: 22px;
+    margin: 12px 0;
+    color: #bbe98f;
+}
+
+#message.error { color: #ff9c9c; }
+
+#sessions {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fill,minmax(310px,1fr));
+    gap: 14px;
+}
+
+.card {
+    border: 1px solid var(--edge);
+    border-radius: 9px;
+    padding: 16px;
+    background: var(--card);
+}
+
+.card.active { border-color: #288859; }
+
+.card .heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.pill {
+    font-size: 11px;
+    color: #ffbcbc;
+}
+
+.pill.live { color: #a5efbc; }
+
+.match {
+    font-size: 17px;
+    font-weight: 850;
+    min-height: 48px;
+}
+
+.score {
+    font-size: 30px;
+    font-weight: 900;
+    color: var(--accent);
+    margin: 8px 0;
+}
+
+.links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 7px;
+    margin-top: 14px;
+}
+
+.links button { grid-column: span 2; }
+
+.tiny {
+    font-size: 12px;
+    margin-top: 6px;
+}
+
+@media(max-width:620px) {
+    .toolbar {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .toolbar select { grid-column: span 2; }
+}
+</style>
+    <link rel="stylesheet" href="/static/css/jliga-responsive.css" data-jliga-responsive>
+</head>
+
+<body>
+<main>
+
+    <div class="top">
+        <div>
+            <h1>J-LIGA · ЦЕНТР ТРАНСЛЯЦИЙ</h1>
+
+            <div class="muted">
+                Разные матчи — разные студии
+                и источники OBS/vMix
+            </div>
+        </div>
+
+        <button id="refresh">
+            ↻ Обновить
+        </button>
+    </div>
+
+    <div class="toolbar">
+        <select
+            id="matchSelect"
+            aria-label="Выбор матча"
+        >
+            <option value="">
+                Загрузка матчей…
+            </option>
+        </select>
+
+        <button id="create" class="primary">
+            + Создать / открыть эфир
+        </button>
+
+        <button id="copyLink">
+            Скопировать ссылку
+        </button>
+    </div>
+
+    <div id="message" role="status"></div>
+
+    <h2>Управляемые трансляции</h2>
+
+    <div id="sessions"></div>
+
+</main>
+
+<script>
+"use strict";
+
+const API = "/api/v1/broadcast";
+const $ = id => document.getElementById(id);
+
+let sessions = [];
+let busy = false;
+
+function say(value, error = false) {
+    $("message").textContent = value;
+
+    $("message").classList.toggle(
+        "error",
+        error
+    );
+}
+
+async function json(url, opts = {}) {
+    const response = await fetch(url, {
+        ...opts,
+        credentials: "same-origin",
+        cache: "no-store",
+        headers: {
+            Accept: "application/json",
+            ...(opts.headers || {})
+        }
+    });
+
+    const data = await response.json()
+        .catch(() => null);
+
+    if (!response.ok) {
+        throw new Error(
+            typeof data?.detail === "string"
+                ? data.detail
+                : data?.detail?.message ||
+                  `HTTP ${response.status}`
+        );
+    }
+
+    return data;
+}
+
+function span(tag, cls, text) {
+    const element = document.createElement(tag);
+
+    if (cls) element.className = cls;
+
+    if (text !== undefined) {
+        element.textContent = String(text);
+    }
+
+    return element;
+}
+
+function formatDate(date) {
+    if (!date) return "Дата не указана";
+
+    const parsed = new Date(date);
+
+    if (Number.isNaN(parsed.getTime())) {
+        return date;
+    }
+
+    return new Intl.DateTimeFormat(
+        "ru-RU",
+        {
+            day: "numeric",
+            month: "long",
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Asia/Almaty"
+        }
+    ).format(parsed);
+}
+
+function makeLink(text, url) {
+    const element = span("a", "link", text);
+
+    element.href = url;
+    element.target = "_blank";
+    element.rel = "noopener";
+
+    return element;
+}
+
+function render() {
+    const root = $("sessions");
+
+    root.replaceChildren();
+
+    if (!sessions.length) {
+        root.append(
+            span(
+                "p",
+                "muted",
+                "Эфиры ещё не созданы. Выбери матч выше."
+            )
+        );
+
+        return;
+    }
+
+    for (const session of sessions) {
+        const card = span(
+            "section",
+            `card ${session.is_active ? "active" : ""}`
+        );
+
+        const header = span("div", "heading");
+
+        header.append(
+            span(
+                "strong",
+                "",
+                `${session.tournament} · эфир #${session.id}`
+            ),
+            span(
+                "span",
+                `pill ${session.is_active ? "live" : ""}`,
+                session.is_active
+                    ? "● В ЭФИРЕ"
+                    : "● ВЫКЛЮЧЕН"
+            )
+        );
+
+        card.append(header);
+
+        card.append(
+            span(
+                "div",
+                "match",
+                `${session.home} — ${session.away}`
+            )
+        );
+
+        card.append(
+            span(
+                "div",
+                "score",
+                `${session.home_score ?? "—"} : ${session.away_score ?? "—"}`
+            )
+        );
+
+        card.append(
+            span(
+                "div",
+                "muted tiny",
+                `${formatDate(session.match_date)} · ` +
+                `${session.status} · ${session.phase}`
+            )
+        );
+
+        const actions = span("div", "links");
+
+        actions.append(
+            makeLink(
+                "Панель оператора",
+                `/broadcast/studio/${session.id}`
+            )
+        );
+
+        actions.append(
+            makeLink(
+                "Графика OBS",
+                `/broadcast/overlay/${session.id}`
+            )
+        );
+
+        const toggle = span(
+            "button",
+            session.is_active ? "" : "primary",
+            session.is_active
+                ? "Отключить эфир"
+                : "Активировать эфир"
+        );
+
+        toggle.onclick = () => toggleSession(session);
+
+        actions.append(toggle);
+
+        const sync = span(
+            "button",
+            "",
+            "↻ Счёт из турнира"
+        );
+
+        sync.onclick = () => syncScore(session);
+
+        actions.append(sync);
+
+        card.append(actions);
+        root.append(card);
+    }
+}
+
+async function loadMatches() {
+    const matches = await json(
+        `${API}/control/matches`
+    );
+
+    const select = $("matchSelect");
+    const previous = select.value;
+
+    select.replaceChildren();
+
+    select.add(
+        new Option("Выберите матч", "")
+    );
+
+    for (const match of matches) {
+        select.add(
+            new Option(
+                `${formatDate(match.date)} · ` +
+                `${match.home} — ${match.away} · ` +
+                `${match.tournament} (#${match.id})`,
+                String(match.id)
+            )
+        );
+    }
+
+    select.value = previous || "";
+}
+
+async function load() {
+    if (busy) return;
+
+    try {
+        sessions = await json(
+            `${API}/control/sessions`
+        );
+
+        render();
+
+    } catch (error) {
+        say(
+            `Не удалось получить трансляции: ${error.message}`,
+            true
+        );
+    }
+}
+
+async function execute(session, action) {
+    const current = await json(
+        `${API}/sessions/${session.id}`
+    );
+
+    await json(
+        `${API}/sessions/${session.id}/commands`,
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                action,
+                expected_revision: current.revision,
+                payload: {}
+            })
+        }
+    );
+}
+
+async function toggleSession(session) {
+    if (busy) return;
+
+    busy = true;
+
+    try {
+        await execute(
+            session,
+            session.is_active
+                ? "DEACTIVATE"
+                : "ACTIVATE"
+        );
+
+        say("Состояние эфира сохранено");
+
+    } catch (error) {
+        say(error.message, true);
+
+    } finally {
+        busy = false;
+        await load();
+    }
+}
+
+async function syncScore(session) {
+    if (busy) return;
+
+    busy = true;
+
+    try {
+        const current = await json(
+            `${API}/sessions/${session.id}`
+        );
+
+        await json(
+            `${API}/control/sessions/${session.id}/sync`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    expected_revision: current.revision
+                })
+            }
+        );
+
+        say("Счёт из матча синхронизирован");
+
+    } catch (error) {
+        say(error.message, true);
+
+    } finally {
+        busy = false;
+        await load();
+    }
+}
+
+$("create").onclick = async () => {
+    const id = Number($("matchSelect").value);
+
+    if (!id) {
+        return say("Выберите матч", true);
+    }
+
+    if (busy) return;
+
+    busy = true;
+
+    try {
+        const session = await json(
+            `${API}/control/start`,
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    match_id: id
+                })
+            }
+        );
+
+        say(`Готово: эфир #${session.id}`);
+
+        window.open(
+            `/broadcast/studio/${session.id}`,
+            "_blank",
+            "noopener"
+        );
+
+    } catch (error) {
+        say(
+            `Не удалось создать эфир: ${error.message}`,
+            true
+        );
+
+    } finally {
+        busy = false;
+        await load();
+    }
+};
+
+$("copyLink").onclick = async () => {
+    const selected = Number(
+        $("matchSelect").value
+    );
+
+    const session = sessions.find(
+        item => item.match_id === selected
+    );
+
+    if (!session) {
+        return say(
+            "Сначала создайте эфир для матча",
+            true
+        );
+    }
+
+    try {
+        await navigator.clipboard.writeText(
+            `${location.origin}/broadcast/overlay/${session.id}`
+        );
+
+        say("Ссылка OBS скопирована");
+
+    } catch (error) {
+        say("Не удалось скопировать ссылку", true);
+    }
+};
+
+$("refresh").onclick = () =>
+    Promise.all([
+        loadMatches(),
+        load()
+    ]).catch(error => {
+        say(error.message, true);
+    });
+
+(async () => {
+    try {
+        await Promise.all([
+            loadMatches(),
+            load()
+        ]);
+
+    } catch (error) {
+        say(error.message, true);
+    }
+})();
+
+setInterval(load, 5000);
+</script>
+    <script src="/static/js/jliga-responsive.js" defer data-jliga-responsive></script>
+</body>
+</html>
