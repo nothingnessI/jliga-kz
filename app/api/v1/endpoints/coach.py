@@ -1,7 +1,7 @@
 
 import re
 from datetime import datetime, timezone
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import (
     APIRouter,
@@ -29,7 +29,6 @@ from app.core.security import (
     verify_password,
 )
 from app.db.session import get_db
-
 from app.models.enums import UserRole
 from app.models.player import Player
 from app.models.registration import (
@@ -40,22 +39,11 @@ from app.models.registration import (
 from app.models.team import Team
 from app.models.tournament import Tournament
 from app.models.user import User
-
 from app.schemas.registration import RegistrationInput
 
 
-# ============================================================
-# ROUTER
-# ============================================================
-
 router = APIRouter()
-
 bearer_scheme = HTTPBearer(auto_error=False)
-
-
-# ============================================================
-# CONSTANTS
-# ============================================================
 
 EDITABLE_STATUSES = {
     RegistrationStatus.DRAFT.value,
@@ -67,7 +55,7 @@ MAX_PLAYERS = 25
 
 
 # ============================================================
-# SCHEMAS: AUTH
+# АВТОРИЗАЦИЯ И СОГЛАСИЯ
 # ============================================================
 
 class CoachCredentials(BaseModel):
@@ -75,7 +63,6 @@ class CoachCredentials(BaseModel):
         min_length=10,
         max_length=25,
     )
-
     password: str = Field(
         min_length=10,
         max_length=72,
@@ -87,27 +74,20 @@ class CoachRegister(CoachCredentials):
         min_length=1,
         max_length=100,
     )
-
     last_name: str = Field(
         min_length=1,
         max_length=100,
     )
 
+    # Обязательное принятие соглашения J-LIGA.
+    agree_terms: Literal[True]
 
-# ============================================================
-# HELPERS: PHONE
-# ============================================================
+    # Подтверждение тренером обязательства
+    # получить необходимые согласия родителей.
+    confirm_parent_consents: Literal[True]
+
 
 def normalize_phone(phone: str) -> str:
-    """
-    Нормализует телефон к формату +7XXXXXXXXXX.
-
-    Поддерживает:
-        87001234567
-        77001234567
-        +7 700 123 45 67
-    """
-
     digits = re.sub(r"\D", "", phone)
 
     if len(digits) == 11 and digits.startswith("8"):
@@ -123,10 +103,6 @@ def normalize_phone(phone: str) -> str:
 
 
 def validate_password(password: str) -> None:
-    """
-    Ограничение bcrypt: 72 байта.
-    """
-
     if len(password.encode("utf-8")) > 72:
         raise HTTPException(
             status_code=422,
@@ -134,31 +110,20 @@ def validate_password(password: str) -> None:
         )
 
 
-# ============================================================
-# HELPERS: STRING
-# ============================================================
-
 def clean_text(value: str | None) -> str:
     if value is None:
         return ""
-
     return value.strip()
 
 
 def enum_value(value):
-    """
-    Возвращает строковое значение Enum,
-    если поле является Enum.
-    """
-
     if value is None:
         return None
-
     return getattr(value, "value", value)
 
 
 # ============================================================
-# DEPENDENCY: CURRENT COACH
+# ТЕКУЩИЙ ТРЕНЕР
 # ============================================================
 
 async def get_current_coach(
@@ -233,7 +198,7 @@ async def get_current_coach(
 
 
 # ============================================================
-# AUTH: REGISTER
+# РЕГИСТРАЦИЯ ТРЕНЕРА
 # ============================================================
 
 @router.post(
@@ -244,7 +209,6 @@ async def register_coach(
     data: CoachRegister,
     db: AsyncSession = Depends(get_db),
 ):
-
     phone = normalize_phone(data.phone)
 
     validate_password(data.password)
@@ -256,6 +220,25 @@ async def register_coach(
         raise HTTPException(
             status_code=422,
             detail="Имя и фамилия обязательны",
+        )
+
+    # Дополнительная серверная проверка.
+    # Literal[True] в CoachRegister также
+    # запрещает регистрацию без согласий.
+
+    if (
+        data.agree_terms is not True
+        or data.confirm_parent_consents is not True
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Для регистрации необходимо принять "
+                "пользовательское соглашение J-LIGA "
+                "и подтвердить обязательство "
+                "по получению согласий "
+                "законных представителей игроков"
+            ),
         )
 
     existing_user = await db.scalar(
@@ -307,7 +290,7 @@ async def register_coach(
 
 
 # ============================================================
-# AUTH: LOGIN
+# ВХОД ТРЕНЕРА
 # ============================================================
 
 @router.post("/login")
@@ -315,7 +298,6 @@ async def login_coach(
     data: CoachCredentials,
     db: AsyncSession = Depends(get_db),
 ):
-
     phone = normalize_phone(data.phone)
 
     coach = await db.scalar(
@@ -355,14 +337,13 @@ async def login_coach(
 
 
 # ============================================================
-# PROFILE: ME
+# ПРОФИЛЬ ТРЕНЕРА
 # ============================================================
 
 @router.get("/me")
 async def get_my_profile(
     coach: User = Depends(get_current_coach),
 ):
-
     return {
         "id": coach.id,
         "first_name": coach.first_name,
@@ -373,7 +354,7 @@ async def get_my_profile(
 
 
 # ============================================================
-# REFERENCE DATA: TEAMS
+# ДОСТУПНЫЕ КОМАНДЫ
 # ============================================================
 
 @router.get("/teams")
@@ -381,7 +362,6 @@ async def get_available_teams(
     coach: User = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
 ):
-
     teams = (
         await db.scalars(
             select(Team).order_by(
@@ -400,7 +380,7 @@ async def get_available_teams(
 
 
 # ============================================================
-# REFERENCE DATA: TOURNAMENTS
+# ДОСТУПНЫЕ ТУРНИРЫ
 # ============================================================
 
 @router.get("/tournaments")
@@ -408,7 +388,6 @@ async def get_available_tournaments(
     coach: User = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
 ):
-
     tournaments = (
         await db.scalars(
             select(Tournament).order_by(
@@ -427,7 +406,7 @@ async def get_available_tournaments(
 
 
 # ============================================================
-# REFERENCE DATA: SEARCH PLAYERS
+# ПОИСК СУЩЕСТВУЮЩИХ ИГРОКОВ
 # ============================================================
 
 @router.get("/players/search")
@@ -439,7 +418,6 @@ async def search_existing_players(
     coach: User = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
 ):
-
     search_text = clean_text(q)
 
     if len(search_text) < 2:
@@ -518,7 +496,7 @@ async def search_existing_players(
 
 
 # ============================================================
-# VALIDATION: APPLICATION REFERENCES
+# ПРОВЕРКА КОМАНДЫ, ТУРНИРА И ИГРОКОВ
 # ============================================================
 
 async def validate_application_references(
@@ -554,9 +532,6 @@ async def validate_application_references(
         if player.existing_player_id is not None
     ]
 
-    # Один и тот же игрок не может быть
-    # добавлен дважды в одну заявку.
-
     if len(existing_player_ids) != len(
         set(existing_player_ids)
     ):
@@ -564,9 +539,6 @@ async def validate_application_references(
             status_code=422,
             detail="Один игрок выбран несколько раз",
         )
-
-    # Номера должны быть уникальными
-    # внутри одной заявки.
 
     jersey_numbers = [
         player.jersey_number
@@ -605,7 +577,7 @@ async def validate_application_references(
 
 
 # ============================================================
-# VALIDATION: APPLICATION CONTENT
+# ПРОВЕРКА СОДЕРЖИМОГО ЗАЯВКИ
 # ============================================================
 
 def validate_application_content(
@@ -622,8 +594,6 @@ def validate_application_content(
             ),
         )
 
-    # Тренер
-
     if not all([
         clean_text(application.coach_first_name),
         clean_text(application.coach_last_name),
@@ -635,13 +605,10 @@ def validate_application_content(
             detail="Заполните все данные тренера",
         )
 
-    # Игроки
-
     numbers = set()
     existing_ids = set()
 
     for player in players:
-
         if not all([
             clean_text(player.first_name),
             clean_text(player.last_name),
@@ -673,7 +640,6 @@ def validate_application_content(
         numbers.add(player.jersey_number)
 
         if player.existing_player_id is not None:
-
             if player.existing_player_id in existing_ids:
                 raise HTTPException(
                     status_code=422,
@@ -686,7 +652,7 @@ def validate_application_content(
 
 
 # ============================================================
-# HELPERS: GET OWNED APPLICATION
+# ПОЛУЧЕНИЕ СВОЕЙ ЗАЯВКИ
 # ============================================================
 
 async def get_owned_application(
@@ -721,7 +687,7 @@ async def get_owned_application(
 
 
 # ============================================================
-# HELPERS: FILL APPLICATION
+# ЗАПОЛНЕНИЕ ДАННЫХ ЗАЯВКИ
 # ============================================================
 
 def fill_application_fields(
@@ -750,7 +716,7 @@ def fill_application_fields(
 
 
 # ============================================================
-# HELPERS: BUILD PLAYERS
+# СОСТАВ ИГРОКОВ
 # ============================================================
 
 def build_application_players(
@@ -760,7 +726,6 @@ def build_application_players(
     result = []
 
     for player in data.players:
-
         registration_player = RegistrationPlayer(
             existing_player_id=player.existing_player_id,
             first_name=clean_text(player.first_name),
@@ -777,7 +742,7 @@ def build_application_players(
 
 
 # ============================================================
-# HELPERS: APPLICATION SUMMARY
+# КРАТКИЕ ДАННЫЕ ЗАЯВКИ
 # ============================================================
 
 def application_summary(
@@ -800,7 +765,7 @@ def application_summary(
 
 
 # ============================================================
-# HELPERS: APPLICATION DETAIL
+# ПОЛНАЯ ИНФОРМАЦИЯ О ЗАЯВКЕ
 # ============================================================
 
 def application_detail(
@@ -839,7 +804,7 @@ def application_detail(
 
 
 # ============================================================
-# APPLICATIONS: CREATE
+# СОЗДАНИЕ ЗАЯВКИ
 # ============================================================
 
 @router.post(
@@ -851,7 +816,6 @@ async def create_application(
     coach: User = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
 ):
-
     await validate_application_references(
         db,
         data,
@@ -896,7 +860,7 @@ async def create_application(
 
 
 # ============================================================
-# APPLICATIONS: LIST
+# СПИСОК ЗАЯВОК ТРЕНЕРА
 # ============================================================
 
 @router.get("/applications")
@@ -904,7 +868,6 @@ async def get_my_applications(
     coach: User = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
 ):
-
     stmt = (
         select(Registration)
         .options(
@@ -932,7 +895,7 @@ async def get_my_applications(
 
 
 # ============================================================
-# APPLICATIONS: DETAIL
+# ПРОСМОТР ЗАЯВКИ
 # ============================================================
 
 @router.get("/applications/{application_id}")
@@ -941,7 +904,6 @@ async def get_application(
     coach: User = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
 ):
-
     application = await get_owned_application(
         db,
         application_id,
@@ -952,7 +914,7 @@ async def get_application(
 
 
 # ============================================================
-# APPLICATIONS: UPDATE
+# РЕДАКТИРОВАНИЕ ЗАЯВКИ
 # ============================================================
 
 @router.put("/applications/{application_id}")
@@ -962,20 +924,12 @@ async def update_application(
     coach: User = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
 ):
-
-    # Блокируем заявку, чтобы администратор
-    # и тренер не изменяли её одновременно.
-
     application = await get_owned_application(
         db,
         application_id,
         coach.id,
         lock=True,
     )
-
-    # Разрешаем редактировать:
-    # 1. Черновик
-    # 2. Заявку на доработке
 
     if application.status not in EDITABLE_STATUSES:
         raise HTTPException(
@@ -996,18 +950,12 @@ async def update_application(
         data,
     )
 
-    # Удаляем предыдущий состав.
-    # Самих игроков из основной таблицы
-    # Player НЕ удаляем.
-
     await db.execute(
         delete(RegistrationPlayer).where(
             RegistrationPlayer.registration_id
             == application.id
         )
     )
-
-    # Формируем новый состав заявки.
 
     new_players = build_application_players(
         data
@@ -1043,27 +991,21 @@ async def update_application(
 
 
 # ============================================================
-# APPLICATIONS: SUBMIT
+# ОТПРАВКА ЗАЯВКИ АДМИНИСТРАТОРУ
 # ============================================================
 
-@router.post(
-    "/applications/{application_id}/submit"
-)
+@router.post("/applications/{application_id}/submit")
 async def submit_application(
     application_id: int,
     coach: User = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
 ):
-
     application = await get_owned_application(
         db,
         application_id,
         coach.id,
         lock=True,
     )
-
-    # Разрешаем отправку черновика
-    # и повторную отправку после замечаний.
 
     if application.status not in EDITABLE_STATUSES:
         raise HTTPException(
@@ -1084,16 +1026,10 @@ async def submit_application(
         )
     ).all()
 
-    # Проверяем заполненность заявки.
-
     validate_application_content(
         application,
         players,
     )
-
-    # Дополнительно проверяем существующих игроков.
-    # Это важно, если игрок был удалён из БД
-    # после создания черновика.
 
     existing_ids = {
         player.existing_player_id
@@ -1122,8 +1058,6 @@ async def submit_application(
                 ),
             )
 
-    # Снова отправляем на модерацию.
-
     application.status = (
         RegistrationStatus.SUBMITTED.value
     )
@@ -1131,9 +1065,6 @@ async def submit_application(
     application.submitted_at = (
         datetime.now(timezone.utc)
     )
-
-    # Предыдущие замечания уже исправлены.
-    # Очищаем прошлое решение администратора.
 
     application.admin_comment = None
     application.reviewed_at = None

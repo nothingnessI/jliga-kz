@@ -5,20 +5,9 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7e289f6c-8968-49f0-ac18-b3bedd7dea2b" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/app/static/css/jliga-responsive.css" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static/js/admin-users.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/static/js/jliga-responsive.js" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/templates/admin_users.html" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/app/web/admin_users.py" afterDir="false" />
       <change afterPath="$PROJECT_DIR$/parser.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/api/v1/pages.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/v1/pages.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/admin_base.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/admin_base.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/base.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/broadcast/control.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/broadcast/control.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/broadcast/studio.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/broadcast/studio.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app/templates/broadcast/tournament_live.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/broadcast/tournament_live.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app/api/v1/endpoints/coach.py" beforeDir="false" afterPath="$PROJECT_DIR$/app/api/v1/endpoints/coach.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/templates/coach_panel.html" beforeDir="false" afterPath="$PROJECT_DIR$/app/templates/coach_panel.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -62,61 +51,61 @@
   </component>
   <component name="NextEditCompletionFeaturesState">
     <decayedCancelled>
-      <entry key="MS100" value="1.3952762506312626" />
-      <entry key="MS500" value="2.8612359756653523" />
-      <entry key="S2" value="4.724677722685694" />
-      <entry key="S5" value="5.729010525629649" />
-      <entry key="S10" value="6.282163119049863" />
-      <entry key="S30" value="7.143600266283646" />
-      <entry key="S60" value="7.839609427650919" />
-      <entry key="M2" value="9.014318523128278" />
-      <entry key="M5" value="12.20749491781289" />
-      <entry key="M10" value="18.57830860438964" />
-      <entry key="M15" value="25.7641037674254" />
-      <entry key="M30" value="45.92851424316833" />
-      <entry key="H1" value="84.72369560342636" />
-      <entry key="H2" value="170.599608023833" />
-      <entry key="H4" value="334.6721481611286" />
-      <entry key="D1" value="1260.315618792606" />
-      <entry key="W1" value="4204.446720854804" />
+      <entry key="MS100" value="1.373758812709994" />
+      <entry key="MS500" value="2.1389923449065216" />
+      <entry key="S2" value="4.0147848939341495" />
+      <entry key="S5" value="8.626509796700965" />
+      <entry key="S10" value="17.043922205030533" />
+      <entry key="S30" value="34.27196139802764" />
+      <entry key="S60" value="42.308551974438025" />
+      <entry key="M2" value="47.26747028774966" />
+      <entry key="M5" value="50.605994252925115" />
+      <entry key="M10" value="51.78543125290375" />
+      <entry key="M15" value="52.18632759882251" />
+      <entry key="M30" value="52.59121654356754" />
+      <entry key="H1" value="52.880782632145845" />
+      <entry key="H2" value="58.3232158386684" />
+      <entry key="H4" value="112.63329711050719" />
+      <entry key="D1" value="998.5457171110771" />
+      <entry key="W1" value="4088.349651090763" />
     </decayedCancelled>
     <decayedSelected>
       <entry key="MS100" value="0.0" />
-      <entry key="MS500" value="6.707652763365616E-253" />
-      <entry key="S2" value="9.049876301375174E-64" />
-      <entry key="S5" value="6.062574063825489E-26" />
-      <entry key="S10" value="2.4622294904873293E-13" />
-      <entry key="S30" value="6.267718884327025E-5" />
-      <entry key="S60" value="0.00791689262547309" />
-      <entry key="M2" value="0.08897692187007364" />
-      <entry key="M5" value="0.37993796250935563" />
-      <entry key="M10" value="0.6187008002876149" />
-      <entry key="M15" value="0.7537218340679098" />
-      <entry key="M30" value="1.3399600937641187" />
-      <entry key="H1" value="3.7871198220536075" />
-      <entry key="H2" value="10.153795836179825" />
-      <entry key="H4" value="20.58520706691228" />
-      <entry key="D1" value="53.944371214612325" />
-      <entry key="W1" value="221.61017887510377" />
+      <entry key="MS500" value="0.0" />
+      <entry key="S2" value="0.0" />
+      <entry key="S5" value="0.0" />
+      <entry key="S10" value="0.0" />
+      <entry key="S30" value="0.0" />
+      <entry key="S60" value="1.573412121077646E-182" />
+      <entry key="M2" value="1.2543572541655213E-91" />
+      <entry key="M5" value="4.358833065723723E-37" />
+      <entry key="M10" value="6.626885264734343E-19" />
+      <entry key="M15" value="7.890362305258915E-13" />
+      <entry key="M30" value="1.370991584875337E-6" />
+      <entry key="H1" value="0.0038307208758375996" />
+      <entry key="H2" value="0.3229342869479083" />
+      <entry key="H4" value="3.67111598252902" />
+      <entry key="D1" value="40.471870755491416" />
+      <entry key="W1" value="212.69738644390895" />
     </decayedSelected>
     <decayedShown>
-      <entry key="MS100" value="1.3291766020199252" />
-      <entry key="MS500" value="2.72938054219474" />
-      <entry key="S2" value="4.185240839770256" />
-      <entry key="S5" value="5.2012213823163265" />
-      <entry key="S10" value="5.909376527286784" />
-      <entry key="S30" value="6.975901670072786" />
-      <entry key="S60" value="7.75189625215357" />
-      <entry key="M2" value="9.048595608286226" />
-      <entry key="M5" value="12.560323687350404" />
-      <entry key="M10" value="19.18154656882551" />
-      <entry key="M15" value="26.506829403218045" />
-      <entry key="M30" value="47.26185041558344" />
-      <entry key="H1" value="88.50552916039382" />
-      <entry key="H2" value="180.74809437376223" />
-      <entry key="H4" value="355.25232837422413" />
-      <entry key="D1" value="1314.2576835575035" />
-      <entry key="W1" value="4426.055397840855" />
+      <entry key="MS100" value="1.2947874469622218" />
+      <entry key="MS500" value="2.1117000967778745" />
+      <entry key="S2" value="3.999694665162099" />
+      <entry key="S5" value="8.611883918804988" />
+      <entry key="S10" value="17.0276996627737" />
+      <entry key="S30" value="34.259172773150446" />
+      <entry key="S60" value="42.30025298146249" />
+      <entry key="M2" value="47.26271303273342" />
+      <entry key="M5" value="50.60392472706449" />
+      <entry key="M10" value="51.78436679556563" />
+      <entry key="M15" value="52.18561121182196" />
+      <entry key="M30" value="52.59085630163402" />
+      <entry key="H1" value="52.88442634241471" />
+      <entry key="H2" value="58.64589021341117" />
+      <entry key="H4" value="116.30347103810364" />
+      <entry key="D1" value="1039.015849844268" />
+      <entry key="W1" value="4301.045594962645" />
     </decayedShown>
   </component>
   <component name="ProblemsViewState">
@@ -134,57 +123,57 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "JavaScript Debug.admin_match_form.html.executor": "Run",
-    "JavaScript Debug.index.html.executor": "Run",
-    "JavaScript Debug.matches.html.executor": "Run",
-    "JavaScript Debug.players_list.html.executor": "Run",
-    "JavaScript Debug.tournament_detail.html.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python tests.Python tests in parser.py.executor": "Run",
-    "Python.check.executor": "Run",
-    "Python.conftest.executor": "Run",
-    "Python.create_admin.executor": "Run",
-    "Python.install_jliga_grouped_view.executor": "Run",
-    "Python.main.executor": "Run",
-    "Python.news.executor": "Run",
-    "Python.pages.executor": "Run",
-    "Python.parser.executor": "Run",
-    "Python.parser_1.executor": "Run",
-    "Python.parser_2.executor": "Run",
-    "Python.parser_tables.executor": "Run",
-    "Python.script.executor": "Run",
-    "Python.tournament.executor": "Run",
-    "Python.tournaments.executor": "Run",
-    "Python.update_stadium.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "main",
-    "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "C:/Users/imran/PycharmProjects/jliga-kz",
-    "list.type.of.created.stylesheet": "CSS",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.jshint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.jshint": "",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "python.packages.toolwindow.project.migrated.to.right.top.v2": "true",
-    "settings.editor.selected.configurable": "editor.preferences.fonts.default",
-    "to.speed.mode.migration.done": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;JavaScript Debug.admin_match_form.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.index.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.matches.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.players_list.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript Debug.tournament_detail.html.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python tests.Python tests in parser.py.executor&quot;: &quot;Run&quot;,
+    &quot;Python.check.executor&quot;: &quot;Run&quot;,
+    &quot;Python.conftest.executor&quot;: &quot;Run&quot;,
+    &quot;Python.create_admin.executor&quot;: &quot;Run&quot;,
+    &quot;Python.install_jliga_grouped_view.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.news.executor&quot;: &quot;Run&quot;,
+    &quot;Python.pages.executor&quot;: &quot;Run&quot;,
+    &quot;Python.parser.executor&quot;: &quot;Run&quot;,
+    &quot;Python.parser_1.executor&quot;: &quot;Run&quot;,
+    &quot;Python.parser_2.executor&quot;: &quot;Run&quot;,
+    &quot;Python.parser_tables.executor&quot;: &quot;Run&quot;,
+    &quot;Python.script.executor&quot;: &quot;Run&quot;,
+    &quot;Python.tournament.executor&quot;: &quot;Run&quot;,
+    &quot;Python.tournaments.executor&quot;: &quot;Run&quot;,
+    &quot;Python.update_stadium.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/imran/PycharmProjects/jliga-kz&quot;,
+    &quot;list.type.of.created.stylesheet&quot;: &quot;CSS&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.jshint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.jshint&quot;: &quot;&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;python.packages.toolwindow.project.migrated.to.right.top.v2&quot;: &quot;true&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.fonts.default&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   },
-  "keyToStringList": {
-    "DatabaseDriversLRU": [
-      "postgresql"
+  &quot;keyToStringList&quot;: {
+    &quot;DatabaseDriversLRU&quot;: [
+      &quot;postgresql&quot;
     ]
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\imran\PycharmProjects\jliga-kz" />
