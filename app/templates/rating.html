@@ -1,5 +1,318 @@
+
 {% extends "base.html" %}
+
 {% block content %}
-<h3 class="text-uppercase fw-bold mb-4 border-bottom pb-2">Rating</h3>
-<div class="alert alert-info">Раздел находится в разработке.</div>
+
+<style>
+.rating-page {
+    max-width: 1200px;
+    margin: auto;
+}
+
+.rating-heading {
+    border-bottom: 3px solid #142d4b;
+    padding-bottom: 16px;
+    margin-bottom: 22px;
+    font-weight: 900;
+    letter-spacing: 1px;
+}
+
+.rating-toolbar {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+}
+
+.rating-toolbar select {
+    max-width: 380px;
+    border: 1px solid #bcc9d4;
+    border-radius: 6px;
+    padding: 10px;
+    background: white;
+}
+
+.rating-card {
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 8px 28px #101a2b12;
+}
+
+.rating-banner {
+    background: #ffe600;
+    padding: 13px 18px;
+    text-align: center;
+    color: #4a091c;
+    font-weight: 900;
+    font-size: 1.15rem;
+}
+
+.rating-scroll {
+    overflow-x: auto;
+}
+
+.rating-table {
+    border-collapse: collapse;
+    min-width: 760px;
+    width: 100%;
+    font-size: 14px;
+    text-align: center;
+}
+
+.rating-table th {
+    background: #890d30;
+    color: #fff;
+    padding: 15px 12px;
+    border-right: 1px solid #ffffff34;
+    font-weight: 800;
+    white-space: normal;
+    min-width: 100px;
+}
+
+.rating-table th:nth-child(2) {
+    text-align: left;
+    min-width: 230px;
+}
+
+.rating-table th:last-child {
+    background: #4e1025;
+}
+
+.rating-table tbody tr:nth-child(odd) {
+    background: #fbe6ed;
+}
+
+.rating-table tbody tr:nth-child(even) {
+    background: #fff4f7;
+}
+
+.rating-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #efcad6;
+}
+
+.rating-table td:nth-child(2) {
+    text-align: left;
+    font-weight: 700;
+}
+
+.rating-table td:last-child {
+    font-weight: 900;
+    background: #f9d9e3;
+}
+
+.rating-table tbody tr:first-child td {
+    background: #fae9b7;
+}
+
+.rating-team {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+}
+
+.rating-team img {
+    height: 35px;
+    width: 35px;
+    object-fit: contain;
+}
+
+.rating-team a {
+    color: #162d4d;
+    text-decoration: none;
+}
+
+.rating-team a:hover {
+    text-decoration: underline;
+}
+
+.rating-rank {
+    font-weight: 900;
+    color: #900c33;
+}
+
+.rating-empty {
+    padding: 45px;
+    text-align: center;
+    color: #677486;
+}
+
+@media(max-width: 576px) {
+    .rating-page {
+        padding: 0 2px;
+    }
+
+    .rating-table {
+        font-size: 12px;
+    }
+
+    .rating-table th,
+    .rating-table td {
+        padding: 10px 8px;
+    }
+}
+</style>
+
+<div class="rating-page">
+
+    <h2 class="rating-heading">
+        RATING
+    </h2>
+
+    <div class="rating-toolbar">
+
+        <div class="text-muted">
+            Рейтинг команд J-LIGA по результатам турниров
+        </div>
+
+        {% if rating_boards %}
+
+        <form action="/rating" method="get">
+
+            <select
+                name="board"
+                aria-label="Выбрать рейтинг"
+                onchange="this.form.submit()"
+            >
+
+                {% for item in rating_boards %}
+
+                <option
+                    value="{{ item.id }}"
+                    {% if rating_board and item.id == rating_board.id %}
+                    selected
+                    {% endif %}
+                >
+                    {{ item.title }} · {{ item.year }}
+                </option>
+
+                {% endfor %}
+
+            </select>
+
+        </form>
+
+        {% endif %}
+
+    </div>
+
+    {% if rating_board %}
+
+    <div class="rating-card">
+
+        <div class="rating-banner">
+            {{ rating_board.title|upper }}
+            · {{ rating_board.year }}
+        </div>
+
+        <div class="rating-scroll">
+
+            <table class="rating-table">
+
+                <thead>
+                    <tr>
+
+                        <th scope="col">
+                            RANKING
+                        </th>
+
+                        <th scope="col">
+                            TEAM
+                        </th>
+
+                        {% for column in rating_columns %}
+
+                        <th scope="col">
+                            {{ column.label }}
+                        </th>
+
+                        {% endfor %}
+
+                        <th scope="col">
+                            TOTAL
+                        </th>
+
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for row in rating_rows %}
+
+                    <tr>
+
+                        <td class="rating-rank">
+                            {{ loop.index }}
+                        </td>
+
+                        <td>
+                            <div class="rating-team">
+
+                                {% if row.logo_url %}
+
+                                <img
+                                    src="{{ row.logo_url }}"
+                                    alt=""
+                                    loading="lazy"
+                                >
+
+                                {% endif %}
+
+                                <a href="/teams/{{ row.team_id }}">
+                                    {{ row.team_name }}
+                                </a>
+
+                            </div>
+                        </td>
+
+                        {% for column in rating_columns %}
+
+                        <td>
+                            {{ row["values"][column.id] }}
+                        </td>
+
+                        {% endfor %}
+
+                        <td>
+                            {{ row.total_text }}
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+                        <td
+                            colspan="{{ rating_columns|length + 3 }}"
+                            class="rating-empty"
+                        >
+                            Команды пока не добавлены
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+
+
+    {% else %}
+
+    <div class="rating-card rating-empty">
+        Пока нет опубликованных рейтингов.
+    </div>
+
+    {% endif %}
+
+</div>
+
 {% endblock %}

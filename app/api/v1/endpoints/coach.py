@@ -3,17 +3,8 @@ import re
 from datetime import datetime, timezone
 from typing import Annotated, Literal
 
-from fastapi import (
-    APIRouter,
-    Depends,
-    HTTPException,
-    Query,
-    status,
-)
-from fastapi.security import (
-    HTTPAuthorizationCredentials,
-    HTTPBearer,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, or_, select
@@ -45,45 +36,28 @@ from app.schemas.registration import RegistrationInput
 router = APIRouter()
 bearer_scheme = HTTPBearer(auto_error=False)
 
+MIN_PLAYERS = 1
+MAX_PLAYERS = 25
+
 EDITABLE_STATUSES = {
     RegistrationStatus.DRAFT.value,
     RegistrationStatus.REVISION.value,
 }
 
-MIN_PLAYERS = 1
-MAX_PLAYERS = 25
+LATIN_NAME_PATTERN = re.compile(
+    r"^[A-Za-z]+(?:[ '-][A-Za-z]+)*$"
+)
 
-
-# ============================================================
-# АВТОРИЗАЦИЯ И СОГЛАСИЯ
-# ============================================================
 
 class CoachCredentials(BaseModel):
-    phone: str = Field(
-        min_length=10,
-        max_length=25,
-    )
-    password: str = Field(
-        min_length=10,
-        max_length=72,
-    )
+    phone: str = Field(min_length=10, max_length=25)
+    password: str = Field(min_length=10, max_length=72)
 
 
 class CoachRegister(CoachCredentials):
-    first_name: str = Field(
-        min_length=1,
-        max_length=100,
-    )
-    last_name: str = Field(
-        min_length=1,
-        max_length=100,
-    )
-
-    # Обязательное принятие соглашения J-LIGA.
+    first_name: str = Field(min_length=1, max_length=100)
+    last_name: str = Field(min_length=1, max_length=100)
     agree_terms: Literal[True]
-
-    # Подтверждение тренером обязательства
-    # получить необходимые согласия родителей.
     confirm_parent_consents: Literal[True]
 
 
@@ -106,25 +80,265 @@ def validate_password(password: str) -> None:
     if len(password.encode("utf-8")) > 72:
         raise HTTPException(
             status_code=422,
-            detail="Пароль слишком длинный",
+            detail="Пароль не должен превышать 72 байта",
         )
 
 
 def clean_text(value: str | None) -> str:
-    if value is None:
-        return ""
-    return value.strip()
+    return (value or "").strip()
 
 
 def enum_value(value):
-    if value is None:
-        return None
-    return getattr(value, "value", value)
+    return getattr(value, "value", value) if value is not None else None
 
 
-# ============================================================
-# ТЕКУЩИЙ ТРЕНЕР
-# ============================================================
+def require_latin_name(value: str | None, label: str) -> str:
+    name = clean_text(value)
+
+    if not name or not LATIN_NAME_PATTERN.fullmatch(name):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"{label}: используйте только латинские буквы "
+                "A–Z. Допускаются внутренние пробелы, "
+                "дефисы и апострофы."
+            ),
+        )
+
+    if len(name) > 100:
+        raise HTTPException(
+            status_code=422,
+            detail=f"{label}: максимум 100 символов",
+        )
+
+    return name
+
+
+def require_photo(value: str | None, label: str) -> str:
+    photo = clean_text(value)
+
+    if not photo:
+        raise HTTPException(
+            status_code=422,
+            detail=f"{label}: фотография обязательна",
+        )
+
+    if not (
+        photo.startswith("https://")
+        or photo.startswith("http://")
+        or (photo.startswith("/") and not photo.startswith("//"))
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=f"{label}: некорректный адрес фотографии",
+        )
+
+    return photo
+
+
+def validate_registration_input(data: RegistrationInput) -> None:
+    if not data.team_id or not data.tournament_id:
+        raise HTTPException(
+            status_code=422,
+            detail="Выберите команду и турнир",
+        )
+
+    require_latin_name(data.coach.first_name, "Имя тренера")
+    require_latin_name(data.coach.last_name, "Фамилия тренера")
+
+    year = data.coach.birth_year
+    current_year = datetime.now(timezone.utc).year
+
+    if year is None or not 1900 <= year <= current_year:
+        raise HTTPException(
+            status_code=422,
+            detail="Укажите корректный год рождения тренера",
+        )
+
+    require_photo(data.coach.photo_url, "Тренер")
+
+    if not MIN_PLAYERS <= len(data.players) <= MAX_PLAYERS:
+        raise HTTPException(
+            status_code=422,
+            detail="В заявке должно быть от 1 до 25 игроков",
+        )
+
+    today = datetime.now(timezone.utc).date()
+    numbers = set()
+    existing_ids = set()
+
+    for index, player in enumerate(data.players, start=1):
+        prefix = f"Игрок №{index}"
+
+        require_latin_name(
+            player.first_name,
+            f"{prefix}, имя",
+        )
+        require_latin_name(
+            player.last_name,
+            f"{prefix}, фамилия",
+        )
+
+        if player.birth_date is None or player.birth_date > today:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{prefix}: некорректная дата рождения",
+            )
+
+        if player.position is None or not clean_text(
+            str(enum_value(player.position) or "")
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=f"{prefix}: выберите позицию",
+            )
+
+        number = player.jersey_number
+
+        if number is None or not 1 <= number <= 99:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{prefix}: номер должен быть от 1 до 99",
+            )
+
+        if number in numbers:
+            raise HTTPException(
+                status_code=422,
+                detail="Игровые номера в заявке не должны повторяться",
+            )
+
+        numbers.add(number)
+
+        if player.existing_player_id is not None:
+            if player.existing_player_id in existing_ids:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Один игрок из базы выбран несколько раз",
+                )
+            existing_ids.add(player.existing_player_id)
+
+        require_photo(player.photo_url, prefix)
+
+
+def validate_application_content(
+    application: Registration,
+    players: list[RegistrationPlayer],
+) -> None:
+    if not MIN_PLAYERS <= len(players) <= MAX_PLAYERS:
+        raise HTTPException(
+            status_code=422,
+            detail="В заявке должно быть от 1 до 25 игроков",
+        )
+
+    require_latin_name(
+        application.coach_first_name,
+        "Имя тренера",
+    )
+    require_latin_name(
+        application.coach_last_name,
+        "Фамилия тренера",
+    )
+
+    year = application.coach_birth_year
+    current_year = datetime.now(timezone.utc).year
+
+    if year is None or not 1900 <= year <= current_year:
+        raise HTTPException(
+            status_code=422,
+            detail="Некорректный год рождения тренера",
+        )
+
+    require_photo(application.coach_photo_url, "Тренер")
+
+    today = datetime.now(timezone.utc).date()
+    numbers = set()
+    existing_ids = set()
+
+    for index, player in enumerate(players, start=1):
+        prefix = f"Игрок №{index}"
+
+        require_latin_name(player.first_name, f"{prefix}, имя")
+        require_latin_name(player.last_name, f"{prefix}, фамилия")
+
+        if player.birth_date is None or player.birth_date > today:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{prefix}: некорректная дата рождения",
+            )
+
+        if player.position is None:
+            raise HTTPException(
+                status_code=422,
+                detail=f"{prefix}: выберите позицию",
+            )
+
+        if (
+            player.jersey_number is None
+            or not 1 <= player.jersey_number <= 99
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=f"{prefix}: неверный игровой номер",
+            )
+
+        if player.jersey_number in numbers:
+            raise HTTPException(
+                status_code=422,
+                detail="Игровые номера повторяются",
+            )
+
+        numbers.add(player.jersey_number)
+
+        if player.existing_player_id is not None:
+            if player.existing_player_id in existing_ids:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Один игрок выбран несколько раз",
+                )
+            existing_ids.add(player.existing_player_id)
+
+        require_photo(player.photo_url, prefix)
+
+
+async def validate_application_references(
+    db: AsyncSession,
+    data: RegistrationInput,
+) -> None:
+    if await db.get(Team, data.team_id) is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Выбранная команда не существует",
+        )
+
+    if await db.get(Tournament, data.tournament_id) is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Выбранный турнир не существует",
+        )
+
+    existing_ids = {
+        player.existing_player_id
+        for player in data.players
+        if player.existing_player_id is not None
+    }
+
+    if existing_ids:
+        found = set(
+            (
+                await db.scalars(
+                    select(Player.id).where(
+                        Player.id.in_(existing_ids)
+                    )
+                )
+            ).all()
+        )
+
+        if found != existing_ids:
+            raise HTTPException(
+                status_code=422,
+                detail="Некоторые выбранные игроки отсутствуют в базе",
+            )
+
 
 async def get_current_coach(
     credentials: Annotated[
@@ -133,14 +347,11 @@ async def get_current_coach(
     ],
     db: AsyncSession = Depends(get_db),
 ) -> User:
-
     if credentials is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail="Необходимо авторизоваться",
-            headers={
-                "WWW-Authenticate": "Bearer",
-            },
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     try:
@@ -152,15 +363,12 @@ async def get_current_coach(
 
         subject = payload.get("sub")
 
-        if (
-            not isinstance(subject, str)
-            or not subject.startswith("coach:")
+        if not isinstance(subject, str) or not subject.startswith(
+            "coach:"
         ):
             raise ValueError("Invalid token type")
 
-        coach_id = int(
-            subject.split(":", 1)[1]
-        )
+        coach_id = int(subject.split(":", 1)[1])
 
         if coach_id <= 0:
             raise ValueError("Invalid coach ID")
@@ -169,9 +377,7 @@ async def get_current_coach(
         raise HTTPException(
             status_code=401,
             detail="Недействительный или просроченный токен",
-            headers={
-                "WWW-Authenticate": "Bearer",
-            },
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
     coach = await db.get(User, coach_id)
@@ -197,10 +403,6 @@ async def get_current_coach(
     return coach
 
 
-# ============================================================
-# РЕГИСТРАЦИЯ ТРЕНЕРА
-# ============================================================
-
 @router.post(
     "/register",
     status_code=status.HTTP_201_CREATED,
@@ -210,36 +412,16 @@ async def register_coach(
     db: AsyncSession = Depends(get_db),
 ):
     phone = normalize_phone(data.phone)
-
     validate_password(data.password)
 
-    first_name = clean_text(data.first_name)
-    last_name = clean_text(data.last_name)
-
-    if not first_name or not last_name:
-        raise HTTPException(
-            status_code=422,
-            detail="Имя и фамилия обязательны",
-        )
-
-    # Дополнительная серверная проверка.
-    # Literal[True] в CoachRegister также
-    # запрещает регистрацию без согласий.
-
-    if (
-        data.agree_terms is not True
-        or data.confirm_parent_consents is not True
-    ):
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                "Для регистрации необходимо принять "
-                "пользовательское соглашение J-LIGA "
-                "и подтвердить обязательство "
-                "по получению согласий "
-                "законных представителей игроков"
-            ),
-        )
+    first_name = require_latin_name(
+        data.first_name,
+        "Имя тренера",
+    )
+    last_name = require_latin_name(
+        data.last_name,
+        "Фамилия тренера",
+    )
 
     existing_user = await db.scalar(
         select(User).where(
@@ -259,9 +441,7 @@ async def register_coach(
         phone=phone,
         phone_normalized=phone,
         email=None,
-        hashed_password=get_password_hash(
-            data.password
-        ),
+        hashed_password=get_password_hash(data.password),
         role=UserRole.COACH,
         is_active=True,
         is_verified=False,
@@ -271,10 +451,8 @@ async def register_coach(
 
     try:
         await db.commit()
-
     except IntegrityError:
         await db.rollback()
-
         raise HTTPException(
             status_code=409,
             detail="Не удалось зарегистрировать номер",
@@ -288,10 +466,6 @@ async def register_coach(
         "phone": coach.phone_normalized,
     }
 
-
-# ============================================================
-# ВХОД ТРЕНЕРА
-# ============================================================
 
 @router.post("/login")
 async def login_coach(
@@ -336,10 +510,6 @@ async def login_coach(
     }
 
 
-# ============================================================
-# ПРОФИЛЬ ТРЕНЕРА
-# ============================================================
-
 @router.get("/me")
 async def get_my_profile(
     coach: User = Depends(get_current_coach),
@@ -353,10 +523,6 @@ async def get_my_profile(
     }
 
 
-# ============================================================
-# ДОСТУПНЫЕ КОМАНДЫ
-# ============================================================
-
 @router.get("/teams")
 async def get_available_teams(
     coach: User = Depends(get_current_coach),
@@ -364,24 +530,15 @@ async def get_available_teams(
 ):
     teams = (
         await db.scalars(
-            select(Team).order_by(
-                Team.name.asc()
-            )
+            select(Team).order_by(Team.name.asc())
         )
     ).all()
 
     return [
-        {
-            "id": team.id,
-            "name": team.name,
-        }
+        {"id": team.id, "name": team.name}
         for team in teams
     ]
 
-
-# ============================================================
-# ДОСТУПНЫЕ ТУРНИРЫ
-# ============================================================
 
 @router.get("/tournaments")
 async def get_available_tournaments(
@@ -397,24 +554,14 @@ async def get_available_tournaments(
     ).all()
 
     return [
-        {
-            "id": tournament.id,
-            "name": tournament.name,
-        }
+        {"id": tournament.id, "name": tournament.name}
         for tournament in tournaments
     ]
 
 
-# ============================================================
-# ПОИСК СУЩЕСТВУЮЩИХ ИГРОКОВ
-# ============================================================
-
 @router.get("/players/search")
 async def search_existing_players(
-    q: str = Query(
-        min_length=2,
-        max_length=100,
-    ),
+    q: str = Query(min_length=2, max_length=100),
     coach: User = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
 ):
@@ -436,37 +583,20 @@ async def search_existing_players(
     pattern = f"%{escaped}%"
 
     full_name = (
-        Player.first_name
-        + " "
-        + Player.last_name
+        Player.first_name + " " + Player.last_name
     )
-
     reversed_name = (
-        Player.last_name
-        + " "
-        + Player.first_name
+        Player.last_name + " " + Player.first_name
     )
 
     stmt = (
         select(Player)
         .where(
             or_(
-                Player.first_name.ilike(
-                    pattern,
-                    escape="\\",
-                ),
-                Player.last_name.ilike(
-                    pattern,
-                    escape="\\",
-                ),
-                full_name.ilike(
-                    pattern,
-                    escape="\\",
-                ),
-                reversed_name.ilike(
-                    pattern,
-                    escape="\\",
-                ),
+                Player.first_name.ilike(pattern, escape="\\"),
+                Player.last_name.ilike(pattern, escape="\\"),
+                full_name.ilike(pattern, escape="\\"),
+                reversed_name.ilike(pattern, escape="\\"),
             )
         )
         .order_by(
@@ -486,174 +616,12 @@ async def search_existing_players(
             "first_name": player.first_name,
             "last_name": player.last_name,
             "birth_date": player.date_of_birth,
-            "position": enum_value(
-                player.position
-            ),
+            "position": enum_value(player.position),
             "photo_url": player.photo_url,
         }
         for player in players
     ]
 
-
-# ============================================================
-# ПРОВЕРКА КОМАНДЫ, ТУРНИРА И ИГРОКОВ
-# ============================================================
-
-async def validate_application_references(
-    db: AsyncSession,
-    data: RegistrationInput,
-) -> None:
-
-    team = await db.get(
-        Team,
-        data.team_id,
-    )
-
-    if team is None:
-        raise HTTPException(
-            status_code=422,
-            detail="Выбранная команда не существует",
-        )
-
-    tournament = await db.get(
-        Tournament,
-        data.tournament_id,
-    )
-
-    if tournament is None:
-        raise HTTPException(
-            status_code=422,
-            detail="Выбранный турнир не существует",
-        )
-
-    existing_player_ids = [
-        player.existing_player_id
-        for player in data.players
-        if player.existing_player_id is not None
-    ]
-
-    if len(existing_player_ids) != len(
-        set(existing_player_ids)
-    ):
-        raise HTTPException(
-            status_code=422,
-            detail="Один игрок выбран несколько раз",
-        )
-
-    jersey_numbers = [
-        player.jersey_number
-        for player in data.players
-    ]
-
-    if len(jersey_numbers) != len(
-        set(jersey_numbers)
-    ):
-        raise HTTPException(
-            status_code=422,
-            detail="Игровые номера не должны повторяться",
-        )
-
-    if existing_player_ids:
-        found_ids = set(
-            (
-                await db.scalars(
-                    select(Player.id).where(
-                        Player.id.in_(
-                            existing_player_ids
-                        )
-                    )
-                )
-            ).all()
-        )
-
-        if found_ids != set(existing_player_ids):
-            raise HTTPException(
-                status_code=422,
-                detail=(
-                    "Один или несколько выбранных "
-                    "игроков отсутствуют в базе"
-                ),
-            )
-
-
-# ============================================================
-# ПРОВЕРКА СОДЕРЖИМОГО ЗАЯВКИ
-# ============================================================
-
-def validate_application_content(
-    application: Registration,
-    players: list[RegistrationPlayer],
-) -> None:
-
-    if not MIN_PLAYERS <= len(players) <= MAX_PLAYERS:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                "В заявке должно быть "
-                f"от {MIN_PLAYERS} до {MAX_PLAYERS} игроков"
-            ),
-        )
-
-    if not all([
-        clean_text(application.coach_first_name),
-        clean_text(application.coach_last_name),
-        application.coach_birth_year is not None,
-        clean_text(application.coach_photo_url),
-    ]):
-        raise HTTPException(
-            status_code=422,
-            detail="Заполните все данные тренера",
-        )
-
-    numbers = set()
-    existing_ids = set()
-
-    for player in players:
-        if not all([
-            clean_text(player.first_name),
-            clean_text(player.last_name),
-            player.birth_date is not None,
-            player.position is not None,
-            player.jersey_number is not None,
-            clean_text(player.photo_url),
-        ]):
-            raise HTTPException(
-                status_code=422,
-                detail=(
-                    "У всех игроков должны быть "
-                    "заполнены обязательные поля"
-                ),
-            )
-
-        if not 1 <= player.jersey_number <= 99:
-            raise HTTPException(
-                status_code=422,
-                detail="Игровой номер должен быть от 1 до 99",
-            )
-
-        if player.jersey_number in numbers:
-            raise HTTPException(
-                status_code=422,
-                detail="Игровые номера повторяются",
-            )
-
-        numbers.add(player.jersey_number)
-
-        if player.existing_player_id is not None:
-            if player.existing_player_id in existing_ids:
-                raise HTTPException(
-                    status_code=422,
-                    detail="Один игрок добавлен несколько раз",
-                )
-
-            existing_ids.add(
-                player.existing_player_id
-            )
-
-
-# ============================================================
-# ПОЛУЧЕНИЕ СВОЕЙ ЗАЯВКИ
-# ============================================================
 
 async def get_owned_application(
     db: AsyncSession,
@@ -662,7 +630,6 @@ async def get_owned_application(
     *,
     lock: bool = False,
 ) -> Registration:
-
     stmt = select(Registration).where(
         Registration.id == application_id,
         Registration.author_id == coach_id,
@@ -686,70 +653,61 @@ async def get_owned_application(
     return application
 
 
-# ============================================================
-# ЗАПОЛНЕНИЕ ДАННЫХ ЗАЯВКИ
-# ============================================================
-
 def fill_application_fields(
     application: Registration,
     data: RegistrationInput,
 ) -> None:
-
     application.team_id = data.team_id
     application.tournament_id = data.tournament_id
-
-    application.coach_first_name = clean_text(
-        data.coach.first_name
+    application.coach_first_name = require_latin_name(
+        data.coach.first_name,
+        "Имя тренера",
+    )
+    application.coach_last_name = require_latin_name(
+        data.coach.last_name,
+        "Фамилия тренера",
+    )
+    application.coach_birth_year = data.coach.birth_year
+    application.coach_photo_url = require_photo(
+        data.coach.photo_url,
+        "Тренер",
     )
 
-    application.coach_last_name = clean_text(
-        data.coach.last_name
-    )
-
-    application.coach_birth_year = (
-        data.coach.birth_year
-    )
-
-    application.coach_photo_url = clean_text(
-        data.coach.photo_url
-    )
-
-
-# ============================================================
-# СОСТАВ ИГРОКОВ
-# ============================================================
 
 def build_application_players(
     data: RegistrationInput,
 ) -> list[RegistrationPlayer]:
-
     result = []
 
-    for player in data.players:
-        registration_player = RegistrationPlayer(
-            existing_player_id=player.existing_player_id,
-            first_name=clean_text(player.first_name),
-            last_name=clean_text(player.last_name),
-            birth_date=player.birth_date,
-            position=player.position,
-            jersey_number=player.jersey_number,
-            photo_url=clean_text(player.photo_url),
+    for index, player in enumerate(data.players, start=1):
+        result.append(
+            RegistrationPlayer(
+                existing_player_id=player.existing_player_id,
+                first_name=require_latin_name(
+                    player.first_name,
+                    f"Игрок №{index}, имя",
+                ),
+                last_name=require_latin_name(
+                    player.last_name,
+                    f"Игрок №{index}, фамилия",
+                ),
+                birth_date=player.birth_date,
+                position=player.position,
+                jersey_number=player.jersey_number,
+                photo_url=require_photo(
+                    player.photo_url,
+                    f"Игрок №{index}",
+                ),
+            )
         )
-
-        result.append(registration_player)
 
     return result
 
-
-# ============================================================
-# КРАТКИЕ ДАННЫЕ ЗАЯВКИ
-# ============================================================
 
 def application_summary(
     application: Registration,
     players_count: int,
 ) -> dict:
-
     return {
         "id": application.id,
         "team_id": application.team_id,
@@ -764,14 +722,7 @@ def application_summary(
     }
 
 
-# ============================================================
-# ПОЛНАЯ ИНФОРМАЦИЯ О ЗАЯВКЕ
-# ============================================================
-
-def application_detail(
-    application: Registration,
-) -> dict:
-
+def application_detail(application: Registration) -> dict:
     return {
         **application_summary(
             application,
@@ -786,15 +737,11 @@ def application_detail(
         "players": [
             {
                 "id": player.id,
-                "existing_player_id": (
-                    player.existing_player_id
-                ),
+                "existing_player_id": player.existing_player_id,
                 "first_name": player.first_name,
                 "last_name": player.last_name,
                 "birth_date": player.birth_date,
-                "position": enum_value(
-                    player.position
-                ),
+                "position": enum_value(player.position),
                 "jersey_number": player.jersey_number,
                 "photo_url": player.photo_url,
             }
@@ -802,10 +749,6 @@ def application_detail(
         ],
     }
 
-
-# ============================================================
-# СОЗДАНИЕ ЗАЯВКИ
-# ============================================================
 
 @router.post(
     "/applications",
@@ -816,10 +759,8 @@ async def create_application(
     coach: User = Depends(get_current_coach),
     db: AsyncSession = Depends(get_db),
 ):
-    await validate_application_references(
-        db,
-        data,
-    )
+    validate_registration_input(data)
+    await validate_application_references(db, data)
 
     application = Registration(
         author_id=coach.id,
@@ -828,23 +769,15 @@ async def create_application(
         status=RegistrationStatus.DRAFT.value,
     )
 
-    fill_application_fields(
-        application,
-        data,
-    )
-
-    application.players = build_application_players(
-        data
-    )
+    fill_application_fields(application, data)
+    application.players = build_application_players(data)
 
     db.add(application)
 
     try:
         await db.commit()
-
     except IntegrityError:
         await db.rollback()
-
         raise HTTPException(
             status_code=409,
             detail="Не удалось сохранить заявку",
@@ -859,10 +792,6 @@ async def create_application(
     }
 
 
-# ============================================================
-# СПИСОК ЗАЯВОК ТРЕНЕРА
-# ============================================================
-
 @router.get("/applications")
 async def get_my_applications(
     coach: User = Depends(get_current_coach),
@@ -873,12 +802,8 @@ async def get_my_applications(
         .options(
             selectinload(Registration.players)
         )
-        .where(
-            Registration.author_id == coach.id
-        )
-        .order_by(
-            Registration.id.desc()
-        )
+        .where(Registration.author_id == coach.id)
+        .order_by(Registration.id.desc())
     )
 
     applications = (
@@ -894,10 +819,6 @@ async def get_my_applications(
     ]
 
 
-# ============================================================
-# ПРОСМОТР ЗАЯВКИ
-# ============================================================
-
 @router.get("/applications/{application_id}")
 async def get_application(
     application_id: int,
@@ -909,13 +830,8 @@ async def get_application(
         application_id,
         coach.id,
     )
-
     return application_detail(application)
 
-
-# ============================================================
-# РЕДАКТИРОВАНИЕ ЗАЯВКИ
-# ============================================================
 
 @router.put("/applications/{application_id}")
 async def update_application(
@@ -940,15 +856,10 @@ async def update_application(
             ),
         )
 
-    await validate_application_references(
-        db,
-        data,
-    )
+    validate_registration_input(data)
+    await validate_application_references(db, data)
 
-    fill_application_fields(
-        application,
-        data,
-    )
+    fill_application_fields(application, data)
 
     await db.execute(
         delete(RegistrationPlayer).where(
@@ -957,9 +868,7 @@ async def update_application(
         )
     )
 
-    new_players = build_application_players(
-        data
-    )
+    new_players = build_application_players(data)
 
     for player in new_players:
         player.registration_id = application.id
@@ -968,16 +877,11 @@ async def update_application(
 
     try:
         await db.commit()
-
     except IntegrityError:
         await db.rollback()
-
         raise HTTPException(
             status_code=409,
-            detail=(
-                "Не удалось обновить заявку. "
-                "Проверьте игроков и игровые номера."
-            ),
+            detail="Не удалось обновить заявку",
         )
 
     return {
@@ -989,10 +893,6 @@ async def update_application(
         ),
     }
 
-
-# ============================================================
-# ОТПРАВКА ЗАЯВКИ АДМИНИСТРАТОРУ
-# ============================================================
 
 @router.post("/applications/{application_id}/submit")
 async def submit_application(
@@ -1011,8 +911,8 @@ async def submit_application(
         raise HTTPException(
             status_code=409,
             detail=(
-                "Эту заявку нельзя отправить. "
-                "Она уже находится на рассмотрении "
+                "Эту заявку нельзя отправить: "
+                "она уже находится на рассмотрении "
                 "или обработана администратором."
             ),
         )
@@ -1026,10 +926,7 @@ async def submit_application(
         )
     ).all()
 
-    validate_application_content(
-        application,
-        players,
-    )
+    validate_application_content(application, players)
 
     existing_ids = {
         player.existing_player_id
@@ -1052,19 +949,13 @@ async def submit_application(
             raise HTTPException(
                 status_code=422,
                 detail=(
-                    "Некоторые игроки больше "
-                    "не существуют в базе. "
-                    "Обновите состав заявки."
+                    "Некоторые игроки больше не существуют "
+                    "в базе. Обновите состав заявки."
                 ),
             )
 
-    application.status = (
-        RegistrationStatus.SUBMITTED.value
-    )
-
-    application.submitted_at = (
-        datetime.now(timezone.utc)
-    )
+    application.status = RegistrationStatus.SUBMITTED.value
+    application.submitted_at = datetime.now(timezone.utc)
 
     application.admin_comment = None
     application.reviewed_at = None
@@ -1072,10 +963,8 @@ async def submit_application(
 
     try:
         await db.commit()
-
     except IntegrityError:
         await db.rollback()
-
         raise HTTPException(
             status_code=409,
             detail="Не удалось отправить заявку",

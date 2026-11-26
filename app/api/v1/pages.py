@@ -1776,9 +1776,61 @@ async def facts_page(request: Request, db: AsyncSession = Depends(get_db)):
     return await render_page(request, db, "facts.html")
 
 
+
 @router.get("/rating")
-async def rating_page(request: Request, db: AsyncSession = Depends(get_db)):
-    return await render_page(request, db, "rating.html")
+async def rating_page(
+    request: Request,
+    board: int | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    from app.models.rating import RatingBoard
+    from app.web.rating import board_data
+
+    boards = (
+        await db.scalars(
+            select(RatingBoard)
+            .where(
+                RatingBoard.is_published.is_(True)
+            )
+            .order_by(
+                RatingBoard.year.desc(),
+                RatingBoard.id.desc(),
+            )
+        )
+    ).all()
+
+    chosen = next(
+        (
+            item
+            for item in boards
+            if item.id == board
+        ),
+        None,
+    )
+
+    if chosen is None:
+        chosen = boards[0] if boards else None
+
+    if chosen:
+        columns, rows = await board_data(
+            db,
+            chosen.id,
+        )
+    else:
+        columns, rows = [], []
+
+    return await render_page(
+        request,
+        db,
+        "rating.html",
+        context={
+            "rating_boards": boards,
+            "rating_board": chosen,
+            "rating_columns": columns,
+            "rating_rows": rows,
+        },
+    )
+
 
 
 @router.get("/disciplinary")

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -444,12 +443,179 @@ html, body {
 body.debug #connection {
     display: block;
 }
+
+/* J-LIGA ALMATY WEATHER V2 */
+
+.weather-almaty {
+    position: absolute;
+    top: 54px;
+    right: 54px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 280px;
+    padding: 14px 20px;
+    border-radius: 13px;
+    background: linear-gradient(
+        125deg,
+        rgba(17, 24, 47, .97),
+        rgba(34, 52, 91, .97)
+    );
+    box-shadow: 0 8px 28px rgba(0, 0, 0, .35);
+    border: 1px solid rgba(255, 255, 255, .12);
+    color: #fff;
+    z-index: 5;
+}
+
+.weather-almaty .weather-icon {
+    font-size: 39px;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.weather-almaty .weather-info {
+    min-width: 0;
+}
+
+.weather-almaty .weather-city {
+    font-size: 14px;
+    font-weight: 900;
+    color: #c9f12d;
+    letter-spacing: 1px;
+}
+
+.weather-almaty .weather-description {
+    font-size: 13px;
+    color: #d7e0f0;
+    margin-top: 5px;
+    font-weight: 500;
+}
+
+.weather-almaty .weather-temperature {
+    font-size: 34px;
+    font-weight: 900;
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.g-event.goal {
+    width: 830px;
+    animation: jliga-goal-appear .65s
+        cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.g-event.goal .g-head {
+    background: #c9f12d;
+    color: #151b38;
+    font-size: 48px;
+    letter-spacing: 3px;
+    padding: 20px 30px;
+}
+
+.g-event.goal .g-body {
+    min-height: 185px;
+    background: linear-gradient(
+        125deg,
+        #12182d,
+        #253a60
+    );
+}
+
+.g-event.goal .event-symbol {
+    font-size: 82px;
+    animation: jliga-ball-appear .75s .18s both;
+}
+
+.g-event.goal .event-player {
+    font-size: 42px;
+}
+
+.g-event.goal .event-team {
+    font-size: 25px;
+}
+
+@keyframes jliga-goal-appear {
+    from {
+        opacity: 0;
+        transform: translateX(-100px) scale(.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0) scale(1);
+    }
+}
+
+@keyframes jliga-ball-appear {
+    from {
+        opacity: 0;
+        transform: scale(.3) rotate(-60deg);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) rotate(0);
+    }
+}
+
+@keyframes jliga-score-change {
+    0% {
+        transform: scale(1);
+    }
+
+    45% {
+        transform: scale(1.25);
+        color: #c9f12d;
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+.score.jliga-changed {
+    animation: jliga-score-change .7s ease-out;
+}
+
 </style>
 </head>
 
 <body>
 
 <div id="scene">
+
+    <div
+        id="weatherAlmaty"
+        class="weather-almaty"
+        aria-label="Погода в Алматы"
+    >
+        <div
+            id="weatherIcon"
+            class="weather-icon"
+        >☁</div>
+
+        <div class="weather-info">
+            <div class="weather-city">
+                АЛМАТЫ
+            </div>
+
+            <div
+                id="weatherDescription"
+                class="weather-description"
+            >
+                Загрузка погоды...
+            </div>
+        </div>
+
+        <div
+            id="weatherTemperature"
+            class="weather-temperature"
+        >
+            —°
+        </div>
+    </div>
+
 
     <!-- SCOREBOARD -->
 
@@ -479,9 +645,7 @@ body.debug #connection {
             00:00
         </div>
 
-        <div id="phase" class="phase">
-            ДО МАТЧА
-        </div>
+        <div id="phase" class="phase"></div>
 
     </div>
 
@@ -553,6 +717,169 @@ let stopped = false;
 let loading = false;
 let lastGraphicKey = "";
 
+
+
+/* J-LIGA ALMATY WEATHER V2 */
+
+const ALMATY_WEATHER_URL =
+    "https://api.open-meteo.com/v1/forecast" +
+    "?latitude=43.238949" +
+    "&longitude=76.889709" +
+    "&current=temperature_2m,weather_code," +
+    "wind_speed_10m,relative_humidity_2m" +
+    "&timezone=Asia%2FAlmaty";
+
+const ALMATY_WEATHER_CODES = {
+    0: ["Ясно", "☀️"],
+    1: ["Преимущественно ясно", "🌤️"],
+    2: ["Переменная облачность", "⛅"],
+    3: ["Облачно", "☁️"],
+    45: ["Туман", "🌫️"],
+    48: ["Изморозь", "🌫️"],
+    51: ["Слабая морось", "🌦️"],
+    53: ["Морось", "🌦️"],
+    55: ["Сильная морось", "🌧️"],
+    56: ["Ледяная морось", "🌧️"],
+    57: ["Ледяная морось", "🌧️"],
+    61: ["Слабый дождь", "🌦️"],
+    63: ["Дождь", "🌧️"],
+    65: ["Сильный дождь", "🌧️"],
+    66: ["Ледяной дождь", "🌧️"],
+    67: ["Ледяной дождь", "🌧️"],
+    71: ["Слабый снег", "🌨️"],
+    73: ["Снег", "❄️"],
+    75: ["Сильный снег", "❄️"],
+    77: ["Снежные зёрна", "❄️"],
+    80: ["Ливень", "🌦️"],
+    81: ["Ливень", "🌧️"],
+    82: ["Сильный ливень", "🌧️"],
+    85: ["Снегопад", "🌨️"],
+    86: ["Сильный снегопад", "❄️"],
+    95: ["Гроза", "⛈️"],
+    96: ["Гроза с градом", "⛈️"],
+    99: ["Сильная гроза", "⛈️"]
+};
+
+let almatyWeatherLoading = false;
+let almatyWeatherAvailable = false;
+
+async function refreshAlmatyWeather() {
+    if (almatyWeatherLoading) {
+        return;
+    }
+
+    almatyWeatherLoading = true;
+
+    const controller = new AbortController();
+    const timeout = setTimeout(
+        () => controller.abort(),
+        10000
+    );
+
+    try {
+        const response = await fetch(
+            ALMATY_WEATHER_URL,
+            {
+                cache: "no-store",
+                signal: controller.signal
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+        const data = await response.json();
+        const current = data.current;
+
+        if (
+            !current ||
+            current.temperature_2m == null
+        ) {
+            throw new Error(
+                "Нет данных о температуре"
+            );
+        }
+
+        const temperature = Number(
+            current.temperature_2m
+        );
+
+        if (!Number.isFinite(temperature)) {
+            throw new Error(
+                "Некорректная температура"
+            );
+        }
+
+        const weatherCode = Number(
+            current.weather_code
+        );
+
+        const condition =
+            ALMATY_WEATHER_CODES[weatherCode] ||
+            ["Погода", "☁️"];
+
+        const roundedTemp = Math.round(
+            temperature
+        );
+
+        const wind = Number(
+            current.wind_speed_10m
+        );
+
+        const tempText =
+            `${roundedTemp > 0 ? "+" : ""}` +
+            `${roundedTemp}°`;
+
+        const description =
+            condition[0] +
+            (
+                Number.isFinite(wind)
+                    ? ` · ${Math.round(wind)} км/ч`
+                    : ""
+            );
+
+        document.getElementById(
+            "weatherIcon"
+        ).textContent = condition[1];
+
+        document.getElementById(
+            "weatherTemperature"
+        ).textContent = tempText;
+
+        document.getElementById(
+            "weatherDescription"
+        ).textContent = description;
+
+        almatyWeatherAvailable = true;
+
+    } catch (error) {
+        console.warn(
+            "Ошибка загрузки погоды Алматы:",
+            error
+        );
+
+        if (!almatyWeatherAvailable) {
+            document.getElementById(
+                "weatherDescription"
+            ).textContent =
+                "Погода временно недоступна";
+        }
+
+    } finally {
+        clearTimeout(timeout);
+        almatyWeatherLoading = false;
+    }
+}
+
+refreshAlmatyWeather();
+
+setInterval(
+    refreshAlmatyWeather,
+    10 * 60 * 1000
+);
 
 /* ============================================
    RESIZE
@@ -820,17 +1147,21 @@ function displayScoreboard() {
         state.added_time_minutes
     ) || 0;
 
-    $("phase").textContent =
-        (
-            PHASES[state.phase] ||
-            state.phase ||
-            "ДО МАТЧА"
-        ) +
-        (
-            added > 0
-                ? ` · +${added}′`
-                : ""
-        );
+    const phaseElement = $("phase");
+
+    if (phaseElement) {
+        phaseElement.textContent =
+            (
+                PHASES[state.phase] ||
+                state.phase ||
+                "ДО МАТЧА"
+            ) +
+            (
+                added > 0
+                    ? ` · +${added}′`
+                    : ""
+            );
+    }
 
     tick();
 }
@@ -849,11 +1180,13 @@ function eventGraphic(type, payload) {
     };
 
     const cls =
-        type === "YELLOW_CARD"
-            ? "yellow"
-            : type === "RED_CARD"
-                ? "red"
-                : "";
+        type === "GOAL"
+            ? "goal"
+            : type === "YELLOW_CARD"
+                ? "yellow"
+                : type === "RED_CARD"
+                    ? "red"
+                    : "";
 
     const body = panel(
         `g-event ${cls}`,
@@ -1535,8 +1868,33 @@ function applyState(next) {
         return;
     }
 
+    const scoreChanged =
+        state &&
+        state.match_id === next.match_id &&
+        (
+            Number(state.home_score) !==
+            Number(next.home_score) ||
+            Number(state.away_score) !==
+            Number(next.away_score)
+        );
+
     state = next;
     receivedAt = performance.now();
+
+    if (scoreChanged) {
+        const scoreBox =
+            document.querySelector(".score");
+
+        scoreBox.classList.remove(
+            "jliga-changed"
+        );
+
+        void scoreBox.offsetWidth;
+
+        scoreBox.classList.add(
+            "jliga-changed"
+        );
+    }
 
     displayScoreboard();
     renderGraphic();

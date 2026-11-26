@@ -1,25 +1,27 @@
 
-import logging
+import os
+import time
+from pathlib import Path
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from collections.abc import Awaitable, Callable
 from typing import Any
-from urllib.parse import urlsplit
+
+import httpx
 
 from fastapi import (
     APIRouter,
     Depends,
     HTTPException,
-    Request,
-    Response,
     WebSocket,
     WebSocketDisconnect,
     WebSocketException,
     status,
 )
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.enums import MatchStatus
 from app.models.match import Match
 from app.schemas.broadcast import (
     BroadcastCommandRequest,
@@ -31,111 +33,55 @@ from app.services.broadcast import (
     state_response,
 )
 from app.services.broadcast_realtime import broadcast_realtime
-from app.services.standings import StandingsService
 
 
-log = logging.getLogger(__name__)
+LOCAL_TZ = ZoneInfo("Asia/Almaty")
+WEATHER_CACHE_SECONDS = 600
+
+WEATHER_CONDITIONS = {
+    "clear": "Ясно",
+    "partly-cloudy": "Малооблачно",
+    "cloudy": "Облачно",
+    "overcast": "Пасмурно",
+    "light-rain": "Небольшой дождь",
+    "rain": "Дождь",
+    "heavy-rain": "Сильный дождь",
+    "showers": "Ливень",
+    "wet-snow": "Дождь со снегом",
+    "light-snow": "Небольшой снег",
+    "snow": "Снег",
+    "snow-showers": "Снегопад",
+    "hail": "Град",
+    "thunderstorm": "Гроза",
+    "thunderstorm-with-rain": "Дождь с грозой",
+}
 
 
-def check_origin(request: Request):
-    authorization = request.headers.get(
-        "authorization",
-        "",
-    )
+def get_weather_config(name: str, default: str = "") -> str:
+    value = os.getenv(name)
+    if value is not None:
+        return value
 
-    if authorization.lower().startswith("bearer "):
-        return
+    env_path = Path(__file__).resolve().parents[3] / ".env"
 
-    source = (
-        request.headers.get("origin")
-        or request.headers.get("referer")
-        or ""
-    )
+    if env_path.exists():
+        for line in env_path.read_text(
+            encoding="utf-8-sig"
+        ).splitlines():
+            key, separator, raw_value = line.strip().partition("=")
 
-    parsed = urlsplit(source)
+            if separator and key.strip() == name:
+                return raw_value.strip().strip('"').strip("'")
 
-    if (
-        parsed.scheme not in ("http", "https")
-        or parsed.netloc.lower()
-        != request.headers.get("host", "").lower()
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="Недопустимый источник запроса",
-        )
-
-
-async def full_state(
-    db: AsyncSession,
-    session,
-) -> BroadcastStateResponse:
-    result = state_response(session)
-
-    match = await db.scalar(
-        select(Match)
-        .options(
-            selectinload(Match.home_team),
-            selectinload(Match.away_team),
-        )
-        .where(Match.id == session.match_id)
-    )
-
-    if match is None:
-        return result
-
-    # Официальный счёт является основным.
-    result.home_score = match.home_score or 0
-    result.away_score = match.away_score or 0
-
-    for side in ("home", "away"):
-        team = getattr(match, f"{side}_team")
-
-        if team is None:
-            continue
-
-        setattr(
-            result,
-            f"{side}_team_name",
-            team.name,
-        )
-
-        setattr(
-            result,
-            f"{side}_team_short_name",
-            team.name[:12],
-        )
-
-        setattr(
-            result,
-            f"{side}_team_logo_url",
-            team.logo_url,
-        )
-
-    return result
-
-
-async def notify(
-    session_id: int,
-    result: BroadcastStateResponse,
-):
-    try:
-        await broadcast_realtime.broadcast_state(
-            session_id,
-            result,
-        )
-
-    except Exception:
-        log.exception(
-            "Broadcast notification failed: %s",
-            session_id,
-        )
+    return default
 
 
 def create_broadcast_router(
     get_db: Callable[..., Any],
     require_operator: Callable[..., Any],
     authorize_viewer: Callable[
-        [WebSocket, int], Awaitable[bool]
+        [WebSocket, int],
+        Awaitable[bool],
     ],
 ) -> APIRouter:
 
@@ -144,80 +90,249 @@ def create_broadcast_router(
         tags=["Broadcast Studio"],
     )
 
+    weather_cache: dict[str, Any] = {
+        "until": 0.0,
+        "value": None,
+    }
+
+    async def full_state(
+        db: AsyncSession,
+        session,
+    ) -> dict:
+        result = state_response(session).model_dump(
+            mode="json"
+        )
+
+        match = await db.scalar(
+            select(Match)
+            .options(
+                selectinload(Match.home_team),
+                selectinload(Match.away_team),
+            )
+            .where(Match.id == session.match_id)
+        )
+
+        if match:
+            for side in ("home", "away"):
+                team = getattr(
+                    match,
+                    f"{side}_team",
+                    None,
+                )
+
+                result[f"{side}_team_name"] = (
+                    team.name if team else None
+                )
+                result[f"{side}_team_short_name"] = (
+                    team.name[:12] if team else None
+                )
+                result[f"{side}_team_logo_url"] = (
+                    team.logo_url if team else None
+                )
+
+        return result
+
     @router.get("/matches")
     async def list_matches(
         db: AsyncSession = Depends(get_db),
         operator: Any = Depends(require_operator),
     ):
-        matches = (
-            await db.scalars(
-                select(Match)
-                .options(
-                    selectinload(Match.home_team),
-                    selectinload(Match.away_team),
-                )
-                .order_by(
-                    Match.match_date.desc().nullslast(),
-                    Match.id.desc(),
-                )
-                .limit(200)
+        today = datetime.now(LOCAL_TZ).date()
+
+        first_day = today - timedelta(days=3)
+        after_last_day = today + timedelta(days=4)
+
+        start = datetime.combine(
+            first_day,
+            datetime.min.time(),
+            LOCAL_TZ,
+        ).astimezone(timezone.utc)
+
+        end = datetime.combine(
+            after_last_day,
+            datetime.min.time(),
+            LOCAL_TZ,
+        ).astimezone(timezone.utc)
+
+        stmt = (
+            select(Match)
+            .options(
+                selectinload(Match.home_team),
+                selectinload(Match.away_team),
             )
-        ).all()
+            .where(
+                Match.match_date >= start,
+                Match.match_date < end,
+            )
+            .order_by(
+                Match.match_date.asc(),
+                Match.id.asc(),
+            )
+        )
+
+        matches = (await db.scalars(stmt)).all()
 
         return [
             {
                 "id": match.id,
                 "home": (
                     match.home_team.name
-                    if match.home_team else "HOME"
+                    if match.home_team
+                    else "HOME"
                 ),
                 "away": (
                     match.away_team.name
-                    if match.away_team else "AWAY"
+                    if match.away_team
+                    else "AWAY"
                 ),
-                "date": (
-                    match.match_date.isoformat()
-                    if match.match_date else None
+                "date": match.match_date.isoformat(),
+                "status": getattr(
+                    match.status,
+                    "value",
+                    str(match.status),
                 ),
+                "stadium": match.stadium,
             }
             for match in matches
         ]
 
+    @router.get("/weather")
+    async def get_broadcast_weather(
+        operator: Any = Depends(require_operator),
+    ):
+        api_key = get_weather_config(
+            "YANDEX_WEATHER_API_KEY"
+        ).strip()
+
+        if not api_key:
+            raise HTTPException(
+                status_code=503,
+                detail=(
+                    "Добавьте YANDEX_WEATHER_API_KEY "
+                    "в .env проекта"
+                ),
+            )
+
+        now = time.monotonic()
+
+        if (
+            weather_cache["value"] is not None
+            and now < weather_cache["until"]
+        ):
+            return weather_cache["value"]
+
+        try:
+            latitude = float(
+                get_weather_config(
+                    "BROADCAST_WEATHER_LAT",
+                    "43.238949",
+                )
+            )
+            longitude = float(
+                get_weather_config(
+                    "BROADCAST_WEATHER_LON",
+                    "76.889709",
+                )
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="Некорректные координаты погоды",
+            ) from exc
+
+        if not (
+            -90 <= latitude <= 90
+            and -180 <= longitude <= 180
+        ):
+            raise HTTPException(
+                status_code=503,
+                detail="Некорректные координаты погоды",
+            )
+
+        try:
+            async with httpx.AsyncClient(
+                timeout=8.0,
+            ) as client:
+                response = await client.get(
+                    "https://api.weather.yandex.ru/v2/informers",
+                    params={
+                        "lat": latitude,
+                        "lon": longitude,
+                        "lang": "ru_RU",
+                    },
+                    headers={
+                        "X-Yandex-Weather-Key": api_key,
+                    },
+                )
+
+            response.raise_for_status()
+
+            fact = response.json().get("fact") or {}
+
+            if fact.get("temp") is None:
+                raise ValueError("Temperature unavailable")
+
+        except (
+            httpx.HTTPError,
+            ValueError,
+            TypeError,
+        ) as exc:
+            raise HTTPException(
+                status_code=502,
+                detail=(
+                    "Не удалось получить погоду от Яндекса. "
+                    "Проверьте API-ключ, тариф и подключение."
+                ),
+            ) from exc
+
+        condition = fact.get("condition", "")
+
+        result = {
+            "city": get_weather_config(
+                "BROADCAST_WEATHER_CITY",
+                "Алматы",
+            ),
+            "temp": fact["temp"],
+            "feels_like": fact.get("feels_like"),
+            "condition": WEATHER_CONDITIONS.get(
+                condition,
+                condition,
+            ),
+            "wind_speed": fact.get("wind_speed"),
+            "humidity": fact.get("humidity"),
+            "source": "Яндекс Погода",
+        }
+
+        weather_cache["value"] = result
+        weather_cache["until"] = now + WEATHER_CACHE_SECONDS
+
+        return result
+
     @router.post(
         "/sessions",
-        response_model=BroadcastStateResponse,
-        status_code=201,
+        status_code=status.HTTP_201_CREATED,
     )
     async def create_session(
         data: BroadcastSessionCreate,
-        request: Request,
         db: AsyncSession = Depends(get_db),
         operator: Any = Depends(require_operator),
     ):
-        check_origin(request)
-
         try:
             session = await BroadcastService.create_session(
                 db,
                 data.match_id,
             )
 
-            result = await full_state(
-                db,
-                session,
-            )
-
+            result = await full_state(db, session)
             await db.commit()
+
             return result
 
         except Exception:
             await db.rollback()
             raise
 
-    @router.get(
-        "/sessions/{session_id}",
-        response_model=BroadcastStateResponse,
-    )
+    @router.get("/sessions/{session_id}")
     async def get_session(
         session_id: int,
         db: AsyncSession = Depends(get_db),
@@ -228,56 +343,39 @@ def create_broadcast_router(
             session_id,
         )
 
-        return await full_state(
-            db,
-            session,
-        )
+        return await full_state(db, session)
 
-    @router.get(
-        "/sessions/{session_id}/public",
-        response_model=BroadcastStateResponse,
-    )
+    @router.get("/sessions/{session_id}/public")
     async def get_public_session(
         session_id: int,
-        response: Response,
         db: AsyncSession = Depends(get_db),
     ):
-        response.headers["Cache-Control"] = "no-store"
-
         session = await BroadcastService.get_session(
             db,
             session_id,
         )
 
-        return await full_state(
-            db,
-            session,
-        )
+        return await full_state(db, session)
 
-    @router.post(
-        "/sessions/{session_id}/commands",
-        response_model=BroadcastStateResponse,
-    )
+    @router.post("/sessions/{session_id}/commands")
     async def execute_command(
         session_id: int,
         command: BroadcastCommandRequest,
-        request: Request,
         db: AsyncSession = Depends(get_db),
         operator: Any = Depends(require_operator),
     ):
-        check_origin(request)
-
-        became_finished = False
-        tournament_id = None
+        operator_id = getattr(
+            operator,
+            "id",
+            None,
+        )
 
         try:
-            # 1. Команда блокирует конкретную
-            # BroadcastSession через FOR UPDATE.
             await BroadcastService.execute_command(
                 db=db,
                 session_id=session_id,
                 command=command,
-                operator_id=operator.id,
+                operator_id=operator_id,
             )
 
             session = await BroadcastService.get_session(
@@ -285,108 +383,22 @@ def create_broadcast_router(
                 session_id,
             )
 
-            # 2. Затем блокируем официальный матч.
-            match = await db.scalar(
-                select(Match)
-                .where(Match.id == session.match_id)
-                .with_for_update()
-            )
+            result = await full_state(db, session)
 
-            if match is None:
-                raise HTTPException(
-                    status_code=404,
-                    detail="Матч не найден",
-                )
-
-            tournament_id = match.tournament_id
-
-            # 3. Ручное изменение счёта
-            # синхронизируется с турниром.
-            if command.action == "SET_SCORE":
-                if match.status == MatchStatus.FINISHED:
-                    raise HTTPException(
-                        status_code=409,
-                        detail=(
-                            "Завершённый матч нельзя "
-                            "изменять из Broadcast Studio"
-                        ),
-                    )
-
-                match.home_score = session.home_score
-                match.away_score = session.away_score
-
-            # 4. Первый запуск переводит матч в LIVE.
-            elif command.action == "START_CLOCK":
-                if match.status == MatchStatus.SCHEDULED:
-                    match.status = MatchStatus.LIVE
-
-            # 5. Смена игрового периода.
-            elif command.action == "SET_PHASE":
-                if (
-                    session.phase
-                    not in ("PRE_MATCH", "FINISHED")
-                    and match.status == MatchStatus.SCHEDULED
-                ):
-                    match.status = MatchStatus.LIVE
-
-                if session.phase == "FINISHED":
-                    became_finished = (
-                        match.status != MatchStatus.FINISHED
-                    )
-
-                    match.status = MatchStatus.FINISHED
-
-            # 6. Синхронизируем зеркало счёта.
-            session.home_score = match.home_score or 0
-            session.away_score = match.away_score or 0
-
-            await db.flush()
-
-            result = await full_state(
-                db,
-                session,
-            )
-
-            # 7. Всё фиксируется вместе.
             await db.commit()
 
         except Exception:
             await db.rollback()
             raise
 
-        # 8. Пересчёт таблицы после завершения.
-        if became_finished and tournament_id is not None:
-            try:
-                # Блокировка действует до COMMIT
-                # внутри StandingsService.
-                await db.execute(
-                    text(
-                        "SELECT pg_advisory_xact_lock(:tid)"
-                    ),
-                    {"tid": tournament_id},
-                )
-
-                await StandingsService.recalculate_standings(
-                    db,
-                    tournament_id,
-                )
-
-            except Exception:
-                log.exception(
-                    "Standings update failed: tournament=%s",
-                    tournament_id,
-                )
-
-                await db.rollback()
-
-        # 9. WebSocket вызывается после фиксации БД.
-        await notify(session_id, result)
+        await broadcast_realtime.broadcast_state(
+            session_id,
+            result,
+        )
 
         return result
 
-    @router.websocket(
-        "/sessions/{session_id}/ws"
-    )
+    @router.websocket("/sessions/{session_id}/ws")
     async def websocket_session(
         websocket: WebSocket,
         session_id: int,
@@ -407,7 +419,7 @@ def create_broadcast_router(
             session_id,
         )
 
-        initial = await full_state(
+        initial_state = await full_state(
             db,
             session,
         )
@@ -420,9 +432,7 @@ def create_broadcast_router(
         try:
             await websocket.send_json({
                 "type": "broadcast.state",
-                "data": initial.model_dump(
-                    mode="json"
-                ),
+                "data": initial_state,
             })
 
             while True:

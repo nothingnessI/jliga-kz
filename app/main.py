@@ -7,8 +7,11 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.api import api_router
 from app.api.v1 import pages
+from app.api.v1.endpoints.coach import router as coach_router
+
 from app.web.broadcast import router as broadcast_web_router
 from app.web.admin_users import router as admin_users_router
+from app.web.rating import router as rating_router
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -48,7 +51,7 @@ app.add_middleware(
 app.mount(
     "/static",
     StaticFiles(
-        directory=BASE_DIR / "static"
+        directory=BASE_DIR / "static",
     ),
     name="static",
 )
@@ -61,19 +64,33 @@ app.include_router(
 )
 
 
-# Существующие Jinja-страницы сайта.
+# API регистрации и работы тренеров.
+app.include_router(
+    coach_router,
+    prefix="/api/v1/coach",
+    tags=["Coach"],
+)
+
+
+# Jinja-страницы сайта.
 app.include_router(
     pages.router,
 )
 
 
-# Центр трансляций, студии, OBS и LIVE.
+# Центр трансляций, OBS и LIVE.
 app.include_router(
     broadcast_web_router,
 )
 
+
+# Управление пользователями.
 app.include_router(
     admin_users_router,
+)
+
+app.include_router(
+    rating_router
 )
 
 

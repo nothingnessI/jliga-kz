@@ -7,8 +7,10 @@
 
 import asyncio
 import logging
+from typing import Any
 
 from fastapi import WebSocket
+from fastapi.encoders import jsonable_encoder
 
 from app.schemas.broadcast import BroadcastStateResponse
 
@@ -18,7 +20,7 @@ log = logging.getLogger(__name__)
 
 class BroadcastRealtimeManager:
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.connections: dict[int, set[WebSocket]] = {}
         self.lock = asyncio.Lock()
 
@@ -41,9 +43,7 @@ class BroadcastRealtimeManager:
         websocket: WebSocket,
     ) -> None:
         async with self.lock:
-            clients = self.connections.get(
-                session_id
-            )
+            clients = self.connections.get(session_id)
 
             if clients is not None:
                 clients.discard(websocket)
@@ -57,13 +57,17 @@ class BroadcastRealtimeManager:
     async def broadcast_state(
         self,
         session_id: int,
-        state: BroadcastStateResponse,
+        state: BroadcastStateResponse | dict[str, Any],
     ) -> None:
+
+        if isinstance(state, dict):
+            data = jsonable_encoder(state)
+        else:
+            data = state.model_dump(mode="json")
+
         message = {
             "type": "broadcast.state",
-            "data": state.model_dump(
-                mode="json"
-            ),
+            "data": data,
         }
 
         async with self.lock:
@@ -76,9 +80,7 @@ class BroadcastRealtimeManager:
 
         for websocket in clients:
             try:
-                await websocket.send_json(
-                    message
-                )
+                await websocket.send_json(message)
 
             except Exception:
                 log.debug(

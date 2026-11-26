@@ -1,0 +1,935 @@
+
+{% extends "admin_base.html" %}
+
+{% block admin_content %}
+
+<style>
+.rt-panel {
+    background: white;
+    border: 1px solid #e1e8ef;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 3px 12px #101a2b0a;
+}
+
+.rt-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: end;
+}
+
+.rt-row > * {
+    min-width: 160px;
+    flex: 1;
+}
+
+.rt-row .btn {
+    flex: 0 0 auto;
+    min-width: auto;
+}
+
+.rt-table-wrap {
+    overflow-x: auto;
+}
+
+.rt-table {
+    min-width: 750px;
+    white-space: nowrap;
+}
+
+.rt-table th {
+    background: #8b1338;
+    color: white;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.rt-table td {
+    vertical-align: middle;
+    text-align: center;
+}
+
+.rt-table td:nth-child(2),
+.rt-table th:nth-child(2) {
+    text-align: left;
+    min-width: 200px;
+}
+
+.rt-score {
+    min-width: 90px;
+    max-width: 120px;
+    text-align: right;
+    margin: auto;
+}
+
+.rt-total {
+    font-weight: 900;
+    color: #0b8043;
+}
+
+.rt-actions {
+    white-space: nowrap;
+}
+
+.rt-subtitle {
+    font-size: 13px;
+    color: #6b778a;
+}
+
+.rt-published {
+    color: #0b8043;
+    font-weight: 700;
+}
+
+.rt-search {
+    position: relative;
+    margin-bottom: 10px;
+}
+
+.rt-search input {
+    width: 100%;
+    padding: 11px 14px 11px 42px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    background: #f8fafc;
+    font-size: 14px;
+}
+
+.rt-search input:focus {
+    background: white;
+    border-color: #0d6efd;
+    outline: none;
+    box-shadow: 0 0 0 3px #0d6efd22;
+}
+
+.rt-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    color: #64748b;
+    pointer-events: none;
+}
+
+.rt-search-count {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 5px;
+    min-height: 18px;
+}
+
+.rt-search-count.empty {
+    color: #dc3545;
+}
+
+.rt-selector {
+    min-height: 43px;
+}
+
+.rt-form-block {
+    min-width: 0;
+}
+
+@media (max-width: 768px) {
+    .rt-panel {
+        padding: 15px;
+    }
+
+    .rt-row > * {
+        flex-basis: 100%;
+    }
+
+    .rt-row .btn {
+        width: 100%;
+    }
+}
+</style>
+
+<div class="d-flex flex-wrap gap-3 justify-content-between align-items-center mb-4">
+
+    <div>
+        <h3 class="fw-bold mb-1">
+            RATING · Управление рейтингами
+        </h3>
+
+        <div class="text-muted">
+            Добавляй команды и турниры, вводи баллы.
+            TOTAL рассчитывается автоматически.
+        </div>
+    </div>
+
+    <a
+        href="/rating"
+        target="_blank"
+        rel="noopener"
+        class="btn btn-outline-primary"
+    >
+        Открыть RATING на сайте
+    </a>
+
+</div>
+
+{% if message %}
+
+<div class="alert alert-info">
+    {{ message }}
+</div>
+
+{% endif %}
+
+<!-- СОЗДАНИЕ РЕЙТИНГА -->
+
+<div class="rt-panel">
+
+    <h5 class="fw-bold mb-3">
+        Новый рейтинг
+    </h5>
+
+    <form
+        action="/admin/rating/create"
+        method="post"
+        class="rt-row"
+    >
+
+        <div>
+            <label for="boardTitle" class="form-label">
+                Название
+            </label>
+
+            <input
+                class="form-control"
+                id="boardTitle"
+                name="title"
+                maxlength="150"
+                placeholder="FINAL RANKING 2026"
+                required
+            >
+        </div>
+
+        <div>
+            <label for="boardYear" class="form-label">
+                Год
+            </label>
+
+            <input
+                class="form-control"
+                id="boardYear"
+                name="year"
+                type="number"
+                min="2000"
+                max="2100"
+                value="2026"
+                required
+            >
+        </div>
+
+        <button
+            class="btn btn-primary"
+            type="submit"
+        >
+            + Создать рейтинг
+        </button>
+
+    </form>
+
+</div>
+
+<!-- ВЫБОР РЕЙТИНГА -->
+
+{% if boards %}
+
+<div class="rt-panel">
+
+    <form
+        action="/admin/rating"
+        method="get"
+        class="rt-row"
+    >
+
+        <div>
+            <label for="boardSelector" class="form-label">
+                Редактируемый рейтинг
+            </label>
+
+            <select
+                id="boardSelector"
+                name="board"
+                class="form-select"
+                onchange="this.form.submit()"
+            >
+
+                {% for b in boards %}
+
+                <option
+                    value="{{ b.id }}"
+                    {% if chosen and chosen.id == b.id %}
+                    selected
+                    {% endif %}
+                >
+                    {{ b.title }} · {{ b.year }}
+                    {% if b.is_published %}
+                    (опубликован)
+                    {% else %}
+                    (черновик)
+                    {% endif %}
+                </option>
+
+                {% endfor %}
+
+            </select>
+        </div>
+
+        <button
+            type="submit"
+            class="btn btn-outline-secondary"
+        >
+            Открыть
+        </button>
+
+    </form>
+
+</div>
+
+{% endif %}
+
+{% if chosen %}
+
+<!-- УПРАВЛЕНИЕ ТУРНИРАМИ И КОМАНДАМИ -->
+
+<div class="rt-panel">
+
+    <div class="d-flex justify-content-between flex-wrap align-items-center gap-2 mb-4">
+
+        <div>
+            <h4 class="fw-bold mb-1">
+                {{ chosen.title }} · {{ chosen.year }}
+            </h4>
+
+            <div class="rt-subtitle">
+                {% if chosen.is_published %}
+
+                <span class="rt-published">
+                    ● Опубликовано
+                </span>
+
+                {% else %}
+
+                ● Черновик — на сайте не видно
+
+                {% endif %}
+            </div>
+        </div>
+
+        <form
+            method="post"
+            action="/admin/rating/{{ chosen.id }}/publish"
+        >
+            <button
+                type="submit"
+                class="btn {% if chosen.is_published %}btn-outline-warning{% else %}btn-success{% endif %}"
+            >
+                {% if chosen.is_published %}
+                Снять с публикации
+                {% else %}
+                Опубликовать на сайте
+                {% endif %}
+            </button>
+        </form>
+
+    </div>
+
+    <div class="row g-4">
+
+        <!-- ТУРНИРЫ -->
+
+        <div class="col-lg-6">
+
+            <form
+                action="/admin/rating/{{ chosen.id }}/tournament"
+                method="post"
+            >
+
+                <label
+                    for="searchTournament"
+                    class="form-label fw-semibold"
+                >
+                    Добавить колонку турнира
+                </label>
+
+                <div class="rt-search">
+
+                    <span class="rt-search-icon">
+                        <i class="bi bi-search"></i>
+                    </span>
+
+                    <input
+                        id="searchTournament"
+                        type="search"
+                        placeholder="Поиск турнира по названию или ID..."
+                        autocomplete="off"
+                        aria-label="Поиск турнира"
+                    >
+
+                </div>
+
+                <div class="rt-search-count" id="tournamentSearchCount">
+                    Найдено: {{ available_tournaments|length }}
+                </div>
+
+                <div class="input-group mt-2">
+
+                    <select
+                        class="form-select rt-selector"
+                        id="addTournament"
+                        name="tournament_id"
+                        required
+                    >
+
+                        <option value="">
+                            Выбери турнир
+                        </option>
+
+                        {% for t in available_tournaments %}
+
+                        <option value="{{ t.id }}">
+                            {{ t.name }} (#{{ t.id }})
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <button
+                        class="btn btn-primary"
+                        type="submit"
+                    >
+                        Добавить
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+        <!-- КОМАНДЫ -->
+
+        <div class="col-lg-6">
+
+            <form
+                action="/admin/rating/{{ chosen.id }}/team"
+                method="post"
+            >
+
+                <label
+                    for="searchTeam"
+                    class="form-label fw-semibold"
+                >
+                    Добавить команду
+                </label>
+
+                <div class="rt-search">
+
+                    <span class="rt-search-icon">
+                        <i class="bi bi-search"></i>
+                    </span>
+
+                    <input
+                        id="searchTeam"
+                        type="search"
+                        placeholder="Поиск команды по названию или ID..."
+                        autocomplete="off"
+                        aria-label="Поиск команды"
+                    >
+
+                </div>
+
+                <div class="rt-search-count" id="teamSearchCount">
+                    Найдено: {{ available_teams|length }}
+                </div>
+
+                <div class="input-group mt-2">
+
+                    <select
+                        class="form-select rt-selector"
+                        id="addTeam"
+                        name="team_id"
+                        required
+                    >
+
+                        <option value="">
+                            Выбери команду
+                        </option>
+
+                        {% for t in available_teams %}
+
+                        <option value="{{ t.id }}">
+                            {{ t.name }} (#{{ t.id }})
+                        </option>
+
+                        {% endfor %}
+
+                    </select>
+
+                    <button
+                        class="btn btn-primary"
+                        type="submit"
+                    >
+                        Добавить
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ТАБЛИЦА РЕЙТИНГА -->
+
+<div class="rt-panel">
+
+    <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
+
+        <div>
+            <h5 class="fw-bold mb-1">
+                Очки по турнирам
+            </h5>
+
+            <div class="rt-subtitle">
+                Изменяй очки и нажми «Сохранить».
+                Команды сортируются по TOTAL.
+            </div>
+        </div>
+
+        <button
+            type="submit"
+            class="btn btn-success"
+            form="scoresForm"
+        >
+            Сохранить все очки
+        </button>
+
+    </div>
+
+    <form
+        action="/admin/rating/{{ chosen.id }}/save"
+        method="post"
+        id="scoresForm"
+    >
+
+        <div class="rt-table-wrap">
+
+            <table
+                class="table table-bordered table-striped rt-table"
+                id="ratingEditor"
+            >
+
+                <thead>
+
+                    <tr>
+                        <th>#</th>
+
+                        <th>Команда</th>
+
+                        {% for column in columns %}
+
+                        <th>
+                            <div>
+                                {{ column.label }}
+                            </div>
+
+                            <button
+                                type="submit"
+                                class="btn btn-sm btn-outline-light mt-2"
+                                form="deleteColumn{{ column.id }}"
+                                onclick="return confirm('Удалить колонку турнира?');"
+                            >
+                                × Удалить
+                            </button>
+                        </th>
+
+                        {% endfor %}
+
+                        <th>TOTAL</th>
+
+                        <th>Действия</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for row in rows %}
+
+                    <tr data-row="{{ row.id }}">
+
+                        <td class="rt-rank">
+                            {{ loop.index }}
+                        </td>
+
+                        <td class="fw-bold">
+                            {{ row.team_name }}
+                        </td>
+
+                        {% for column in columns %}
+
+                        <td>
+                            <input
+                                class="form-control form-control-sm rt-score"
+                                name="score_{{ row.id }}_{{ column.id }}"
+                                type="number"
+                                min="0"
+                                max="99999.99"
+                                step="0.01"
+                                required
+                                value="{{ row['values'][column.id] }}"
+                                aria-label="Очки: {{ row.team_name }} — {{ column.label }}"
+                            >
+                        </td>
+
+                        {% endfor %}
+
+                        <td class="rt-total">
+                            {{ row.total_text }}
+                        </td>
+
+                        <td class="rt-actions">
+
+                            <button
+                                type="submit"
+                                class="btn btn-sm btn-outline-danger"
+                                form="deleteRow{{ row.id }}"
+                                onclick="return confirm('Убрать команду из рейтинга?');"
+                            >
+                                Удалить
+                            </button>
+
+                        </td>
+
+                    </tr>
+
+                    {% else %}
+
+                    <tr>
+                        <td
+                            colspan="{{ columns|length + 4 }}"
+                            class="text-center text-muted py-4"
+                        >
+                            Добавь команды, чтобы заполнить рейтинг
+                        </td>
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </form>
+
+    <div class="d-flex justify-content-end mt-3">
+
+        <button
+            class="btn btn-success"
+            type="submit"
+            form="scoresForm"
+        >
+            Сохранить все очки
+        </button>
+
+    </div>
+
+</div>
+
+<!-- ФОРМЫ УДАЛЕНИЯ -->
+
+{% for column in columns %}
+
+<form
+    id="deleteColumn{{ column.id }}"
+    method="post"
+    action="/admin/rating/{{ chosen.id }}/tournament/{{ column.id }}/delete"
+></form>
+
+{% endfor %}
+
+{% for row in rows %}
+
+<form
+    id="deleteRow{{ row.id }}"
+    method="post"
+    action="/admin/rating/{{ chosen.id }}/team/{{ row.id }}/delete"
+></form>
+
+{% endfor %}
+
+<script>
+(() => {
+    "use strict";
+
+    /*
+     * ПОИСК ПО ВЫПАДАЮЩИМ СПИСКАМ
+     */
+
+    function initSelectSearch(
+        inputId,
+        selectId,
+        countId,
+        placeholder
+    ) {
+        const input = document.getElementById(inputId);
+        const select = document.getElementById(selectId);
+        const counter = document.getElementById(countId);
+
+        if (!input || !select) {
+            return;
+        }
+
+        // Сохраняем полный список в памяти браузера.
+        const originalOptions = Array.from(
+            select.options
+        )
+            .filter(option => option.value !== "")
+            .map(option => ({
+                value: option.value,
+                label: option.textContent.trim()
+            }));
+
+        const normalize = value => String(value)
+            .toLocaleLowerCase("ru")
+            .replace(/ё/g, "е")
+            .normalize("NFKD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim();
+
+        function filterOptions() {
+            const query = normalize(input.value);
+
+            const previousValue = select.value;
+
+            const matched = originalOptions.filter(
+                option =>
+                    normalize(option.label).includes(query) ||
+                    option.value.includes(query)
+            );
+
+            const fragment = document.createDocumentFragment();
+
+            fragment.appendChild(
+                new Option(placeholder, "")
+            );
+
+            for (const option of matched) {
+                fragment.appendChild(
+                    new Option(
+                        option.label,
+                        option.value
+                    )
+                );
+            }
+
+            if (matched.length === 0) {
+                const empty = new Option(
+                    "Ничего не найдено",
+                    ""
+                );
+
+                empty.disabled = true;
+
+                fragment.appendChild(empty);
+            }
+
+            select.replaceChildren(fragment);
+
+            const stillExists = matched.some(
+                option => option.value === previousValue
+            );
+
+            select.value = stillExists
+                ? previousValue
+                : "";
+
+            if (counter) {
+                counter.textContent =
+                    `Найдено: ${matched.length}`;
+
+                counter.classList.toggle(
+                    "empty",
+                    matched.length === 0
+                );
+            }
+        }
+
+        input.addEventListener(
+            "input",
+            filterOptions
+        );
+
+        // Escape очищает поиск.
+        input.addEventListener("keydown", event => {
+            if (event.key === "Escape") {
+                input.value = "";
+                filterOptions();
+            }
+
+            // Enter выбирает единственный результат.
+            if (event.key === "Enter") {
+                const available = Array.from(
+                    select.options
+                ).filter(option =>
+                    option.value !== "" &&
+                    !option.disabled
+                );
+
+                if (available.length === 1) {
+                    event.preventDefault();
+
+                    select.value = available[0].value;
+                    select.focus();
+                }
+            }
+        });
+
+        filterOptions();
+    }
+
+    initSelectSearch(
+        "searchTournament",
+        "addTournament",
+        "tournamentSearchCount",
+        "Выбери турнир"
+    );
+
+    initSelectSearch(
+        "searchTeam",
+        "addTeam",
+        "teamSearchCount",
+        "Выбери команду"
+    );
+
+    /*
+     * АВТОМАТИЧЕСКИЙ ПЕРЕСЧЁТ TOTAL
+     */
+
+    const table = document.getElementById(
+        "ratingEditor"
+    );
+
+    if (!table || !table.tBodies.length) {
+        return;
+    }
+
+    const body = table.tBodies[0];
+
+    function calculateTotal(row) {
+        const inputs = Array.from(
+            row.querySelectorAll(".rt-score")
+        );
+
+        const total = inputs.reduce(
+            (sum, input) =>
+                sum + (Number(input.value) || 0),
+            0
+        );
+
+        return Math.round(
+            (total + Number.EPSILON) * 100
+        ) / 100;
+    }
+
+    function updateRow(row) {
+        const total = calculateTotal(row);
+
+        row.dataset.total = String(total);
+
+        const totalElement = row.querySelector(
+            ".rt-total"
+        );
+
+        if (totalElement) {
+            totalElement.textContent =
+                total.toLocaleString("ru-RU", {
+                    maximumFractionDigits: 2
+                });
+        }
+    }
+
+    function sortRows() {
+        const rows = Array.from(
+            body.querySelectorAll(
+                "tr[data-row]"
+            )
+        );
+
+        for (const row of rows) {
+            updateRow(row);
+        }
+
+        rows.sort((a, b) => {
+            const difference =
+                Number(b.dataset.total) -
+                Number(a.dataset.total);
+
+            if (difference !== 0) {
+                return difference;
+            }
+
+            return a.cells[1].textContent
+                .trim()
+                .localeCompare(
+                    b.cells[1].textContent.trim(),
+                    "ru"
+                );
+        });
+
+        rows.forEach((row, index) => {
+            const rank = row.querySelector(
+                ".rt-rank"
+            );
+
+            if (rank) {
+                rank.textContent = String(index + 1);
+            }
+
+            body.appendChild(row);
+        });
+    }
+
+    table.addEventListener("input", event => {
+        if (!event.target.matches(".rt-score")) {
+            return;
+        }
+
+        const row = event.target.closest(
+            "tr[data-row]"
+        );
+
+        if (row) {
+            updateRow(row);
+        }
+    });
+
+    // Сортируем после завершения редактирования,
+    // чтобы строка не прыгала во время ввода.
+    table.addEventListener("change", event => {
+        if (event.target.matches(".rt-score")) {
+            sortRows();
+        }
+    });
+
+    sortRows();
+
+})();
+</script>
+
+{% endif %}
+
+{% endblock %}

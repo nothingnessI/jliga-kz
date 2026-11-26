@@ -136,6 +136,11 @@ async def list_sessions(
         for session, match in rows
     ]
 
+from datetime import time, timedelta, datetime, timezone
+from zoneinfo import ZoneInfo
+from sqlalchemy import select, case
+
+
 
 @router.get("/control/matches")
 async def list_matches(
@@ -143,6 +148,33 @@ async def list_matches(
     db: AsyncSession = Depends(get_db),
     admin=Depends(get_current_admin),
 ):
+    local_tz = ZoneInfo("Asia/Almaty")
+
+    now_local = datetime.now(local_tz)
+    now_utc = now_local.astimezone(timezone.utc)
+
+    # Три дня назад + сегодня + три дня вперёд.
+    start_local = datetime.combine(
+        now_local.date() - timedelta(days=3),
+        time.min,
+        tzinfo=local_tz,
+    )
+
+    end_local = datetime.combine(
+        now_local.date() + timedelta(days=4),
+        time.min,
+        tzinfo=local_tz,
+    )
+
+    start_utc = start_local.astimezone(timezone.utc)
+    end_utc = end_local.astimezone(timezone.utc)
+
+    # Будущие матчи отображаются первыми.
+    future_first = case(
+        (Match.match_date >= now_utc, 0),
+        else_=1,
+    )
+
     stmt = (
         select(Match)
         .options(
@@ -150,9 +182,27 @@ async def list_matches(
             selectinload(Match.away_team),
             selectinload(Match.tournament),
         )
+        .where(
+            Match.match_date >= start_utc,
+            Match.match_date < end_utc,
+        )
         .order_by(
-            Match.match_date.desc().nullslast(),
-            Match.id.desc(),
+            future_first.asc(),
+            case(
+                (
+                    Match.match_date >= now_utc,
+                    Match.match_date,
+                ),
+                else_=None,
+            ).asc().nullslast(),
+            case(
+                (
+                    Match.match_date < now_utc,
+                    Match.match_date,
+                ),
+                else_=None,
+            ).desc().nullslast(),
+            Match.id.asc(),
         )
         .limit(max(1, min(limit, 500)))
     )
@@ -165,24 +215,29 @@ async def list_matches(
             "tournament_id": match.tournament_id,
             "tournament": (
                 match.tournament.name
-                if match.tournament else "Турнир"
+                if match.tournament
+                else "Турнир"
             ),
             "home": (
                 match.home_team.name
-                if match.home_team else "HOME"
+                if match.home_team
+                else "HOME"
             ),
             "away": (
                 match.away_team.name
-                if match.away_team else "AWAY"
+                if match.away_team
+                else "AWAY"
             ),
             "date": (
                 match.match_date.isoformat()
-                if match.match_date else None
+                if match.match_date
+                else None
             ),
             "status": match.status.value,
         }
         for match in matches
     ]
+
 
 
 @router.post("/control/start")

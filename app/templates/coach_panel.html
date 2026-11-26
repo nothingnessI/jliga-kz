@@ -6,8 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Кабинет тренера | J-LIGA</title>
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+        rel="stylesheet"
+    >
+    <link
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+        rel="stylesheet"
+    >
+    <link
+        rel="stylesheet"
+        href="/static/css/jliga-responsive.css"
+        data-jliga-responsive
+    >
 
     <style>
         :root {
@@ -166,6 +177,7 @@
         }
 
         .search-results button {
+            display: block;
             width: 100%;
             padding: 11px;
             border: none;
@@ -231,15 +243,6 @@
             margin-top: 14px;
         }
 
-        .coach-consents .form-check-input {
-            cursor: pointer;
-        }
-
-        .coach-consents .form-check-label {
-            line-height: 1.5;
-            cursor: pointer;
-        }
-
         .coach-terms-dialog {
             border: 0;
             border-radius: 14px;
@@ -262,6 +265,10 @@
         .coach-terms-body h6 {
             margin-top: 18px;
             font-weight: 700;
+        }
+
+        .is-invalid + .invalid-feedback {
+            display: block;
         }
 
         @media (max-width: 991px) {
@@ -290,14 +297,11 @@
             }
         }
     </style>
-
-    <link rel="stylesheet" href="/static/css/jliga-responsive.css" data-jliga-responsive>
 </head>
 
 <body>
 
 <div id="authView" class="container auth-wrapper">
-
     <div class="text-center mb-4">
         <i class="bi bi-shield-shaded text-primary display-3"></i>
         <h3 class="fw-bold mt-2">J-LIGA</h3>
@@ -305,7 +309,6 @@
     </div>
 
     <div class="panel-card p-4">
-
         <ul class="nav nav-pills nav-fill mb-4" id="authTabs">
             <li class="nav-item">
                 <button
@@ -329,29 +332,44 @@
         </ul>
 
         <form id="authForm">
-
             <div id="nameFields" class="row g-2 mb-3 d-none">
                 <div class="col-6">
-                    <label for="authFirst" class="form-label">Имя</label>
+                    <label for="authFirst" class="form-label">
+                        Имя *
+                    </label>
                     <input
                         id="authFirst"
                         class="form-control"
                         maxlength="100"
+                        placeholder="Alexander"
+                        autocomplete="given-name"
                     >
                 </div>
 
                 <div class="col-6">
-                    <label for="authLast" class="form-label">Фамилия</label>
+                    <label for="authLast" class="form-label">
+                        Фамилия *
+                    </label>
                     <input
                         id="authLast"
                         class="form-control"
                         maxlength="100"
+                        placeholder="Ivanov"
+                        autocomplete="family-name"
                     >
+                </div>
+
+                <div class="col-12">
+                    <div class="form-text">
+                        Имя и фамилия только латиницей (A–Z).
+                    </div>
                 </div>
             </div>
 
             <div class="mb-3">
-                <label for="authPhone" class="form-label">Телефон</label>
+                <label for="authPhone" class="form-label">
+                    Телефон *
+                </label>
                 <input
                     id="authPhone"
                     type="tel"
@@ -363,19 +381,22 @@
             </div>
 
             <div class="mb-4">
-                <label for="authPassword" class="form-label">Пароль</label>
+                <label for="authPassword" class="form-label">
+                    Пароль *
+                </label>
                 <input
                     id="authPassword"
                     type="password"
                     class="form-control"
                     minlength="10"
-                    autocomplete="current-password"
                     required
                 >
+                <div class="form-text">
+                    Минимум 10 символов.
+                </div>
             </div>
 
             <div id="coachConsents" class="coach-consents mb-3 d-none">
-
                 <div class="form-check">
                     <input
                         class="form-check-input"
@@ -383,11 +404,7 @@
                         id="agreeTerms"
                         autocomplete="off"
                     >
-
-                    <label
-                        class="form-check-label"
-                        for="agreeTerms"
-                    >
+                    <label class="form-check-label" for="agreeTerms">
                         Я ознакомился(лась) и принимаю
                         <button
                             type="button"
@@ -406,22 +423,25 @@
                         id="confirmParentConsents"
                         autocomplete="off"
                     >
-
                     <label
                         class="form-check-label"
                         for="confirmParentConsents"
                     >
                         Подтверждаю, что до подачи заявок
                         несовершеннолетних футболистов получу
-                        необходимые согласия их законных
-                        представителей на обработку персональных
-                        данных, использование фотографий,
-                        видеосъёмку, публикацию изображений
-                        и трансляции матчей, включая отдельные
-                        разрешения на рекламное и коммерческое
-                        использование изображений детей.
+                        необходимые согласия их законных представителей
+                        на обработку персональных данных,
+                        использование фотографий и видео,
+                        публикацию изображений и трансляции,
+                        включая отдельные разрешения на рекламное
+                        и коммерческое использование изображений детей.
                     </label>
                 </div>
+
+                <p class="small text-muted mt-3 mb-0">
+                    Подтверждение тренера не заменяет согласие
+                    законного представителя ребёнка.
+                </p>
             </div>
 
             <button
@@ -431,7 +451,6 @@
             >
                 Войти
             </button>
-
         </form>
 
         <div
@@ -439,16 +458,13 @@
             class="alert alert-danger mt-3 d-none"
             role="alert"
         ></div>
-
     </div>
 </div>
 
 <div id="workspace" class="d-none">
-
     <div id="sidebarBackdrop" class="sidebar-backdrop"></div>
 
     <aside id="sidebar" class="sidebar">
-
         <div class="sidebar-brand">
             <i class="bi bi-shield-shaded text-primary me-2"></i>
             J-LIGA
@@ -476,24 +492,21 @@
         <div class="px-3 mt-5">
             <button
                 id="logoutButton"
-                class="btn btn-outline-light w-100"
                 type="button"
+                class="btn btn-outline-light w-100"
             >
                 <i class="bi bi-box-arrow-right me-2"></i>
                 Выйти
             </button>
         </div>
-
     </aside>
 
     <div class="main-content">
-
         <header class="topbar">
-
             <button
                 id="menuToggle"
-                class="btn btn-link text-dark d-lg-none p-0"
                 type="button"
+                class="btn btn-link text-dark d-lg-none p-0"
             >
                 <i class="bi bi-list fs-3"></i>
             </button>
@@ -504,16 +517,19 @@
                 <i class="bi bi-box-arrow-up-right me-1"></i>
                 На сайт
             </a>
-
         </header>
 
         <main class="page-content">
-
-            <div id="notice" class="alert d-none" role="alert"></div>
+            <div
+                id="notice"
+                class="alert d-none"
+                role="alert"
+            ></div>
 
             <section id="listView">
-
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                <div
+                    class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4"
+                >
                     <div>
                         <h3 class="fw-bold mb-1">Мои заявки</h3>
                         <p class="text-muted mb-0">
@@ -523,8 +539,8 @@
 
                     <button
                         id="newApplication"
-                        class="btn btn-primary fw-bold"
                         type="button"
+                        class="btn btn-primary fw-bold"
                     >
                         <i class="bi bi-plus-lg me-2"></i>
                         Подать заявку
@@ -532,42 +548,50 @@
                 </div>
 
                 <div class="row g-3 mb-4">
-
                     <div class="col-sm-4">
                         <div class="panel-card stat-card">
-                            <div class="stat-label">Всего заявок</div>
+                            <div class="stat-label">
+                                Всего заявок
+                            </div>
                             <strong id="countAll">0</strong>
                         </div>
                     </div>
 
                     <div class="col-sm-4">
                         <div class="panel-card stat-card">
-                            <div class="stat-label">Черновики</div>
+                            <div class="stat-label">
+                                Черновики
+                            </div>
                             <strong id="countDraft">0</strong>
                         </div>
                     </div>
 
                     <div class="col-sm-4">
                         <div class="panel-card stat-card">
-                            <div class="stat-label">На рассмотрении</div>
+                            <div class="stat-label">
+                                На рассмотрении
+                            </div>
                             <strong id="countSubmitted">0</strong>
                         </div>
                     </div>
-
                 </div>
 
                 <div class="panel-card p-3 p-md-4">
-                    <h5 class="fw-bold mb-3">История заявок</h5>
+                    <h5 class="fw-bold mb-3">
+                        История заявок
+                    </h5>
                     <div id="applicationsList" class="d-grid gap-2">
-                        <div class="text-muted">Загрузка...</div>
+                        <div class="text-muted">
+                            Загрузка...
+                        </div>
                     </div>
                 </div>
-
             </section>
 
             <section id="formView" class="d-none">
-
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                <div
+                    class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4"
+                >
                     <div>
                         <button
                             id="backToList"
@@ -592,21 +616,20 @@
                 </div>
 
                 <form id="applicationForm">
-
                     <div class="panel-card p-3 p-md-4 mb-3">
-
                         <h5 class="fw-bold mb-3">
                             <i class="bi bi-trophy text-primary me-2"></i>
                             Турнир и команда
                         </h5>
 
                         <div class="row g-3">
-
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">
+                                <label
+                                    for="tournamentId"
+                                    class="form-label fw-semibold"
+                                >
                                     Турнир *
                                 </label>
-
                                 <select
                                     id="tournamentId"
                                     class="form-select"
@@ -619,10 +642,12 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">
+                                <label
+                                    for="teamId"
+                                    class="form-label fw-semibold"
+                                >
                                     Команда *
                                 </label>
-
                                 <select
                                     id="teamId"
                                     class="form-select"
@@ -633,41 +658,44 @@
                                     </option>
                                 </select>
                             </div>
-
                         </div>
                     </div>
 
                     <div class="panel-card p-3 p-md-4 mb-3">
-
                         <h5 class="fw-bold mb-3">
                             <i class="bi bi-person-badge text-primary me-2"></i>
                             Данные тренера
                         </h5>
 
                         <div class="row g-3">
-
                             <div class="col-md-4">
-                                <label class="form-label">Имя *</label>
+                                <label for="coachFirst" class="form-label">
+                                    Имя *
+                                </label>
                                 <input
                                     id="coachFirst"
                                     class="form-control"
                                     maxlength="100"
+                                    placeholder="Alexander"
                                     required
                                 >
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">Фамилия *</label>
+                                <label for="coachLast" class="form-label">
+                                    Фамилия *
+                                </label>
                                 <input
                                     id="coachLast"
                                     class="form-control"
                                     maxlength="100"
+                                    placeholder="Ivanov"
                                     required
                                 >
                             </div>
 
                             <div class="col-md-4">
-                                <label class="form-label">
+                                <label for="coachYear" class="form-label">
                                     Год рождения *
                                 </label>
                                 <input
@@ -675,19 +703,24 @@
                                     type="number"
                                     min="1900"
                                     max="2100"
+                                    step="1"
                                     class="form-control"
                                     required
                                 >
                             </div>
 
                             <div class="col-12">
+                                <div class="form-text">
+                                    Имя и фамилия тренера — только латиницей.
+                                </div>
+                            </div>
 
+                            <div class="col-12">
                                 <label class="form-label fw-semibold">
                                     Фотография тренера *
                                 </label>
 
                                 <div class="photo-section">
-
                                     <div
                                         id="coachPhotoPlaceholder"
                                         class="photo-placeholder"
@@ -712,24 +745,23 @@
                                         </button>
 
                                         <div class="text-muted small mt-2">
-                                            Фотография будет отображаться
-                                            в заявке
+                                            Фотография обязательна
                                         </div>
                                     </div>
-
                                 </div>
 
-                                <input id="coachPhoto" type="hidden">
-
+                                <input
+                                    id="coachPhoto"
+                                    type="hidden"
+                                >
                             </div>
-
                         </div>
                     </div>
 
                     <div class="panel-card p-3 p-md-4 mb-3">
-
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
-
+                        <div
+                            class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3"
+                        >
                             <div>
                                 <h5 class="fw-bold mb-1">
                                     <i class="bi bi-people text-primary me-2"></i>
@@ -738,7 +770,8 @@
 
                                 <div class="text-muted small">
                                     От 1 до 25 игроков.
-                                    Можно выбрать игрока из базы.
+                                    Можно выбрать существующего из базы.
+                                    Все поля обязательны.
                                 </div>
                             </div>
 
@@ -760,11 +793,11 @@
                         >
                             0 из 25 игроков
                         </div>
-
                     </div>
 
-                    <div class="d-flex flex-wrap justify-content-end gap-2 mb-5">
-
+                    <div
+                        class="d-flex flex-wrap justify-content-end gap-2 mb-5"
+                    >
                         <button
                             id="saveDraftButton"
                             type="submit"
@@ -782,13 +815,9 @@
                             <i class="bi bi-send me-2"></i>
                             Отправить заявку
                         </button>
-
                     </div>
-
                 </form>
-
             </section>
-
         </main>
     </div>
 </div>
@@ -798,126 +827,110 @@
     class="coach-terms-dialog"
     aria-labelledby="coachTermsTitle"
 >
-    <div class="d-flex align-items-center justify-content-between border-bottom px-4 py-3">
+    <div
+        class="d-flex align-items-center justify-content-between border-bottom px-4 py-3"
+    >
         <h5 id="coachTermsTitle" class="fw-bold mb-0">
             Пользовательское соглашение J-LIGA
         </h5>
 
         <button
+            id="closeCoachTerms"
             type="button"
             class="btn-close"
-            id="closeCoachTerms"
             aria-label="Закрыть"
         ></button>
     </div>
 
     <div class="coach-terms-body">
-
         <p class="small text-muted">
-            Редакция: 25.11.2026.
-            Оператор: [полное юридическое наименование,
-            БИН/ИИН, адрес, e-mail].
-            Реквизиты необходимо заполнить до публикации.
+            Проект соглашения. Оператор:
+            [наименование, БИН/ИИН, юридический адрес, e-mail].
+            Перед публикацией необходимо заполнить реквизиты.
         </p>
 
-        <h6>1. Общие положения</h6>
+        <h6>1. Назначение платформы</h6>
         <p>
-            Настоящее соглашение регулирует использование
-            платформы J-LIGA, расположенной по адресу
-            jliga.kz, тренерами и представителями
-            футбольных команд.
+            J-LIGA предоставляет тренерам и уполномоченным
+            представителям команд личный кабинет для регистрации,
+            формирования заявок и участия в футбольных
+            соревнованиях.
         </p>
 
-        <h6>2. Регистрация тренера</h6>
+        <h6>2. Регистрация</h6>
         <p>
-            Пользователь обязуется указывать достоверные
-            сведения о себе, обеспечивать сохранность
-            данных доступа и соблюдать правила
-            соревнований J-LIGA.
+            Пользователь предоставляет достоверные сведения о себе,
+            обеспечивает сохранность пароля и соблюдает правила
+            соревнований и условия настоящего соглашения.
         </p>
 
         <h6>3. Подача заявок</h6>
         <p>
-            Тренер подаёт заявки на участие команд
-            в соревнованиях, указывает данные игроков
-            и несёт ответственность за достоверность
-            передаваемой информации в пределах
-            законодательства Республики Казахстан.
+            Пользователь подтверждает наличие полномочий
+            представлять команду и достоверность сведений
+            о футболистах.
         </p>
 
-        <h6>4. Персональные данные несовершеннолетних</h6>
+        <h6>4. Данные несовершеннолетних</h6>
         <p>
-            Передавая сведения о несовершеннолетних
-            футболистах, тренер подтверждает наличие
-            необходимых правовых оснований и согласий
-            законных представителей в случаях,
-            предусмотренных законодательством
-            Республики Казахстан.
+            Перед передачей данных несовершеннолетних
+            пользователь обязан обеспечить необходимые
+            правовые основания и согласия законных представителей
+            в предусмотренных законодательством случаях.
         </p>
 
-        <h6>5. Фотографии и видеозаписи</h6>
+        <h6>5. Фото и видеоматериалы</h6>
         <p>
-            Тренер обязуется получить необходимые
-            разрешения на использование фотографий
-            несовершеннолетних, видеосъёмку,
-            публикацию спортивных материалов
-            и трансляции матчей до предоставления
-            соответствующих материалов J-LIGA.
+            Тренер обязуется получить необходимые разрешения
+            до передачи фотографий и видеоматериалов.
+            Публикация, видеотрансляции и коммерческое
+            использование изображений должны соответствовать
+            объёму предоставленных разрешений.
         </p>
 
         <h6>6. Коммерческое использование</h6>
         <p>
-            Использование изображения ребёнка
-            в рекламных, спонсорских и иных
-            коммерческих материалах допускается
-            при наличии соответствующего разрешения
-            его законного представителя.
-        </p>
-        <p>
-            Принятие соглашения тренером не заменяет
-            разрешение законного представителя ребёнка.
+            Использование изображения несовершеннолетнего
+            в рекламе или коммерческих материалах требует
+            надлежащего правового основания.
+            Подтверждение тренера не заменяет разрешение
+            законного представителя ребёнка.
         </p>
 
-        <h6>7. Обработка персональных данных</h6>
+        <h6>7. Персональные данные</h6>
         <p>
-            Данные обрабатываются в целях регистрации,
-            организации соревнований, ведения заявок,
-            протоколов, статистики и спортивных публикаций
-            в соответствии с законодательством
-            Республики Казахстан.
+            Данные обрабатываются в целях работы платформы,
+            ведения заявок, проведения соревнований
+            и формирования спортивной статистики
+            в соответствии с законодательством Республики Казахстан.
         </p>
 
-        <h6>8. Ответственность сторон</h6>
+        <h6>8. Ответственность</h6>
         <p>
-            Стороны несут ответственность в соответствии
-            с законодательством Республики Казахстан.
-            Организатор вправе проверять сведения
-            и запрашивать подтверждения необходимых
-            разрешений.
+            Тренер отвечает за достоверность переданных сведений.
+            Оператор несёт предусмотренную законодательством
+            ответственность за обработку персональных данных.
         </p>
 
-        <h6>9. Заключительные положения</h6>
+        <h6>9. Обращения</h6>
+        <p>
+            По вопросам персональных данных и изображений:
+            [контактный e-mail оператора].
+        </p>
+
+        <h6>10. Заключительные положения</h6>
         <p>
             Соглашение действует с момента его принятия.
-            Изменение целей обработки данных либо
-            коммерческого использования изображений,
-            требующее отдельного согласия, предполагает
-            получение соответствующего разрешения.
+            Принятие соглашения не заменяет получение
+            дополнительных разрешений, необходимых по закону.
         </p>
-
-        <p class="small text-muted">
-            По вопросам обработки персональных данных
-            и использования изображений:
-            [контактная электронная почта].
-        </p>
-
     </div>
 
     <div class="border-top p-3 text-end">
         <button
+            id="doneCoachTerms"
             type="button"
             class="btn btn-secondary"
-            id="doneCoachTerms"
         >
             Закрыть
         </button>
@@ -931,12 +944,7 @@ const API = "/api/v1/coach";
 const TOKEN_KEY = "jliga_coach_token";
 const $ = id => document.getElementById(id);
 
-let token = sessionStorage.getItem(TOKEN_KEY);
-let authMode = "login";
-let applicationId = null;
-let locked = false;
-let teams = [];
-let tournaments = [];
+const LATIN_NAME_RE = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
 
 const positions = [
     "Вратарь",
@@ -953,6 +961,13 @@ const statusNames = {
     needs_revision: "На исправлении"
 };
 
+let token = sessionStorage.getItem(TOKEN_KEY);
+let authMode = "login";
+let applicationId = null;
+let locked = false;
+let teams = [];
+let tournaments = [];
+
 function escapeHTML(value) {
     return String(value ?? "").replace(
         /[&<>"']/g,
@@ -964,6 +979,40 @@ function escapeHTML(value) {
             "'": "&#39;"
         })[char]
     );
+}
+
+function clean(value) {
+    return String(value ?? "").trim();
+}
+
+function assertLatin(value, label) {
+    if (!LATIN_NAME_RE.test(clean(value))) {
+        throw new Error(
+            label + ": введите имя латиницей A–Z. " +
+            "Допускаются дефис, апостроф и внутренние пробелы."
+        );
+    }
+}
+
+function bindLatinInput(input) {
+    input.pattern = "[A-Za-z]+([ '-][A-Za-z]+)*";
+    input.title =
+        "Только латиница A–Z, внутренние пробелы, дефисы и апострофы";
+
+    const check = () => {
+        const value = clean(input.value);
+
+        input.setCustomValidity(
+            value && !LATIN_NAME_RE.test(value)
+                ? "Используйте только латинские буквы A–Z"
+                : ""
+        );
+    };
+
+    input.addEventListener("input", check);
+    input.addEventListener("blur", check);
+
+    return input;
 }
 
 function showNotice(message, type = "danger") {
@@ -983,6 +1032,17 @@ function clearNotice() {
     $("notice").textContent = "";
 }
 
+function showAuthError(message) {
+    const element = $("authError");
+    element.textContent = message;
+    element.classList.remove("d-none");
+}
+
+function hideAuthError() {
+    $("authError").classList.add("d-none");
+    $("authError").textContent = "";
+}
+
 async function apiRequest(path, options = {}) {
     const headers = {
         ...(options.headers || {})
@@ -992,7 +1052,10 @@ async function apiRequest(path, options = {}) {
         headers.Authorization = "Bearer " + token;
     }
 
-    if (options.body && !(options.body instanceof FormData)) {
+    if (
+        options.body &&
+        !(options.body instanceof FormData)
+    ) {
         headers["Content-Type"] = "application/json";
     }
 
@@ -1024,7 +1087,9 @@ async function apiRequest(path, options = {}) {
             `Ошибка запроса (${response.status})`;
 
         if (Array.isArray(detail)) {
-            detail = detail.map(item => item.msg).join("; ");
+            detail = detail.map(
+                item => item.msg
+            ).join("; ");
         }
 
         throw new Error(String(detail));
@@ -1033,36 +1098,78 @@ async function apiRequest(path, options = {}) {
     return data;
 }
 
-function openCoachTerms() {
-    const dialog = $("coachTermsDialog");
+function normalizePhotoUrl(value) {
+    const url = clean(value);
 
-    if (!dialog.open) {
-        dialog.showModal();
+    if (!url) {
+        return "";
     }
+
+    if (
+        url.startsWith("/") &&
+        !url.startsWith("//")
+    ) {
+        return url;
+    }
+
+    try {
+        const parsed = new URL(
+            url,
+            window.location.origin
+        );
+
+        if (
+            parsed.protocol === "http:" ||
+            parsed.protocol === "https:"
+        ) {
+            return parsed.href;
+        }
+    } catch {
+        return "";
+    }
+
+    return "";
+}
+
+function updatePhotoPreview(
+    image,
+    placeholder,
+    photoUrl
+) {
+    const safeUrl = normalizePhotoUrl(photoUrl);
+
+    image.onload = () => {
+        image.classList.remove("d-none");
+        placeholder.classList.add("d-none");
+    };
+
+    image.onerror = () => {
+        image.classList.add("d-none");
+        placeholder.classList.remove("d-none");
+    };
+
+    if (safeUrl) {
+        image.classList.add("d-none");
+        placeholder.classList.remove("d-none");
+        image.src = safeUrl;
+    } else {
+        image.removeAttribute("src");
+        image.classList.add("d-none");
+        placeholder.classList.remove("d-none");
+    }
+}
+
+function openCoachTerms() {
+    $("coachTermsDialog").showModal();
 }
 
 function closeCoachTerms() {
-    const dialog = $("coachTermsDialog");
-
-    if (dialog.open) {
-        dialog.close();
-    }
+    $("coachTermsDialog").close();
 }
 
-$("openCoachTerms").addEventListener(
-    "click",
-    openCoachTerms
-);
-
-$("closeCoachTerms").addEventListener(
-    "click",
-    closeCoachTerms
-);
-
-$("doneCoachTerms").addEventListener(
-    "click",
-    closeCoachTerms
-);
+$("openCoachTerms").onclick = openCoachTerms;
+$("closeCoachTerms").onclick = closeCoachTerms;
+$("doneCoachTerms").onclick = closeCoachTerms;
 
 function logout() {
     token = null;
@@ -1081,20 +1188,21 @@ function showWorkspace(profile) {
     $("coachName").textContent =
         profile.first_name + " " + profile.last_name;
 
-    $("coachPhone").textContent = profile.phone || "";
+    $("coachPhone").textContent =
+        profile.phone || "";
 }
 
 function setAuthMode(mode) {
     authMode = mode;
 
-    document.querySelectorAll("#authTabs button").forEach(
-        button => {
-            button.classList.toggle(
-                "active",
-                button.dataset.mode === mode
-            );
-        }
-    );
+    document.querySelectorAll(
+        "#authTabs button"
+    ).forEach(button => {
+        button.classList.toggle(
+            "active",
+            button.dataset.mode === mode
+        );
+    });
 
     const isRegister = mode === "register";
 
@@ -1110,7 +1218,6 @@ function setAuthMode(mode) {
 
     $("authFirst").required = isRegister;
     $("authLast").required = isRegister;
-
     $("agreeTerms").required = isRegister;
     $("confirmParentConsents").required = isRegister;
 
@@ -1118,90 +1225,110 @@ function setAuthMode(mode) {
         ? "new-password"
         : "current-password";
 
+    $("authSubmit").textContent = isRegister
+        ? "Зарегистрироваться"
+        : "Войти";
+
     if (!isRegister) {
         $("agreeTerms").checked = false;
         $("confirmParentConsents").checked = false;
     }
 
-    $("authSubmit").textContent = isRegister
-        ? "Зарегистрироваться"
-        : "Войти";
-
-    $("authError").classList.add("d-none");
+    hideAuthError();
 }
 
 $("authTabs").addEventListener("click", event => {
     const button = event.target.closest("[data-mode]");
-    if (!button) return;
 
-    setAuthMode(button.dataset.mode);
-});
-
-$("authForm").addEventListener("submit", async event => {
-    event.preventDefault();
-
-    const phone = $("authPhone").value.trim();
-    const password = $("authPassword").value;
-
-    const data = {
-        phone,
-        password
-    };
-
-    if (authMode === "register") {
-        data.first_name = $("authFirst").value.trim();
-        data.last_name = $("authLast").value.trim();
-
-        data.agree_terms = $("agreeTerms").checked;
-        data.confirm_parent_consents =
-            $("confirmParentConsents").checked;
-
-        if (!data.agree_terms || !data.confirm_parent_consents) {
-            $("authError").textContent =
-                "Для регистрации необходимо принять " +
-                "пользовательское соглашение и подтвердить " +
-                "наличие необходимых разрешений.";
-
-            $("authError").classList.remove("d-none");
-            return;
-        }
-    }
-
-    const button = $("authSubmit");
-    button.disabled = true;
-
-    $("authError").classList.add("d-none");
-
-    try {
-        if (authMode === "register") {
-            await apiRequest("/register", {
-                method: "POST",
-                body: JSON.stringify(data)
-            });
-        }
-
-        const result = await apiRequest("/login", {
-            method: "POST",
-            body: JSON.stringify({
-                phone,
-                password
-            })
-        });
-
-        token = result.access_token;
-
-        sessionStorage.setItem(TOKEN_KEY, token);
-
-        await initialize();
-
-    } catch (error) {
-        $("authError").textContent = error.message;
-        $("authError").classList.remove("d-none");
-
-    } finally {
-        button.disabled = false;
+    if (button) {
+        setAuthMode(button.dataset.mode);
     }
 });
+
+$("authForm").addEventListener(
+    "submit",
+    async event => {
+        event.preventDefault();
+        hideAuthError();
+
+        const phone = clean($("authPhone").value);
+        const password = $("authPassword").value;
+
+        const data = {phone, password};
+
+        try {
+            if (authMode === "register") {
+                assertLatin(
+                    $("authFirst").value,
+                    "Имя тренера"
+                );
+                assertLatin(
+                    $("authLast").value,
+                    "Фамилия тренера"
+                );
+
+                data.first_name = clean(
+                    $("authFirst").value
+                );
+                data.last_name = clean(
+                    $("authLast").value
+                );
+
+                data.agree_terms =
+                    $("agreeTerms").checked;
+
+                data.confirm_parent_consents =
+                    $("confirmParentConsents").checked;
+
+                if (
+                    !data.agree_terms ||
+                    !data.confirm_parent_consents
+                ) {
+                    throw new Error(
+                        "Необходимо принять пользовательское " +
+                        "соглашение и подтвердить обязательство " +
+                        "по получению согласий."
+                    );
+                }
+            }
+
+            const button = $("authSubmit");
+            button.disabled = true;
+
+            try {
+                if (authMode === "register") {
+                    await apiRequest("/register", {
+                        method: "POST",
+                        body: JSON.stringify(data)
+                    });
+                }
+
+                const result = await apiRequest(
+                    "/login",
+                    {
+                        method: "POST",
+                        body: JSON.stringify({
+                            phone,
+                            password
+                        })
+                    }
+                );
+
+                token = result.access_token;
+                sessionStorage.setItem(
+                    TOKEN_KEY,
+                    token
+                );
+
+                await initialize();
+            } finally {
+                button.disabled = false;
+            }
+        } catch (error) {
+            showAuthError(error.message);
+        }
+    }
+);
 
 function closeMenu() {
     $("sidebar").classList.remove("show");
@@ -1271,7 +1398,9 @@ async function loadReferences() {
 }
 
 async function loadApplications() {
-    const applications = await apiRequest("/applications");
+    const applications = await apiRequest(
+        "/applications"
+    );
 
     $("countAll").textContent = applications.length;
 
@@ -1279,12 +1408,12 @@ async function loadApplications() {
         item => item.status === "draft"
     ).length;
 
-    $("countSubmitted").textContent = applications.filter(
-        item => item.status === "submitted"
-    ).length;
+    $("countSubmitted").textContent =
+        applications.filter(
+            item => item.status === "submitted"
+        ).length;
 
     const container = $("applicationsList");
-
     container.replaceChildren();
 
     if (!applications.length) {
@@ -1314,7 +1443,6 @@ async function loadApplications() {
             "justify-content-between gap-3";
 
         const status = application.status;
-
         const safeStatus = Object.hasOwn(
             statusNames,
             status
@@ -1323,13 +1451,17 @@ async function loadApplications() {
         item.innerHTML = `
             <div>
                 <div class="fw-bold">
-                    ${escapeHTML(team?.name ||
-                        "Команда #" + application.team_id)}
+                    ${escapeHTML(
+                        team?.name ||
+                        "Команда #" + application.team_id
+                    )}
                 </div>
 
                 <div class="text-muted small">
-                    ${escapeHTML(tournament?.name ||
-                        "Турнир #" + application.tournament_id)}
+                    ${escapeHTML(
+                        tournament?.name ||
+                        "Турнир #" + application.tournament_id
+                    )}
                     · ${application.players_count ?? 0} игроков
                 </div>
 
@@ -1340,10 +1472,15 @@ async function loadApplications() {
 
             <div class="d-flex align-items-center gap-2">
                 <span class="status-badge status-${safeStatus}">
-                    ${escapeHTML(statusNames[status] || status)}
+                    ${escapeHTML(
+                        statusNames[status] || status
+                    )}
                 </span>
 
-                <button class="btn btn-outline-primary btn-sm">
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                >
                     ${status === "draft"
                         ? "Редактировать"
                         : "Просмотр"}
@@ -1386,7 +1523,6 @@ $("navNew").onclick = event => {
 
 $("navList").onclick = async event => {
     event.preventDefault();
-
     switchView("list");
 
     try {
@@ -1406,68 +1542,8 @@ $("backToList").onclick = async () => {
     }
 };
 
-function normalizePhotoUrl(value) {
-    const url = String(value || "").trim();
-
-    if (!url) {
-        return "";
-    }
-
-    if (url.startsWith("/") && !url.startsWith("//")) {
-        return url;
-    }
-
-    try {
-        const parsed = new URL(
-            url,
-            window.location.origin
-        );
-
-        if (
-            parsed.protocol === "http:" ||
-            parsed.protocol === "https:"
-        ) {
-            return parsed.href;
-        }
-
-    } catch {
-        return "";
-    }
-
-    return "";
-}
-
-function updatePhotoPreview(
-    image,
-    placeholder,
-    photoUrl
-) {
-    const safeUrl = normalizePhotoUrl(photoUrl);
-
-    image.onload = () => {
-        image.classList.remove("d-none");
-        placeholder.classList.add("d-none");
-    };
-
-    image.onerror = () => {
-        image.classList.add("d-none");
-        placeholder.classList.remove("d-none");
-    };
-
-    if (safeUrl) {
-        image.classList.add("d-none");
-        placeholder.classList.remove("d-none");
-        image.src = safeUrl;
-
-    } else {
-        image.removeAttribute("src");
-        image.classList.add("d-none");
-        placeholder.classList.remove("d-none");
-    }
-}
-
 function setCoachPhoto(photoUrl) {
-    $("coachPhoto").value = photoUrl || "";
+    $("coachPhoto").value = clean(photoUrl);
 
     updatePhotoPreview(
         $("coachPhotoPreview"),
@@ -1492,11 +1568,11 @@ $("coachPhotoButton").onclick = () => {
         return;
     }
 
-    const value = url.trim();
+    const value = clean(url);
 
     if (value && !normalizePhotoUrl(value)) {
         showNotice(
-            "Укажите корректную ссылку на изображение"
+            "Укажите корректную ссылку на фотографию"
         );
         return;
     }
@@ -1547,7 +1623,6 @@ function addPlayer(value = {}) {
         </div>
 
         <div class="row g-3">
-
             <div class="col-12 position-relative">
                 <label class="form-label small fw-semibold">
                     Найти существующего игрока
@@ -1564,19 +1639,25 @@ function addPlayer(value = {}) {
             </div>
 
             <div class="col-md-6">
-                <label class="form-label">Имя *</label>
+                <label class="form-label">
+                    Имя *
+                </label>
                 <input
                     class="form-control player-first"
                     maxlength="100"
+                    placeholder="Alexander"
                     required
                 >
             </div>
 
             <div class="col-md-6">
-                <label class="form-label">Фамилия *</label>
+                <label class="form-label">
+                    Фамилия *
+                </label>
                 <input
                     class="form-control player-last"
                     maxlength="100"
+                    placeholder="Ivanov"
                     required
                 >
             </div>
@@ -1593,8 +1674,9 @@ function addPlayer(value = {}) {
             </div>
 
             <div class="col-md-4">
-                <label class="form-label">Позиция *</label>
-
+                <label class="form-label">
+                    Позиция *
+                </label>
                 <select
                     class="form-select player-position"
                     required
@@ -1612,26 +1694,28 @@ function addPlayer(value = {}) {
             </div>
 
             <div class="col-md-4">
-                <label class="form-label">Номер *</label>
-
+                <label class="form-label">
+                    Номер *
+                </label>
                 <input
                     type="number"
                     min="1"
                     max="99"
+                    step="1"
                     class="form-control player-number"
                     required
                 >
             </div>
 
             <div class="col-12">
-
                 <label class="form-label fw-semibold">
                     Фотография игрока *
                 </label>
 
                 <div class="photo-section">
-
-                    <div class="photo-placeholder player-photo-placeholder">
+                    <div
+                        class="photo-placeholder player-photo-placeholder"
+                    >
                         <i class="bi bi-person"></i>
                     </div>
 
@@ -1655,14 +1739,14 @@ function addPlayer(value = {}) {
                     </div>
                 </div>
 
-                <input
-                    type="hidden"
-                    class="player-photo"
-                >
+                <input type="hidden" class="player-photo">
             </div>
-
         </div>
     `;
+
+    card.querySelectorAll(
+        ".player-first, .player-last"
+    ).forEach(bindLatinInput);
 
     card.dataset.existingId =
         value.existing_player_id || "";
@@ -1673,32 +1757,30 @@ function addPlayer(value = {}) {
     }
 
     function setPlayerPhoto(photoUrl) {
+        const photo = clean(photoUrl);
         const input = card.querySelector(
             ".player-photo"
         );
-
         const image = card.querySelector(
             ".player-photo-preview"
         );
-
         const placeholder = card.querySelector(
             ".player-photo-placeholder"
         );
-
         const description = card.querySelector(
             ".player-photo-description"
         );
 
-        input.value = photoUrl || "";
+        input.value = photo;
 
-        description.textContent = photoUrl
+        description.textContent = photo
             ? "Фотография выбрана"
             : "Фотография не выбрана";
 
         updatePhotoPreview(
             image,
             placeholder,
-            photoUrl
+            photo
         );
     }
 
@@ -1731,7 +1813,6 @@ function addPlayer(value = {}) {
         }
 
         card.dataset.existingId = "";
-
         note.textContent =
             "Данные изменены: связь с игроком базы сброшена";
     }
@@ -1744,7 +1825,6 @@ function addPlayer(value = {}) {
             "input",
             resetExistingPlayer
         );
-
         input.addEventListener(
             "change",
             resetExistingPlayer
@@ -1771,7 +1851,7 @@ function addPlayer(value = {}) {
             return;
         }
 
-        const photoUrl = url.trim();
+        const photoUrl = clean(url);
 
         if (
             photoUrl &&
@@ -1801,7 +1881,7 @@ function addPlayer(value = {}) {
     search.addEventListener("input", () => {
         clearTimeout(timer);
 
-        const query = search.value.trim();
+        const query = clean(search.value);
         const version = ++searchVersion;
 
         results.classList.add("d-none");
@@ -1830,7 +1910,6 @@ function addPlayer(value = {}) {
                     const button = document.createElement(
                         "button"
                     );
-
                     button.type = "button";
 
                     button.textContent =
@@ -1850,25 +1929,20 @@ function addPlayer(value = {}) {
                             ".player-first",
                             player.first_name
                         );
-
                         fill(
                             ".player-last",
                             player.last_name
                         );
-
                         fill(
                             ".player-birth",
                             player.birth_date
                         );
-
                         fill(
                             ".player-position",
                             player.position
                         );
 
-                        setPlayerPhoto(
-                            player.photo_url
-                        );
+                        setPlayerPhoto(player.photo_url);
 
                         note.textContent =
                             "Игрок выбран из базы";
@@ -1889,21 +1963,17 @@ function addPlayer(value = {}) {
                 }
 
                 results.classList.remove("d-none");
-
             } catch (error) {
                 showNotice(error.message);
             }
         }, 300);
     });
 
-    document.addEventListener(
-        "click",
-        event => {
-            if (!card.contains(event.target)) {
-                results.classList.add("d-none");
-            }
+    document.addEventListener("click", event => {
+        if (!card.contains(event.target)) {
+            results.classList.add("d-none");
         }
-    );
+    });
 
     container.appendChild(card);
 
@@ -1948,27 +2018,86 @@ function setLocked(value) {
     renumberPlayers();
 }
 
+function validateFormFields() {
+    const form = $("applicationForm");
+
+    if (!form.reportValidity()) {
+        return false;
+    }
+
+    return true;
+}
+
 function buildPayload() {
+    if (!$("teamId").value || !$("tournamentId").value) {
+        throw new Error("Выберите турнир и команду");
+    }
+
+    assertLatin(
+        $("coachFirst").value,
+        "Имя тренера"
+    );
+
+    assertLatin(
+        $("coachLast").value,
+        "Фамилия тренера"
+    );
+
+    const birthYear = Number($("coachYear").value);
+    const currentYear = new Date().getFullYear();
+
+    if (
+        !$("coachYear").value ||
+        !Number.isInteger(birthYear) ||
+        birthYear < 1900 ||
+        birthYear > currentYear
+    ) {
+        throw new Error(
+            "Укажите корректный год рождения тренера"
+        );
+    }
+
+    const coachPhoto = clean($("coachPhoto").value);
+
+    if (
+        !coachPhoto ||
+        !normalizePhotoUrl(coachPhoto)
+    ) {
+        throw new Error(
+            "Укажите корректную фотографию тренера"
+        );
+    }
+
     const cards = [
         ...$("playersContainer").children
     ];
 
-    const players = cards.map(card => {
-        const existingId =
-            card.dataset.existingId;
+    if (cards.length < 1 || cards.length > 25) {
+        throw new Error(
+            "В заявке должно быть от 1 до 25 игроков"
+        );
+    }
 
-        return {
+    const players = cards.map((card, index) => {
+        const prefix = "Игрок №" + (index + 1);
+        const existingId = card.dataset.existingId;
+
+        const player = {
             existing_player_id: existingId
                 ? Number(existingId)
                 : null,
 
-            first_name: card.querySelector(
-                ".player-first"
-            ).value.trim(),
+            first_name: clean(
+                card.querySelector(
+                    ".player-first"
+                ).value
+            ),
 
-            last_name: card.querySelector(
-                ".player-last"
-            ).value.trim(),
+            last_name: clean(
+                card.querySelector(
+                    ".player-last"
+                ).value
+            ),
 
             birth_date: card.querySelector(
                 ".player-birth"
@@ -1984,30 +2113,77 @@ function buildPayload() {
                 ).value
             ),
 
-            photo_url: card.querySelector(
-                ".player-photo"
-            ).value.trim()
+            photo_url: clean(
+                card.querySelector(
+                    ".player-photo"
+                ).value
+            )
         };
-    });
 
-    if (
-        players.length < 1 ||
-        players.length > 25
-    ) {
-        throw new Error(
-            "В заявке должно быть от 1 до 25 игроков"
+        assertLatin(
+            player.first_name,
+            prefix + ", имя"
         );
-    }
+
+        assertLatin(
+            player.last_name,
+            prefix + ", фамилия"
+        );
+
+        const today = [
+            new Date().getFullYear(),
+            String(new Date().getMonth() + 1).padStart(2, "0"),
+            String(new Date().getDate()).padStart(2, "0")
+        ].join("-");
+
+        if (
+            !player.birth_date ||
+            !Number.isFinite(
+                Date.parse(player.birth_date)
+            ) ||
+            player.birth_date > today
+        ) {
+            throw new Error(
+                prefix + ": укажите корректную дату рождения"
+            );
+        }
+
+        if (!positions.includes(player.position)) {
+            throw new Error(
+                prefix + ": выберите позицию"
+            );
+        }
+
+        if (
+            !card.querySelector(".player-number").value ||
+            !Number.isInteger(player.jersey_number) ||
+            player.jersey_number < 1 ||
+            player.jersey_number > 99
+        ) {
+            throw new Error(
+                prefix + ": номер должен быть от 1 до 99"
+            );
+        }
+
+        if (
+            !player.photo_url ||
+            !normalizePhotoUrl(player.photo_url)
+        ) {
+            throw new Error(
+                prefix + ": фотография обязательна"
+            );
+        }
+
+        return player;
+    });
 
     const numbers = players.map(
         player => player.jersey_number
     );
 
-    if (
-        new Set(numbers).size !== numbers.length
-    ) {
+    if (new Set(numbers).size !== numbers.length) {
         throw new Error(
-            "Номера игроков не должны повторяться"
+            "Игровые номера игроков не должны повторяться"
         );
     }
 
@@ -2019,42 +2195,19 @@ function buildPayload() {
         new Set(existingIds).size !== existingIds.length
     ) {
         throw new Error(
-            "Один игрок из базы выбран несколько раз"
+            "Один существующий игрок выбран несколько раз"
         );
-    }
-
-    if (!$("coachPhoto").value.trim()) {
-        throw new Error(
-            "Укажите фотографию тренера"
-        );
-    }
-
-    for (const player of players) {
-        if (!player.photo_url) {
-            throw new Error(
-                "Укажите фотографию для игрока " +
-                player.first_name + " " +
-                player.last_name
-            );
-        }
     }
 
     return {
-        team_id: Number(
-            $("teamId").value
-        ),
-
-        tournament_id: Number(
-            $("tournamentId").value
-        ),
+        team_id: Number($("teamId").value),
+        tournament_id: Number($("tournamentId").value),
 
         coach: {
-            first_name: $("coachFirst").value.trim(),
-            last_name: $("coachLast").value.trim(),
-            birth_year: Number(
-                $("coachYear").value
-            ),
-            photo_url: $("coachPhoto").value.trim()
+            first_name: clean($("coachFirst").value),
+            last_name: clean($("coachLast").value),
+            birth_year: birthYear,
+            photo_url: coachPhoto
         },
 
         players
@@ -2062,9 +2215,7 @@ function buildPayload() {
 }
 
 async function saveApplication() {
-    if (
-        !$("applicationForm").reportValidity()
-    ) {
+    if (!validateFormFields()) {
         return null;
     }
 
@@ -2101,10 +2252,8 @@ $("applicationForm").addEventListener(
                     "success"
                 );
             }
-
         } catch (error) {
             showNotice(error.message);
-
         } finally {
             button.disabled = false;
         }
@@ -2112,9 +2261,16 @@ $("applicationForm").addEventListener(
 );
 
 $("submitApplicationButton").onclick = async () => {
-    if (
-        !$("applicationForm").reportValidity()
-    ) {
+    if (!validateFormFields()) {
+        return;
+    }
+
+    let data;
+
+    try {
+        data = buildPayload();
+    } catch (error) {
+        showNotice(error.message);
         return;
     }
 
@@ -2129,17 +2285,20 @@ $("submitApplicationButton").onclick = async () => {
     button.disabled = true;
 
     try {
-        const result = await saveApplication();
+        const path = applicationId
+            ? "/applications/" + applicationId
+            : "/applications";
 
-        if (!result) {
-            return;
-        }
+        const result = await apiRequest(path, {
+            method: applicationId ? "PUT" : "POST",
+            body: JSON.stringify(data)
+        });
+
+        applicationId = result.id;
 
         await apiRequest(
             "/applications/" + applicationId + "/submit",
-            {
-                method: "POST"
-            }
+            {method: "POST"}
         );
 
         switchView("list");
@@ -2149,10 +2308,8 @@ $("submitApplicationButton").onclick = async () => {
             "Заявка отправлена на рассмотрение",
             "success"
         );
-
     } catch (error) {
         showNotice(error.message);
-
     } finally {
         button.disabled = false;
     }
@@ -2181,35 +2338,26 @@ async function openApplication(id) {
         $("formStatus").className =
             "status-badge status-" + safeStatus;
 
-        $("teamId").value =
-            application.team_id;
-
-        $("tournamentId").value =
-            application.tournament_id;
+        $("teamId").value = application.team_id;
+        $("tournamentId").value = application.tournament_id;
 
         const coach = application.coach || {};
 
-        $("coachFirst").value =
-            coach.first_name || "";
-
-        $("coachLast").value =
-            coach.last_name || "";
-
-        $("coachYear").value =
-            coach.birth_year || "";
+        $("coachFirst").value = coach.first_name || "";
+        $("coachLast").value = coach.last_name || "";
+        $("coachYear").value = coach.birth_year || "";
 
         setCoachPhoto(coach.photo_url);
 
         $("playersContainer").replaceChildren();
 
-        for (const player of (
-            application.players || []
-        )) {
+        for (const player of application.players || []) {
             addPlayer(player);
         }
 
         setLocked(
-            application.status !== "draft"
+            application.status !== "draft" &&
+            application.status !== "needs_revision"
         );
 
         switchView("form");
@@ -2221,7 +2369,6 @@ async function openApplication(id) {
                 "info"
             );
         }
-
     } catch (error) {
         showNotice(error.message);
     }
@@ -2241,13 +2388,23 @@ async function initialize() {
         await loadApplications();
 
         switchView("list");
-
     } catch (error) {
         if (token) {
             showNotice(error.message);
         }
     }
 }
+
+[
+    "authFirst",
+    "authLast",
+    "coachFirst",
+    "coachLast"
+].forEach(id => bindLatinInput($(id)));
+
+$("coachYear").max = String(
+    new Date().getFullYear()
+);
 
 setAuthMode("login");
 initialize();

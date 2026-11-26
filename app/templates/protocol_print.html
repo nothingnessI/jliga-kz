@@ -217,7 +217,7 @@
                     <tbody>
                         {% for p in away_roster %}
                         <tr>
-                            <td class="col-num">{{ p jersey_number or '' }}</td>
+                            <td class="col-num">{{ p.jersey_number or '' }}</td>
                             <td>{{ p.player.last_name }} {{ p.player.first_name }}</td>
                             <td class="col-stat">
                                 {% if events_data.get(p.player_id) and events_data[p.player_id].goals %}
